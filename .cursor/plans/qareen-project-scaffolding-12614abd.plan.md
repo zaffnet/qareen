@@ -13,7 +13,7 @@
 
 ## Directory Structure
 
-```
+```text
 qareen/
 ├── qareen/
 │   ├── __init__.py
