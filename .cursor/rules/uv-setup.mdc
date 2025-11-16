@@ -1,0 +1,6 @@
+---
+description: uv package manager setup
+alwaysApply: true
+---
+
+This project uses uv. Python commands must start with: `source ~/.zshrc && source .venv/bin/activate && uv run python ...`

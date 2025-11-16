@@ -1,0 +1,6 @@
+---
+description: Commit message formatting convention
+alwaysApply: true
+---
+
+Use Conventional Commits: `<type>[optional scope]: <description>`. Types: `feat`, `fix`, etc. Use `!` or `BREAKING CHANGE:` for breaking changes.

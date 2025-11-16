@@ -33,13 +33,7 @@ Install the base package:
 pip install qareen
 ```
 
-For GPU support, install with the `gpu` extra:
-
-```bash
-pip install qareen[gpu]
-```
-
-**Note:** The `gpu` extra installs a CPU-only build of PyTorch by default. For custom CUDA builds or other GPU-specific PyTorch installations, please refer to the [official PyTorch installation guide](https://pytorch.org/get-started/locally/) and install the appropriate version for your system before installing `qareen`.
+**Note on GPU support:** The `gpu` extra is currently a placeholder and does not install any GPU-specific packages. For GPU support, you must install a CUDA-enabled PyTorch build from the [official PyTorch installation guide](https://pytorch.org/get-started/locally/) **before** installing `qareen`. The package will automatically check at runtime and warn if CUDA is not available. The base package will work with CPU-only PyTorch (installed automatically via dependencies).
 
 ## Usage
 

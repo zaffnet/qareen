@@ -2,6 +2,10 @@
 requires = ["setuptools>=68.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["qareen*"]
+
 [project]
 name = "qareen"
 version = "0.1.0"
@@ -10,29 +14,32 @@ readme = "README.md"
 requires-python = ">=3.11"
 license = {text = "MIT"}
 authors = [
-    {name = "Zafarullah Mahmood", email = "zafarmahmood@users.noreply.github.com"}
+    {name = "Zafarullah Mahmood", email = "zafar@zafarmahmood.com"}
 ]
 maintainers = [
-    {name = "Zafarullah Mahmood", email = "zafarmahmood@users.noreply.github.com"}
+    {name = "Zafarullah Mahmood", email = "zafar@zafarmahmood.com"}
 ]
 dependencies = [
     "gradio~=4.0.0",
-    "transformers~=4.40.0",
+    "transformers~=4.57.0",
     "numpy~=1.26.0",
     "pandas~=2.2.0",
-    "sentence-transformers~=2.3.0",
+    "sentence-transformers~=5.1.0",
 ]
 
 [project.optional-dependencies]
-# Note: The 'gpu' extra is a placeholder for future GPU-specific dependencies.
-# For GPU support, install PyTorch with CUDA from https://pytorch.org/get-started/locally/
-# before installing qareen. The base package will work with CPU-only PyTorch (installed
-# automatically via transformers/sentence-transformers dependencies).
+# Note: The 'gpu' extra is currently a placeholder (empty) and does not install
+# any GPU-specific packages. For GPU support, you must install a CUDA-enabled PyTorch
+# build from https://pytorch.org/get-started/locally/ BEFORE installing qareen.
+# The package will check at runtime and warn if CUDA is not available.
+# The base package will work with CPU-only PyTorch (installed automatically via
+# transformers/sentence-transformers dependencies).
 gpu = []
 dev = [
     "pytest~=8.0.0",
-    "ruff~=0.3.0",
+    "ruff>=0.14.5",
     "mypy~=1.8.0",
+    "pre-commit~=3.7.0",
 ]
 
 [project.urls]
@@ -43,6 +50,7 @@ Issues = "https://github.com/zaffnet/qareen/issues"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+pythonpath = ["."]
 python_files = ["test_*.py", "*_test.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
@@ -57,6 +65,7 @@ select = [
     "E",   # pycodestyle errors
     "W",   # pycodestyle warnings
     "F",   # pyflakes
+    "I",   # isort
     "B",   # flake8-bugbear
     "C4",  # flake8-comprehensions
     "UP",  # pyupgrade
@@ -64,3 +73,24 @@ select = [
 
 extend-select = ["E501"]  # line-too-long: Ruff omits rules that overlap with formatters by default
 
+[tool.mypy]
+python_version = "3.11"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = false
+disallow_incomplete_defs = false
+check_untyped_defs = true
+no_implicit_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_no_return = true
+strict_optional = true
+show_error_codes = true
+
+[[tool.mypy.overrides]]
+module = [
+    "gradio.*",
+    "transformers.*",
+    "sentence_transformers.*",
+]
+ignore_missing_imports = true
