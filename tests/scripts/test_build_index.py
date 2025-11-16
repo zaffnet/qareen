@@ -1,31 +1,54 @@
-"""CLI contract for scripts.build_index."""
+import unittest
+from unittest.mock import patch, MagicMock
+from scripts import build_index
+from qareen.dataset.schema import DatasetSchema, DatasetItem
 
-from __future__ import annotations
+class TestBuildIndexScript(unittest.TestCase):
 
-import pytest
+    @patch('scripts.build_index.ChromaIndexer')
+    @patch('scripts.build_index.HuggingFaceDatasetLoader')
+    @patch('argparse.ArgumentParser.parse_args')
+    def test_main(self, mock_parse_args, mock_loader_class, mock_indexer_class):
+        # Mock the arguments
+        mock_parse_args.return_value = MagicMock(
+            dataset_name="test/dataset",
+            models=["model1", "model2"],
+            alphas=[0.2, 0.8],
+            environment="dev",
+            sample_size=100
+        )
 
-from scripts.build_index import build_parser
+        # Mock the loader instance and its load method
+        mock_loader_instance = mock_loader_class.return_value
+        mock_loader_instance.load.return_value = DatasetSchema(
+            dataset_name="test/dataset",
+            data=[DatasetItem(text="a", image="b")]
+        )
 
+        # Mock the indexer instance
+        mock_indexer_instance = mock_indexer_class.return_value
 
-def test_build_index_parser_contract() -> None:
-    parser = build_parser()
-    with pytest.raises(SystemExit):
-        parser.parse_args([])
+        # Run the script's main function
+        build_index.main()
 
-    args = parser.parse_args(
-        [
-            "--dataset-name",
-            "sqid",
-            "--models",
-            "google/siglip-base-patch16-224",
-            "openai/clip-vit-large-patch14",
-            "--environment",
-            "prod",
-        ]
-    )
-    assert args.dataset_name == "sqid"
-    assert args.models == [
-        "google/siglip-base-patch16-224",
-        "openai/clip-vit-large-patch14",
-    ]
-    assert args.environment == "prod"
+        # Assert that the loader was called correctly
+        mock_loader_class.assert_called_with(dataset_name="test/dataset", sample_size=100)
+        mock_loader_instance.load.assert_called_once()
+
+        # Assert that the indexer was called for each model and alpha
+        self.assertEqual(mock_indexer_instance.get_collection_name.call_count, 4)
+        mock_indexer_instance.get_collection_name.assert_any_call(
+            dataset_name="test/dataset", model_id="model1", alpha=0.2, environment="dev"
+        )
+        mock_indexer_instance.get_collection_name.assert_any_call(
+            dataset_name="test/dataset", model_id="model1", alpha=0.8, environment="dev"
+        )
+        mock_indexer_instance.get_collection_name.assert_any_call(
+            dataset_name="test/dataset", model_id="model2", alpha=0.2, environment="dev"
+        )
+        mock_indexer_instance.get_collection_name.assert_any_call(
+            dataset_name="test/dataset", model_id="model2", alpha=0.8, environment="dev"
+        )
+
+if __name__ == '__main__':
+    unittest.main()

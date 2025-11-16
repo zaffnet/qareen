@@ -20,6 +20,12 @@ maintainers = [
     {name = "Zafarullah Mahmood", email = "zafar@zafarmahmood.com"}
 ]
 dependencies = [
+    "datasets",
+    "langchain",
+    "langchain-chroma",
+    "pydantic",
+    "pydantic-settings",
+    "pillow",
     "gradio~=4.0.0",
     "transformers~=4.57.0",
     "numpy~=1.26.0",
