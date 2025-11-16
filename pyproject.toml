@@ -1,0 +1,66 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "qareen"
+version = "0.1.0"
+description = "A tool for analyzing and optimizing multimodal few-shot example selection"
+readme = "README.md"
+requires-python = ">=3.11"
+license = {text = "MIT"}
+authors = [
+    {name = "Zafarullah Mahmood", email = "zafarmahmood@users.noreply.github.com"}
+]
+maintainers = [
+    {name = "Zafarullah Mahmood", email = "zafarmahmood@users.noreply.github.com"}
+]
+dependencies = [
+    "gradio~=4.0.0",
+    "transformers~=4.40.0",
+    "numpy~=1.26.0",
+    "pandas~=2.2.0",
+    "sentence-transformers~=2.3.0",
+]
+
+[project.optional-dependencies]
+# Note: The 'gpu' extra is a placeholder for future GPU-specific dependencies.
+# For GPU support, install PyTorch with CUDA from https://pytorch.org/get-started/locally/
+# before installing qareen. The base package will work with CPU-only PyTorch (installed
+# automatically via transformers/sentence-transformers dependencies).
+gpu = []
+dev = [
+    "pytest~=8.0.0",
+    "ruff~=0.3.0",
+    "mypy~=1.8.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/zaffnet/qareen"
+Repository = "https://github.com/zaffnet/qareen"
+Documentation = "https://github.com/zaffnet/qareen#readme"
+Issues = "https://github.com/zaffnet/qareen/issues"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py", "*_test.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "B",   # flake8-bugbear
+    "C4",  # flake8-comprehensions
+    "UP",  # pyupgrade
+]
+
+extend-select = ["E501"]  # line-too-long: Ruff omits rules that overlap with formatters by default
+
