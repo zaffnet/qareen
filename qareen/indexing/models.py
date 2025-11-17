@@ -43,11 +43,15 @@ class SigLIPEmbeddingModel(EmbeddingModel):
         return self.model
 
     def embed_text(self, text: str) -> np.ndarray:
+        assert self.processor is not None
+        assert self.model is not None
         inputs = self.processor(text=[text], return_tensors="pt")
         text_features = self.model.get_text_features(**inputs)
         return text_features.detach().numpy()
 
     def embed_image(self, image: Image.Image | str) -> np.ndarray:
+        assert self.processor is not None
+        assert self.model is not None
         if isinstance(image, str):
             image = Image.open(image)
         inputs = self.processor(images=image, return_tensors="pt")

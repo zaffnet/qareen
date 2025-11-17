@@ -1,9 +1,6 @@
 from __future__ import annotations
 
 import re
-from typing import Any, List
-
-from langchain_chroma import Chroma
 
 from .base import VectorStoreIndexer
 from .exceptions import InvalidCollectionNameError
@@ -33,7 +30,7 @@ class ChromaIndexer(VectorStoreIndexer):
     def get_embeddings(self, *args: object, **kwargs: object) -> object:
         raise NotImplementedError
 
-    def list_available_alphas(self) -> List[float]:
+    def list_available_alphas(self) -> list[float]:
         raise NotImplementedError
 
     def validate_alpha_available(self, alpha: float) -> bool:

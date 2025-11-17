@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import argparse
-from pathlib import Path
 
 from qareen.config.settings import Settings
 from qareen.dataset.hf_dataset import HuggingFaceDatasetLoader
@@ -54,7 +53,7 @@ def main():
         args.dataset_name,
         sample_size=args.sample_size,
     )
-    dataset = loader.load()
+    loader.load()
 
     for model_id in args.models:
         model = SigLIPEmbeddingModel(model_id)

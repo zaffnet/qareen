@@ -11,7 +11,7 @@ This document outlines potential future enhancements for qareen, organized by im
 
 **Components**:
 - **Dataset Explorer**: Visual grid showing image-text pairs with metadata filters
-- **Similarity Playground**: Interactive alpha slider with real-time similarity updates  
+- **Similarity Playground**: Interactive alpha slider with real-time similarity updates
 - **Query Interface**: Natural language queries with visual result comparison
 - **Strategy Comparison**: Side-by-side evaluation of different retrieval strategies
 - **Export Tools**: One-click export to Gradio datasets, JSON, CSV formats
@@ -24,7 +24,7 @@ This document outlines potential future enhancements for qareen, organized by im
 **User Value**: Makes qareen immediately accessible to non-technical users, encourages experimentation
 
 ### 1.2 Fluent Python API
-**Priority**: High  
+**Priority**: High
 **Effort**: Medium
 **Description**: Chainable, intuitive API that reads like natural language
 
@@ -41,9 +41,9 @@ qareen = (Qareen()
 )
 
 results = qareen.find_examples(
-    query="red sports car", 
+    query="red sports car",
     strategy="diversity",
-    model="siglip", 
+    model="siglip",
     alpha=0.5,
     k=5
 )
@@ -56,7 +56,7 @@ results = qareen.find_examples(
 
 **User Value**: Dramatically improves developer experience, reduces learning curve
 
-### 1.3 Smart Defaults & Preset Configurations  
+### 1.3 Smart Defaults & Preset Configurations
 **Priority**: Medium
 **Effort**: Low
 **Description**: Intelligent presets for common use cases
@@ -78,7 +78,7 @@ results = qareen.find_examples(
 
 ### 2.1 Advanced Retrieval Strategies
 **Priority**: High
-**Effort**: High  
+**Effort**: High
 **Description**: Go beyond simple similarity to sophisticated example selection
 
 **Strategy Library**:
@@ -103,7 +103,7 @@ results = qareen.find_examples(
 
 **Core Metrics**:
 - **Semantic Coverage**: How well examples span the problem space
-- **Intra-set Diversity**: Variety within selected examples  
+- **Intra-set Diversity**: Variety within selected examples
 - **Query Relevance**: Similarity to the specific query
 - **Quality Score**: Composite metric for overall selection effectiveness
 - **Task Performance**: Optional integration with LLM evaluation pipelines
@@ -123,7 +123,7 @@ results = qareen.find_examples(
 
 ## Phase 3: Integration & Ecosystem
 
-### 3.1 Platform Integrations  
+### 3.1 Platform Integrations
 **Priority**: Medium
 **Effort**: Medium
 **Description**: Seamless integration with popular ML platforms
@@ -171,7 +171,7 @@ results = qareen.find_examples(
 
 **Advanced Techniques**:
 - Cross-modal attention mechanisms
-- Learned fusion strategies  
+- Learned fusion strategies
 - Modality-specific weighting based on query type
 - Dynamic alpha selection based on content
 
@@ -183,13 +183,13 @@ results = qareen.find_examples(
 **User Value**: Better results through state-of-the-art multimodal techniques
 
 ### 4.2 Extended Modality Support
-**Priority**: Low  
+**Priority**: Low
 **Effort**: High
 **Description**: Support beyond text+image
 
 **Additional Modalities**:
 - Audio (speech, music, sound effects)
-- Video (short clips, frames)  
+- Video (short clips, frames)
 - 3D models/point clouds
 - Time series data
 

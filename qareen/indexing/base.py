@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import Any, List
 
 
 class VectorStoreIndexer(ABC):
@@ -27,7 +26,7 @@ class VectorStoreIndexer(ABC):
     def get_embeddings(self, *args: object, **kwargs: object) -> object:
         raise NotImplementedError
 
-    def list_available_alphas(self) -> List[float]:
+    def list_available_alphas(self) -> list[float]:
         raise NotImplementedError
 
     def validate_alpha_available(self, alpha: float) -> bool:

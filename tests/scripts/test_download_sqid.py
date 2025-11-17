@@ -1,13 +1,9 @@
 from __future__ import annotations
 
+from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-import pytest
-
 from scripts.download_sqid import main
-
-
-from pathlib import Path
 
 
 @patch("scripts.download_sqid.argparse.ArgumentParser")
