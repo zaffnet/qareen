@@ -16,16 +16,17 @@ class HuggingFaceDatasetLoader(DatasetLoader):
 
     def load(self) -> Any:
         self.dataset = load_dataset(self.dataset_name, split="train")
-        if self.sample_size and self.dataset:
+        if self.sample_size:
             self.dataset = self.dataset.select(range(self.sample_size))
         return self.dataset
 
     def validate_schema(self) -> bool:
         if not self.dataset:
             self.load()
-        if self.dataset:
-            for item in self.dataset:
-                DatasetSchema(**item)
+        if not self.dataset:
+            return False
+        for item in self.dataset:
+            DatasetSchema(**item)
         return True
 
     def get_dataset_name(self) -> str:
@@ -34,6 +35,6 @@ class HuggingFaceDatasetLoader(DatasetLoader):
     def get_dataset_info(self) -> dict[str, Any]:
         if not self.dataset:
             self.load()
-        if self.dataset:
-            return dict(self.dataset.info)
-        return {}
+        if not self.dataset:
+            raise RuntimeError("Dataset failed to load; cannot retrieve info.")
+        return dict(self.dataset.info)
