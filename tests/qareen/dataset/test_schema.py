@@ -18,7 +18,11 @@ def test_dataset_schema_contract() -> None:
     assert issubclass(DatasetSchema, BaseModel)
     assert issubclass(DatasetItem, BaseModel)
 
-    sample = DatasetSchema(text="caption", image="sample.jpg", metadata={"split": "train"})
+    sample = DatasetSchema(
+        text="caption",
+        image="sample.jpg",
+        metadata={"split": "train"},
+    )
     assert sample.model_dump() == {
         "text": "caption",
         "image": "sample.jpg",
@@ -27,10 +31,15 @@ def test_dataset_schema_contract() -> None:
     }
 
     item = DatasetItem(text="caption", image="img.png")
-    assert item.model_dump() == {"text": "caption", "image": "img.png", "metadata": None, "dataset_name": None}
+    assert item.model_dump() == {
+        "text": "caption",
+        "image": "img.png",
+        "metadata": None,
+        "dataset_name": None,
+    }
 
 
 @pytest.mark.parametrize("payload", INVALID_PAYLOADS)
 def test_dataset_schema_requires_text_and_image(payload: dict[str, object]) -> None:
     with pytest.raises(ValidationError):
-        DatasetSchema(**payload)  # type: ignore[arg-type]
+        DatasetSchema(**payload)

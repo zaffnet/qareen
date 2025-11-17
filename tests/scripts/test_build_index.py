@@ -19,6 +19,9 @@ def test_build_index_parser_contract() -> None:
             "--models",
             "google/siglip-base-patch16-224",
             "openai/clip-vit-large-patch14",
+            "--alphas",
+            "0.2",
+            "0.8",
             "--environment",
             "prod",
         ]
@@ -28,4 +31,5 @@ def test_build_index_parser_contract() -> None:
         "google/siglip-base-patch16-224",
         "openai/clip-vit-large-patch14",
     ]
+    assert args.alphas == [0.2, 0.8]
     assert args.environment == "prod"
