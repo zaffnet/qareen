@@ -1,5 +1,7 @@
 import unittest
+
 from qareen.indexing.chroma_indexer import ChromaIndexer
+
 
 class TestChromaIndexer(unittest.TestCase):
 

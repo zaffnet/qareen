@@ -1,6 +1,8 @@
 from abc import ABC, abstractmethod
 from typing import Any
+
 from qareen.dataset.schema import DatasetSchema
+
 
 class VectorStoreIndexer(ABC):
 
@@ -9,7 +11,9 @@ class VectorStoreIndexer(ABC):
         """Takes dataset and creates vector store."""
 
     @abstractmethod
-    def get_collection_name(self, dataset_name: str, model_id: str, alpha: float, environment: str) -> str:
+    def get_collection_name(
+        self, dataset_name: str, model_id: str, alpha: float, environment: str
+    ) -> str:
         """Generates collection name from dataset_name, environment, model_id, and alpha."""
 
     @abstractmethod

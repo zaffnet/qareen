@@ -1,5 +1,7 @@
 from pydantic import BaseModel
+
 from qareen.dataset.schema import DatasetItem, DatasetSchema
+
 
 def test_dataset_item_contract() -> None:
     """Items must contain text/image pairs, and may contain arbitrary metadata."""

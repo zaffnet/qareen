@@ -1,6 +1,8 @@
 import unittest
-from qareen.indexing.models import EmbeddingModel
+
 from qareen.indexing.base import VectorStoreIndexer
+from qareen.indexing.models import EmbeddingModel
+
 
 class TestAbstractIndexingClasses(unittest.TestCase):
 

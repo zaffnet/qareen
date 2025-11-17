@@ -1,6 +1,8 @@
 import unittest
 from pathlib import Path
+
 from qareen.config.settings import Settings
+
 
 class TestSettings(unittest.TestCase):
 

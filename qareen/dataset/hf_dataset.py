@@ -1,7 +1,10 @@
-from qareen.dataset.base import DatasetLoader
-from qareen.dataset.schema import DatasetSchema, DatasetItem
 from typing import Any
+
 import datasets
+
+from qareen.dataset.base import DatasetLoader
+from qareen.dataset.schema import DatasetItem, DatasetSchema
+
 
 class HuggingFaceDatasetLoader(DatasetLoader):
 
@@ -14,10 +17,8 @@ class HuggingFaceDatasetLoader(DatasetLoader):
 
     def load(self) -> DatasetSchema:
         """Loads the dataset from HuggingFace and returns it as a DatasetSchema object."""
-        try:
-            self._dataset = datasets.load_dataset(self.dataset_name, split='train') # Default to train split
-        except Exception as e:
-            raise RuntimeError(f"Failed to load dataset '{self.dataset_name}': {e}") from e
+        # Default to train split
+        self._dataset = datasets.load_dataset(self.dataset_name, split="train")
 
         if self.sample_size > 0:
             num_samples = min(self.sample_size, len(self._dataset))

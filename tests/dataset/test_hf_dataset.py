@@ -1,8 +1,11 @@
 import unittest
-from unittest.mock import patch, MagicMock
-from qareen.dataset.hf_dataset import HuggingFaceDatasetLoader
-from qareen.dataset.schema import DatasetSchema, DatasetItem
+from unittest.mock import patch
+
 from datasets import Dataset
+
+from qareen.dataset.hf_dataset import HuggingFaceDatasetLoader
+from qareen.dataset.schema import DatasetSchema
+
 
 class TestHuggingFaceDatasetLoader(unittest.TestCase):
 

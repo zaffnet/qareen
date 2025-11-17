@@ -15,5 +15,9 @@ def test_dataset_loader_contract_and_hf_impl() -> None:
     assert REQUIRED_METHODS <= getattr(DatasetLoader, "__abstractmethods__", set())
 
     assert issubclass(HuggingFaceDatasetLoader, DatasetLoader)
-    missing = [method for method in REQUIRED_METHODS if not hasattr(HuggingFaceDatasetLoader, method)]
+    missing = [
+        method
+        for method in REQUIRED_METHODS
+        if not hasattr(HuggingFaceDatasetLoader, method)
+    ]
     assert not missing, f"HuggingFaceDatasetLoader must implement: {missing}"

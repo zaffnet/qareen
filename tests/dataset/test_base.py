@@ -1,5 +1,7 @@
 import unittest
+
 from qareen.dataset.base import DatasetLoader
+
 
 class TestAbstractDatasetLoader(unittest.TestCase):
 

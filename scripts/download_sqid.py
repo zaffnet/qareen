@@ -1,5 +1,7 @@
 import argparse
+
 from qareen.dataset.hf_dataset import HuggingFaceDatasetLoader
+
 
 def main():
     parser = argparse.ArgumentParser(description="Download the SQID dataset from HuggingFace.")
