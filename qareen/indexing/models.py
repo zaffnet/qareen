@@ -33,8 +33,8 @@ class EmbeddingModel(ABC):
 class SigLIPEmbeddingModel(EmbeddingModel):
     def __init__(self, model_id: str = "google/siglip-base-patch16-224"):
         self.model_id = model_id
-        self.model = None
-        self.processor = None
+        self.model: SiglipModel | None = None
+        self.processor: SiglipImageProcessor | None = None
 
     def load_model(self) -> Any:
         if self.model is None:
@@ -43,11 +43,15 @@ class SigLIPEmbeddingModel(EmbeddingModel):
         return self.model
 
     def embed_text(self, text: str) -> np.ndarray:
+        if self.processor is None or self.model is None:
+            raise RuntimeError("Model not loaded. Call load_model() first.")
         inputs = self.processor(text=[text], return_tensors="pt")
         text_features = self.model.get_text_features(**inputs)
         return text_features.detach().numpy()
 
     def embed_image(self, image: Image.Image | str) -> np.ndarray:
+        if self.processor is None or self.model is None:
+            raise RuntimeError("Model not loaded. Call load_model() first.")
         if isinstance(image, str):
             image = Image.open(image)
         inputs = self.processor(images=image, return_tensors="pt")

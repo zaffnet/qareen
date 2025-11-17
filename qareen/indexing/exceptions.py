@@ -1,13 +1,11 @@
 from __future__ import annotations
 
-from typing import List
-
 
 class AlphaNotAvailableError(Exception):
     def __init__(
         self,
         alpha: float,
-        available_alphas: List[float],
+        available_alphas: list[float],
         model_id: str,
         dataset_name: str,
         environment: str,
@@ -24,7 +22,12 @@ class AlphaNotAvailableError(Exception):
 
 
 class CollectionNameTooLongError(Exception):
-    def __init__(self, collection_name: str, max_length: int, suggested_alternatives: List[str] | None = None):
+    def __init__(
+        self,
+        collection_name: str,
+        max_length: int,
+        suggested_alternatives: list[str] | None = None,
+    ):
         self.collection_name = collection_name
         self.max_length = max_length
         self.suggested_alternatives = suggested_alternatives
@@ -35,10 +38,9 @@ class CollectionNameTooLongError(Exception):
 
 
 class InvalidCollectionNameError(Exception):
-    def __init__(self, collection_name: str, invalid_characters: List[str]):
+    def __init__(self, collection_name: str, invalid_characters: list[str]):
         self.collection_name = collection_name
         self.invalid_characters = invalid_characters
         super().__init__(
-            f"Invalid collection name '{collection_name}'. "
-            f"Invalid characters: {invalid_characters}"
+            f"Invalid collection name '{collection_name}'. Invalid characters: {invalid_characters}"
         )

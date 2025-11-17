@@ -2,8 +2,6 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock, patch
 
-import pytest
-
 from scripts.build_index import main
 
 
@@ -18,9 +16,11 @@ def test_build_index_main(mock_argparse):
     mock_args.batch_size = 50
     mock_argparse.return_value.parse_args.return_value = mock_args
 
-    with patch("scripts.build_index.HuggingFaceDatasetLoader") as mock_loader, patch(
-        "scripts.build_index.SigLIPEmbeddingModel"
-    ) as mock_model, patch("scripts.build_index.ChromaIndexer") as mock_indexer:
+    with (
+        patch("scripts.build_index.HuggingFaceDatasetLoader") as mock_loader,
+        patch("scripts.build_index.SigLIPEmbeddingModel") as mock_model,
+        patch("scripts.build_index.ChromaIndexer") as mock_indexer,
+    ):
         main()
         mock_loader.assert_called_with("test_dataset", sample_size=100)
         mock_loader.return_value.load.assert_called_once()

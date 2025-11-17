@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import Any, Dict
+from typing import Any
 
 
 class DatasetLoader(ABC):
@@ -18,5 +18,5 @@ class DatasetLoader(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def get_dataset_info(self) -> Dict[str, Any]:
+    def get_dataset_info(self) -> dict[str, Any]:
         raise NotImplementedError
