@@ -4,6 +4,9 @@ from __future__ import annotations
 
 from abc import ABC
 
+from langchain_core.embeddings import Embeddings
+from langchain_core.vectorstores import VectorStore
+
 from qareen.indexing.base import VectorStoreIndexer
 from qareen.indexing.chroma_indexer import ChromaIndexer
 
@@ -20,13 +23,24 @@ def test_vector_store_indexer_contract_and_naming() -> None:
         def __init__(self) -> None:
             pass
 
-        def index(self, *args: object, **kwargs: object) -> object:
+        def index(
+            self,
+            alpha_values: list[float],
+            batch_size: int = 100,
+            sample_size: int | None = None,
+        ) -> dict[float, VectorStore]:
             raise NotImplementedError()
 
-        def create_vectorstore(self, *args: object, **kwargs: object) -> object:
+        def create_vectorstore(
+            self,
+            dataset_name: str,
+            model_id: str,
+            alpha: float,
+            environment: str = "dev",
+        ) -> VectorStore:
             raise NotImplementedError()
 
-        def get_embeddings(self, *args: object, **kwargs: object) -> object:
+        def get_embeddings(self) -> Embeddings:
             raise NotImplementedError()
 
     indexer = StubChromaIndexer()

@@ -3,7 +3,40 @@
 import os
 import warnings
 
+from qareen.config import Settings
+from qareen.dataset import (
+    DatasetItem,
+    DatasetLoader,
+    DatasetSchema,
+    HuggingFaceDatasetLoader,
+)
+from qareen.indexing import (
+    AlphaNotAvailableError,
+    ChromaIndexer,
+    CollectionNameTooLongError,
+    EmbeddingModel,
+    InvalidCollectionNameError,
+    SIGLIPEmbeddingModel,
+    VectorStoreIndexer,
+)
+
 __version__ = "0.1.0"
+
+__all__ = [
+    "AlphaNotAvailableError",
+    "ChromaIndexer",
+    "CollectionNameTooLongError",
+    "DatasetItem",
+    "DatasetLoader",
+    "DatasetSchema",
+    "EmbeddingModel",
+    "HuggingFaceDatasetLoader",
+    "InvalidCollectionNameError",
+    "Settings",
+    "SIGLIPEmbeddingModel",
+    "VectorStoreIndexer",
+    "check_gpu_available",
+]
 
 
 def check_gpu_available() -> bool:
@@ -26,7 +59,7 @@ def check_gpu_available() -> bool:
     try:
         import torch
 
-        is_available = torch.cuda.is_available()
+        is_available: bool = torch.cuda.is_available()
 
         if not is_available:
             suppress_warning = os.getenv("QAREEN_SUPPRESS_GPU_WARNING", "").lower() in (
