@@ -135,14 +135,15 @@ def main() -> int:
             for idx in tqdm(range(len(dataset)), desc="Downloading images"):
                 sample = dataset[idx]
                 image_url = sample.get("image")
-                product_id = sample.get("metadata", {}).get("product_id", f"unknown_{idx}")
+                metadata = sample.get("metadata") or {}
+                product_id = metadata.get("product_id", f"unknown_{idx}")
 
                 if not image_url:
                     logger.debug(f"No image URL for index {idx}, product_id {product_id}")
                     failed_downloads += 1
                     continue
 
-                image_filename = f"{product_id}.jpg"
+                image_filename = f"{idx}_{product_id}.jpg"
                 image_path = args.output_dir / image_filename
 
                 if image_path.exists():
@@ -200,11 +201,8 @@ def main() -> int:
         logger.info(f"✓ Images saved to: {args.output_dir}")
         logger.info(f"View the gallery with: open {args.output_markdown}")
 
-    except (OSError, requests.RequestException) as e:
-        logger.exception(f"Error generating image gallery: {e}")
-        return 1
-    except Exception as e:
-        logger.exception(f"Unexpected error generating image gallery: {e}")
+    except Exception:
+        logger.exception("Error generating image gallery")
         return 1
     else:
         return 0

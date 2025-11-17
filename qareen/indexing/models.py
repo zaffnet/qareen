@@ -17,6 +17,7 @@ class EmbeddingModel(ABC):
     """
 
     ZERO_VECTOR_ERROR: ClassVar[str] = "cannot L2-normalize zero vector"
+    ZERO_NORM_TOLERANCE: ClassVar[float] = 1e-8
 
     @abstractmethod
     def load_model(self) -> None:
@@ -104,6 +105,6 @@ class EmbeddingModel(ABC):
             ValueError: If the input vector has zero norm (zero vector)
         """
         norm: float = float(np.linalg.norm(vector))
-        if norm == 0:
+        if norm <= EmbeddingModel.ZERO_NORM_TOLERANCE:
             raise ValueError(EmbeddingModel.ZERO_VECTOR_ERROR)
         return vector / norm

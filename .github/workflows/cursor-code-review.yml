@@ -32,14 +32,30 @@ jobs:
       - name: Install Cursor CLI
         if: steps.cache-cursor.outputs.cache-hit != 'true'
         run: |
-          curl -fsS https://cursor.com/install -o /tmp/cursor-install.sh
+          set -e
+          curl --fail --show-error -fsS https://cursor.com/install -o /tmp/cursor-install.sh
+          curl --fail --show-error -fsS https://cursor.com/install.sha256 -o /tmp/cursor-install.sh.sha256 || {
+            echo "Error: Failed to download checksum file"
+            rm -f /tmp/cursor-install.sh /tmp/cursor-install.sh.sha256
+            exit 1
+          }
           if [ ! -s /tmp/cursor-install.sh ]; then
             echo "Error: Downloaded installer is empty"
+            rm -f /tmp/cursor-install.sh /tmp/cursor-install.sh.sha256
+            exit 1
+          fi
+          INSTALLER_SHA256=$(sha256sum /tmp/cursor-install.sh | cut -d' ' -f1)
+          EXPECTED_SHA256=$(cat /tmp/cursor-install.sh.sha256 | cut -d' ' -f1)
+          if [ "$INSTALLER_SHA256" != "$EXPECTED_SHA256" ]; then
+            echo "Error: Installer checksum verification failed"
+            echo "Expected: $EXPECTED_SHA256"
+            echo "Got: $INSTALLER_SHA256"
+            rm -f /tmp/cursor-install.sh /tmp/cursor-install.sh.sha256
             exit 1
           fi
           chmod +x /tmp/cursor-install.sh
           bash /tmp/cursor-install.sh
-          rm /tmp/cursor-install.sh
+          rm -f /tmp/cursor-install.sh /tmp/cursor-install.sh.sha256
 
       - name: Add Cursor to PATH
         run: |

@@ -377,7 +377,7 @@ class ChromaIndexer(VectorStoreIndexer):
                             elif isinstance(image, dict) and "bytes" in image:
                                 image = Image.open(BytesIO(image["bytes"]))
                             elif isinstance(image, str):
-                                if image.startswith("http://") or image.startswith("https://"):
+                                if image.startswith(("http://", "https://")):
                                     image = self._download_image_with_retry(
                                         image_url=image,
                                         max_retries=3,

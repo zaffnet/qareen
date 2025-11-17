@@ -219,9 +219,9 @@ class SIGLIPEmbeddingModel(EmbeddingModel):
             if embedding is None:
                 raise RuntimeError(
                     f"Failed to determine embedding dimension for model '{self.model_id}'"
-                ) from None
+                )
             return len(embedding)
-        except Exception:
+        except Exception as err:
             raise RuntimeError(
                 f"Failed to determine embedding dimension for model '{self.model_id}'"
-            ) from None
+            ) from err

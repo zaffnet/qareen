@@ -8,7 +8,6 @@ import os
 import re
 import sys
 from pathlib import Path
-from typing import Any
 
 import pandas as pd
 import requests
@@ -160,7 +159,11 @@ def load_and_combine_sqid_esci(
         Combined HuggingFace Dataset
     """
     if esci_download_timeout is None:
-        esci_download_timeout = int(os.getenv("ESCI_DOWNLOAD_TIMEOUT", "600"))
+        try:
+            esci_download_timeout = int(os.getenv("ESCI_DOWNLOAD_TIMEOUT", "600"))
+        except ValueError:
+            esci_download_timeout = 600
+            logger.warning("Invalid ESCI_DOWNLOAD_TIMEOUT environment variable. Using default: 600")
 
     cache_dir.mkdir(parents=True, exist_ok=True)
 
@@ -210,7 +213,7 @@ def load_and_combine_sqid_esci(
 
     logger.info("Constructing text fields...")
 
-    def construct_text(row: Any) -> str:
+    def construct_text(row: pd.Series) -> str:
         parts = []
         if pd.notna(row.get("product_title")) and row.get("product_title"):
             parts.append(str(row["product_title"]).strip())
@@ -327,8 +330,8 @@ def main() -> int:
         dataset.save_to_disk(save_path)
         logger.info(f"Dataset saved to {save_path}")
 
-    except Exception as e:
-        logger.exception(f"Error downloading dataset: {e}")
+    except Exception:
+        logger.exception("Error downloading dataset")
         return 1
     else:
         return 0

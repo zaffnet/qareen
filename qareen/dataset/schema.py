@@ -18,9 +18,15 @@ IMAGE_FILE_EXTENSIONS: frozenset[str] = frozenset(
         ".webp",
         ".tiff",
         ".tif",
+        ".avif",
+        ".heic",
+        ".heif",
+        ".jfif",
         ".svg",
     }
 )
+
+SVG_EXTENSION = ".svg"
 
 
 class DatasetItem(BaseModel):
@@ -64,6 +70,9 @@ class DatasetItem(BaseModel):
         Note: Only validates format/type, not file existence. File existence
         is checked when the image is actually loaded (e.g., via Image.open()).
         This allows paths to be constructed before files are downloaded or created.
+
+        Note: SVG files require extra libraries (e.g., cairosvg) for conversion
+        before PIL/Pillow can load them. PIL cannot natively load SVG files.
         """
         if v is None:
             return None
