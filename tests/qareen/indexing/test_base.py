@@ -14,17 +14,29 @@ REQUIRED_INDEXER_METHODS = frozenset(
 
 def test_vector_store_indexer_contract_and_naming() -> None:
     assert issubclass(VectorStoreIndexer, ABC)
-    assert REQUIRED_INDEXER_METHODS <= getattr(VectorStoreIndexer, "__abstractmethods__", set())
+    assert getattr(VectorStoreIndexer, "__abstractmethods__", set()) >= REQUIRED_INDEXER_METHODS
 
-    stub_cls = type(
-        "StubChromaIndexer",
-        (ChromaIndexer,),
-        {
-            "__init__": lambda self: None,
-            "index": lambda self, *a, **k: NotImplemented,
-            "create_vectorstore": lambda self, *a, **k: NotImplemented,
-            "get_embeddings": lambda self, *a, **k: NotImplemented,
-        },
+    class StubChromaIndexer(ChromaIndexer):
+        def __init__(self) -> None:
+            pass
+
+        def index(self, *args: object, **kwargs: object) -> object:
+            raise NotImplementedError()
+
+        def create_vectorstore(self, *args: object, **kwargs: object) -> object:
+            raise NotImplementedError()
+
+        def get_embeddings(self, *args: object, **kwargs: object) -> object:
+            raise NotImplementedError()
+
+    indexer = StubChromaIndexer()
+    assert (
+        indexer.get_collection_name(
+            dataset_name="SQID Shots",
+            environment="Staging",
+            model_id="google/siglip-base-patch16-224",
+        )
+        == "staging_sqid_shots_google_siglip-base-patch16-224"
     )
     indexer = stub_cls()
     assert indexer.get_collection_name(
