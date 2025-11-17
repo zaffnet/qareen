@@ -25,13 +25,11 @@ class HuggingFaceDatasetLoader(DatasetLoader):
         self._dataset = dataset  # Cache for downstream metadata access
 
         if isinstance(dataset, DatasetDict):
-            raw_records = (
-                record for split_dataset in dataset.values() for record in split_dataset
-            )
+            raw_records = (record for split_dataset in dataset.values() for record in split_dataset)
         elif isinstance(dataset, (IterableDataset, Dataset)):
             raw_records = dataset
         else:
-            raw_records = dataset  # type: ignore[assignment]
+            raw_records = dataset
         return self.validate_schema(raw_records)
 
     def validate_schema(self, records: Iterable[dict[str, Any]]) -> Sequence[DatasetItem]:

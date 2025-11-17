@@ -52,7 +52,7 @@ AGENTS.md currently only contains setup instructions. Based on research and user
 Add three brief sections to AGENTS.md after Setup:
 
 1. Dependency Management (2-3 lines max)
-2. Architecture Patterns (3-4 lines max)  
+2. Architecture Patterns (3-4 lines max)
 3. Code Style (4-5 lines max, including strong comment guideline)
 
 Total addition should be ~15-20 lines maximum. Be ruthless about brevity. Focus only on what agents need to know when implementing NEW features.

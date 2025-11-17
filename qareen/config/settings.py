@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Literal
+from typing import Any, Literal
 
 from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -105,7 +105,7 @@ __all__ = ["Settings"]
 class LenientEnvSettingsSource(EnvSettingsSource):
     """Env source that falls back to raw strings when JSON decoding fails."""
 
-    def decode_complex_value(self, field_name, field, value):  # type: ignore[override]
+    def decode_complex_value(self, field_name: str, field: Any, value: str) -> Any:
         try:
             return super().decode_complex_value(field_name, field, value)
         except json.JSONDecodeError:

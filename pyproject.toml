@@ -98,6 +98,7 @@ warn_unused_ignores = true
 warn_no_return = true
 strict_optional = true
 show_error_codes = true
+explicit_package_bases = true
 
 [[tool.mypy.overrides]]
 module = [

@@ -19,7 +19,7 @@ The tool works with any multimodal embedding model from Hugging Face—CLIP, SIG
 
 ## Demo
 
-We demonstrate `qareen` on the Shopping Queries Image Dataset (SQID) [Al Ghossein et al. (2024)](#ref4), part of Amazon's ESCI benchmark for product search. 
+We demonstrate `qareen` on the Shopping Queries Image Dataset (SQID) [Al Ghossein et al. (2024)](#ref4), part of Amazon's ESCI benchmark for product search.
 
 ![Demo GIF placeholder]
 

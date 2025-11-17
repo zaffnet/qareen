@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import argparse
-from typing import Sequence
+from collections.abc import Sequence
 
 from qareen.config import Settings
 from qareen.dataset.hf_dataset import HuggingFaceDatasetLoader
