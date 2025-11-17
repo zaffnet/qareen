@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+from pathlib import Path
 from typing import Sequence
 
 from qareen.config import Settings
@@ -61,13 +62,18 @@ def index_dataset(
     environment: str,
     split: str,
     sample_size: int | None,
+    chroma_db_dir: str | Path,
 ) -> None:
     loader = HuggingFaceDatasetLoader(dataset_name, split=split)
     items = loader.load()
     if environment == "dev" and sample_size is not None:
         items = items[:sample_size]
 
-    indexer = ChromaIndexer(environment=environment, dev_sample_size=sample_size)
+    indexer = ChromaIndexer(
+        environment=environment,
+        dev_sample_size=sample_size,
+        chroma_db_dir=chroma_db_dir,
+    )
     for model_id in models:
         for alpha in alphas:
             collection_name = indexer.get_collection_name(
@@ -106,6 +112,7 @@ def main(argv: list[str] | None = None) -> int:
         environment=environment,
         split=args.split,
         sample_size=sample_size,
+        chroma_db_dir=settings.chroma_db_dir,
     )
     return 0
 
