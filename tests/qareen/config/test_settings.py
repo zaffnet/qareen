@@ -15,6 +15,7 @@ def test_settings_defaults_match_plan() -> None:
     settings = Settings()
     assert settings.default_embedding_models, "At least one default embedding model is required"
     assert all(isinstance(model, str) for model in settings.default_embedding_models)
+    assert settings.default_alpha_values == [0.5]
 
     assert settings.data_dir == Path("data")
     assert settings.chroma_db_dir == Path("chroma_db")
