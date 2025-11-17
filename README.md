@@ -19,7 +19,7 @@ The tool works with any multimodal embedding model from Hugging Face—CLIP, SIG
 
 ## Demo
 
-We demonstrate `qareen` on the Shopping Queries Image Dataset (SQID) [Al Ghossein et al. (2024)](#ref4), part of Amazon's ESCI benchmark for product search. 
+We demonstrate `qareen` on the Shopping Queries Image Dataset (SQID) [Al Ghossein et al. (2024)](#ref4), part of Amazon's ESCI benchmark for product search.
 
 ![Demo GIF placeholder]
 
@@ -36,6 +36,26 @@ pip install qareen
 **Note on GPU support:** The `gpu` extra is currently a placeholder and does not install any GPU-specific packages. For GPU support, you must install a CUDA-enabled PyTorch build from the [official PyTorch installation guide](https://pytorch.org/get-started/locally/) **before** installing `qareen`. The package will automatically check at runtime and warn if CUDA is not available. The base package will work with CPU-only PyTorch (installed automatically via dependencies).
 
 ## Usage
+
+### Building indexes with multiple models and alpha blends
+
+The provided `scripts/build_index.py` CLI orchestrates dataset indexing against one or more embedding
+models and alpha weights. Alpha controls the text/image weighting applied to blended embeddings; the
+script accepts multiple values (between 0 and 1) and produces a collection for every combination of
+model and alpha.
+
+```bash
+python scripts/build_index.py \
+  --dataset-name sqid \
+  --models google/siglip-base-patch16-224 openai/clip-vit-large-patch14 \
+  --alphas 0.2 0.5 0.8 \
+  --environment dev
+```
+
+Each run emits the sanitized collection name so you can track the resulting `{environment}_{dataset}_{model}_alpha-X`
+artifacts. CLI arguments fall back to the defaults defined in `qareen.config.Settings`, so you can
+also configure comma-delimited environment variables like `QAREEN_DEFAULT_EMBEDDING_MODELS` or
+`QAREEN_DEFAULT_ALPHA_VALUES`.
 
 See [docs/QUICKSTART.md](docs/QUICKSTART.md) for full steps; e.g., `./scripts/build_index.sh <data> && ./scripts/run_gradio.sh`
 
