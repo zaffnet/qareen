@@ -21,9 +21,15 @@ class HuggingFaceDatasetLoader(DatasetLoader):
         self._dataset = datasets.load_dataset(self.dataset_name, split="train")
 
         if self.sample_size > 0:
-            self._dataset = self._dataset.select(range(self.sample_size))
+            num_samples = min(self.sample_size, len(self._dataset))
+            self._dataset = self._dataset.select(range(num_samples))
 
-        items = [DatasetItem(text=row['text'], image=row['image']) for row in self._dataset]
+        items = []
+        for row in self._dataset:
+            if 'text' not in row or 'image' not in row:
+                raise ValueError(f"Dataset row missing required fields 'text' or 'image': {row.keys()}")
+            items.append(DatasetItem(text=row['text'], image=row['image']))
+
         return DatasetSchema(dataset_name=self.dataset_name, data=items)
 
     def validate_schema(self, data: Any) -> bool:

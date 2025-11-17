@@ -44,6 +44,14 @@ class TestHuggingFaceDatasetLoader(unittest.TestCase):
         dataset_schema = loader.load()
         self.assertEqual(len(dataset_schema.data), 5)
 
+    @patch('datasets.load_dataset')
+    def test_load_with_large_sample_size(self, mock_load_dataset):
+        mock_load_dataset.return_value = self.mock_hf_dataset
+        loader = HuggingFaceDatasetLoader(self.dataset_name, sample_size=100)
+
+        dataset_schema = loader.load()
+        self.assertEqual(len(dataset_schema.data), 3) # Should be the actual size of the dataset
+
     def test_get_dataset_name(self):
         loader = HuggingFaceDatasetLoader(self.dataset_name)
         self.assertEqual(loader.get_dataset_name(), self.dataset_name)

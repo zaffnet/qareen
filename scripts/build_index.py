@@ -46,7 +46,7 @@ def main():
         dataset_name=args.dataset_name,
         sample_size=args.sample_size if args.environment == "dev" else -1,
     )
-    loader.load()
+    dataset = loader.load()
 
     indexer = ChromaIndexer()
 
@@ -66,6 +66,7 @@ def main():
             # Here we would load the actual model and pass it to the indexer
             # For now, we'll just print a message
             print("Mocking the indexing process.")
+            # indexer.index(dataset, model, alpha)
 
 
 if __name__ == "__main__":
