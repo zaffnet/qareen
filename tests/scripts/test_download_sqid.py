@@ -1,7 +1,9 @@
 import unittest
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
+
+from qareen.dataset.schema import DatasetItem, DatasetSchema
 from scripts import download_sqid
-from qareen.dataset.schema import DatasetSchema, DatasetItem
+
 
 class TestDownloadSqidScript(unittest.TestCase):
 

@@ -1,8 +1,11 @@
-import unittest
-from pydantic import ValidationError
-from qareen.dataset.schema import DatasetItem, DatasetSchema
-from PIL import Image
 import os
+import unittest
+
+from PIL import Image
+from pydantic import ValidationError
+
+from qareen.dataset.schema import DatasetItem, DatasetSchema
+
 
 class TestSchema(unittest.TestCase):
 

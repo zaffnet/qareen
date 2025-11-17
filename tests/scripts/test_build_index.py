@@ -1,7 +1,9 @@
 import unittest
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
+
+from qareen.dataset.schema import DatasetItem, DatasetSchema
 from scripts import build_index
-from qareen.dataset.schema import DatasetSchema, DatasetItem
+
 
 class TestBuildIndexScript(unittest.TestCase):
 

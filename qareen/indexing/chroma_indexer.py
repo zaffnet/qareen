@@ -1,7 +1,9 @@
-from qareen.indexing.base import VectorStoreIndexer
-from qareen.dataset.schema import DatasetSchema
-from typing import Any
 import re
+from typing import Any
+
+from qareen.dataset.schema import DatasetSchema
+from qareen.indexing.base import VectorStoreIndexer
+
 
 class ChromaIndexer(VectorStoreIndexer):
 
@@ -12,7 +14,9 @@ class ChromaIndexer(VectorStoreIndexer):
         """Takes dataset and creates vector store."""
         raise NotImplementedError("index method not yet implemented")
 
-    def get_collection_name(self, dataset_name: str, model_id: str, alpha: float, environment: str) -> str:
+    def get_collection_name(
+        self, dataset_name: str, model_id: str, alpha: float, environment: str
+    ) -> str:
         """Generates collection name from dataset_name, environment, model_id, and alpha."""
         sanitized_dataset_name = re.sub(r'\s+', '_', dataset_name).lower()
         sanitized_model_id = model_id.replace("/", "-")

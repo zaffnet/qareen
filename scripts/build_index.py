@@ -1,10 +1,9 @@
 import argparse
+
 from qareen.config.settings import settings
 from qareen.dataset.hf_dataset import HuggingFaceDatasetLoader
 from qareen.indexing.chroma_indexer import ChromaIndexer
-from qareen.indexing.models import EmbeddingModel # This will be a mock for now
-import sys
-import os
+
 
 def main():
     parser = argparse.ArgumentParser(description="Build vector store indexes for a dataset.")
@@ -59,7 +58,10 @@ def main():
                 alpha=alpha,
                 environment=args.environment,
             )
-            print(f"Indexing with model '{model_id}' and alpha '{alpha}' into collection '{collection_name}'...")
+            print(
+                f"Indexing with model '{model_id}' and alpha '{alpha}' "
+                f"into collection '{collection_name}'..."
+            )
 
             # Here we would load the actual model and pass it to the indexer
             # For now, we'll just print a message
