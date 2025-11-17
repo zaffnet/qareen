@@ -58,11 +58,8 @@ class HuggingFaceDatasetLoader(DatasetLoader):
             )
         return self._dataset
 
-    def validate_schema(self) -> bool:
+    def validate_schema(self) -> None:
         """Validate dataset has required text and image fields.
-
-        Returns:
-            True if schema is valid
 
         Raises:
             ValueError: If required fields are missing
@@ -100,8 +97,6 @@ class HuggingFaceDatasetLoader(DatasetLoader):
             else:
                 raise ValueError("Dataset is empty")
         DatasetSchema(**sample)
-
-        return True
 
     def get_dataset_name(self) -> str:
         """Return dataset identifier.

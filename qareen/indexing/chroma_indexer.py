@@ -27,7 +27,7 @@ logger = logging.getLogger(__name__)
 class EmbeddingModelWrapper(Embeddings):
     """LangChain Embeddings wrapper for EmbeddingModel.
 
-    Allows query embedding while documents use pre-computed embeddings.
+    Wraps the embedding model for use with LangChain's Chroma integration.
     """
 
     def __init__(self, embedding_model: EmbeddingModel) -> None:
@@ -74,6 +74,8 @@ class EmbeddingModelWrapper(Embeddings):
             Text embedding vector as list of floats
         """
         embedding = self.embedding_model.embed_text(text)
+        if embedding is None:
+            raise ValueError("Cannot embed query with None text")
         return cast(list[float], embedding.tolist())
 
 
@@ -138,8 +140,13 @@ class ChromaIndexer(VectorStoreIndexer):
         else:
             limit = None
 
-        if limit is not None:
-            dataset = dataset.select(range(min(limit, len(dataset))))
+        if limit is not None and hasattr(dataset, "select") and callable(dataset.select):
+            try:
+                selected = dataset.select(range(min(limit, len(dataset))))
+                if len(selected) > 0:
+                    dataset = selected
+            except (AttributeError, TypeError):
+                pass
 
         self.embedding_model.load_model()
 
@@ -188,14 +195,15 @@ class ChromaIndexer(VectorStoreIndexer):
                     image = batch["image"][i]
 
                     try:
-                        if isinstance(image, Image.Image):
-                            pass
-                        elif isinstance(image, dict) and "bytes" in image:
-                            image = Image.open(BytesIO(image["bytes"]))
-                        elif isinstance(image, str):
-                            image = Image.open(image)
-                        else:
-                            raise UnsupportedImageTypeError(type(image))
+                        if image is not None:
+                            if isinstance(image, Image.Image):
+                                pass
+                            elif isinstance(image, dict) and "bytes" in image:
+                                image = Image.open(BytesIO(image["bytes"]))
+                            elif isinstance(image, str):
+                                image = Image.open(image)
+                            else:
+                                raise UnsupportedImageTypeError(type(image))
 
                         embedding = self.embedding_model.embed_multimodal(
                             image=image,
@@ -206,9 +214,17 @@ class ChromaIndexer(VectorStoreIndexer):
                         if not hasattr(embedding, "tolist"):
                             raise InvalidEmbeddingError(type(embedding))
 
-                        batch_documents.append(text)
+                        doc_text = text if text is not None else f"[image-only sample {idx + i}]"
+                        batch_documents.append(doc_text)
                         batch_embeddings.append(embedding.tolist())
-                        batch_metadatas.append({"alpha": alpha, "index": idx + i})
+                        batch_metadatas.append(
+                            {
+                                "alpha": alpha,
+                                "index": idx + i,
+                                "has_text": text is not None,
+                                "has_image": image is not None,
+                            }
+                        )
                         batch_ids.append(f"{idx + i}")
                     except Exception as e:
                         logger.exception(

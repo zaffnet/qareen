@@ -9,6 +9,8 @@ import sys
 from pathlib import Path
 from typing import Any
 
+from datasets import DatasetDict
+
 from qareen.config.settings import Settings
 from qareen.dataset.hf_dataset import HuggingFaceDatasetLoader
 
@@ -81,7 +83,14 @@ def main() -> int:
 
         if args.sample_size:
             logger.info(f"Sampling {args.sample_size} items")
-            dataset = dataset.select(range(min(args.sample_size, len(dataset))))
+            if isinstance(dataset, DatasetDict):
+                sampled_splits = {}
+                for split_name, split in dataset.items():
+                    sample_count = min(args.sample_size, len(split))
+                    sampled_splits[split_name] = split.select(range(sample_count))
+                dataset = DatasetDict(sampled_splits)
+            else:
+                dataset = dataset.select(range(min(args.sample_size, len(dataset))))
 
         logger.info("Validating schema...")
         loader.validate_schema()

@@ -41,43 +41,47 @@ class MockEmbeddingModel(EmbeddingModel):
         """Mark model as loaded."""
         self.model_loaded = True
 
-    def embed_text(self, text: str) -> np.ndarray:
+    def embed_text(self, text: str | None) -> np.ndarray | None:
         """Generate deterministic text embedding based on text hash.
 
         Args:
-            text: Input text
+            text: Input text or None
 
         Returns:
-            L2-normalized embedding vector
+            L2-normalized embedding vector or None if text is None
         """
+        if text is None:
+            return None
         np.random.seed(hash(text) % 2**32)
         embedding = np.random.randn(self.embedding_dim).astype(np.float32)
         return self.normalize_l2(embedding)
 
-    def embed_image(self, image: Image.Image | str | Path) -> np.ndarray:
+    def embed_image(self, image: Image.Image | str | Path | None) -> np.ndarray | None:
         """Generate deterministic image embedding.
 
         Args:
-            image: Input image
+            image: Input image or None
 
         Returns:
-            L2-normalized embedding vector
+            L2-normalized embedding vector or None if image is None
         """
+        if image is None:
+            return None
         np.random.seed(42)
         embedding = np.random.randn(self.embedding_dim).astype(np.float32)
         return self.normalize_l2(embedding)
 
     def embed_multimodal(
         self,
-        image: Image.Image | str | Path,
-        text: str,
+        image: Image.Image | str | Path | None,
+        text: str | None,
         alpha: float,
     ) -> np.ndarray:
         """Generate combined multimodal embedding.
 
         Args:
-            image: Input image
-            text: Input text
+            image: Input image or None
+            text: Input text or None
             alpha: Weight for image embedding
 
         Returns:
@@ -85,6 +89,13 @@ class MockEmbeddingModel(EmbeddingModel):
         """
         image_emb = self.embed_image(image)
         text_emb = self.embed_text(text)
+        if image_emb is None and text_emb is None:
+            raise ValueError("At least one modality must be present")
+        if image_emb is None:
+            assert text_emb is not None
+            return text_emb
+        if text_emb is None:
+            return image_emb
         combined = alpha * image_emb + (1 - alpha) * text_emb
         return self.normalize_l2(combined)
 
@@ -179,9 +190,9 @@ class MockDatasetLoader(DatasetLoader):
         """
         return "test_dataset"
 
-    def validate_schema(self) -> bool:
+    def validate_schema(self) -> None:
         """Validate schema."""
-        return True
+        pass
 
     def get_dataset_info(self) -> dict[str, object]:
         """Return dataset info."""

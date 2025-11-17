@@ -11,7 +11,7 @@ name = "qareen"
 version = "0.1.0"
 description = "A tool for analyzing and optimizing multimodal few-shot example selection"
 readme = "README.md"
-requires-python = ">=3.11"
+requires-python = ">=3.11,<3.13"
 license = {text = "MIT"}
 authors = [
     {name = "Zafarullah Mahmood", email = "zafar@zafarmahmood.com"}
@@ -21,7 +21,7 @@ maintainers = [
 ]
 dependencies = [
     "transformers~=4.57.0",
-    "numpy~=2.1.0",
+    "numpy~=1.26.0",
     "pandas~=2.2.0",
     "sentence-transformers~=5.1.0",
     "datasets~=2.0",

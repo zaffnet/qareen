@@ -21,34 +21,34 @@ class EmbeddingModel(ABC):
         pass
 
     @abstractmethod
-    def embed_text(self, text: str) -> np.ndarray:
+    def embed_text(self, text: str | None) -> np.ndarray | None:
         """Generate L2-normalized text embedding.
 
         Args:
-            text: Input text string
+            text: Input text string or None
 
         Returns:
-            L2-normalized text embedding vector
+            L2-normalized text embedding vector or None if text is None
         """
         pass
 
     @abstractmethod
-    def embed_image(self, image: Image.Image | str | Path) -> np.ndarray:
+    def embed_image(self, image: Image.Image | str | Path | None) -> np.ndarray | None:
         """Generate L2-normalized image embedding.
 
         Args:
-            image: PIL Image object or path to image file
+            image: PIL Image object, path to image file, or None
 
         Returns:
-            L2-normalized image embedding vector
+            L2-normalized image embedding vector or None if image is None
         """
         pass
 
     @abstractmethod
     def embed_multimodal(
         self,
-        image: Image.Image | str | Path,
-        text: str,
+        image: Image.Image | str | Path | None,
+        text: str | None,
         alpha: float,
     ) -> np.ndarray:
         """Generate combined multimodal embedding with alpha weighting.
@@ -56,13 +56,21 @@ class EmbeddingModel(ABC):
         Formula: V_combined = Normalize(alpha * V_image + (1 - alpha) * V_text)
         Both V_image and V_text are L2-normalized before combination.
 
+        Handles missing modalities:
+        - If image is None: returns text embedding
+        - If text is None: returns image embedding
+        - If both are None: raises ValueError
+
         Args:
-            image: PIL Image object or path to image file
-            text: Input text string
+            image: PIL Image object, path to image file, or None
+            text: Input text string or None
             alpha: Weight for image embedding (0.0-1.0)
 
         Returns:
             L2-normalized combined embedding vector
+
+        Raises:
+            ValueError: If both image and text are None
         """
         pass
 

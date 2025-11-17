@@ -64,15 +64,18 @@ class SIGLIPEmbeddingModel(EmbeddingModel):
                 logger.exception(error_msg)
                 raise RuntimeError(error_msg) from e
 
-    def embed_text(self, text: str) -> np.ndarray:
+    def embed_text(self, text: str | None) -> np.ndarray | None:
         """Generate L2-normalized text embedding.
 
         Args:
-            text: Input text string
+            text: Input text string or None
 
         Returns:
-            L2-normalized text embedding vector
+            L2-normalized text embedding vector or None if text is None
         """
+        if text is None:
+            return None
+
         if self.model is None or self.processor is None:
             self.load_model()
 
@@ -89,15 +92,18 @@ class SIGLIPEmbeddingModel(EmbeddingModel):
         embedding = outputs[0].cpu().numpy()
         return self.normalize_l2(embedding)
 
-    def embed_image(self, image: Image.Image | str | Path) -> np.ndarray:
+    def embed_image(self, image: Image.Image | str | Path | None) -> np.ndarray | None:
         """Generate L2-normalized image embedding.
 
         Args:
-            image: PIL Image object or path to image file
+            image: PIL Image object, path to image file, or None
 
         Returns:
-            L2-normalized image embedding vector
+            L2-normalized image embedding vector or None if image is None
         """
+        if image is None:
+            return None
+
         if self.model is None or self.processor is None:
             self.load_model()
 
@@ -120,8 +126,8 @@ class SIGLIPEmbeddingModel(EmbeddingModel):
 
     def embed_multimodal(
         self,
-        image: Image.Image | str | Path,
-        text: str,
+        image: Image.Image | str | Path | None,
+        text: str | None,
         alpha: float,
     ) -> np.ndarray:
         """Generate combined multimodal embedding with alpha weighting.
@@ -129,19 +135,37 @@ class SIGLIPEmbeddingModel(EmbeddingModel):
         Formula: V_combined = Normalize(alpha * V_image + (1 - alpha) * V_text)
         Both V_image and V_text are L2-normalized before combination.
 
+        Handles missing modalities:
+        - If image is None: returns text embedding
+        - If text is None: returns image embedding
+        - If both are None: raises ValueError
+
         Args:
-            image: PIL Image object or path to image file
-            text: Input text string
+            image: PIL Image object, path to image file, or None
+            text: Input text string or None
             alpha: Weight for image embedding (0.0-1.0)
 
         Returns:
             L2-normalized combined embedding vector
+
+        Raises:
+            ValueError: If both image and text are None
+            InvalidAlphaError: If alpha is not in range [0.0, 1.0]
         """
         if not (0.0 <= alpha <= 1.0):
             raise InvalidAlphaError(alpha)
 
         image_embedding = self.embed_image(image)
         text_embedding = self.embed_text(text)
+
+        if image_embedding is None and text_embedding is None:
+            raise ValueError("At least one modality must be present")
+
+        if image_embedding is None:
+            return text_embedding
+
+        if text_embedding is None:
+            return image_embedding
 
         combined = alpha * image_embedding + (1 - alpha) * text_embedding
         return self.normalize_l2(combined)
@@ -184,4 +208,8 @@ class SIGLIPEmbeddingModel(EmbeddingModel):
             )
 
         embedding = self.embed_text("dummy")
+        if embedding is None:
+            raise RuntimeError(
+                f"Failed to determine embedding dimension for model '{self.model_id}'"
+            )
         return len(embedding)

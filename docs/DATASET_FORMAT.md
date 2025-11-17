@@ -1,59 +1,37 @@
 # Dataset Format
 
-This document describes the expected format for datasets used with qareen.
-
 ## Required Fields
 
-All datasets must contain the following fields:
-
-- **`text`**: A non-empty string containing the text content (caption, description, etc.)
-- **`image`**: Either a PIL Image object or a path to an image file
+At least one of:
+- `text`: Non-empty string
+- `image`: PIL Image or path string
 
 ## Optional Fields
 
-- **`metadata`**: A dictionary containing additional metadata about the item
-- **`dataset_name`**: A string identifier for the dataset
+- `metadata`: Dict
+- `dataset_name`: String
 
-## Example Structure
-
-```python
-{
-    "text": "A cat sitting on a mat",
-    "image": "path/to/image.jpg",  # or PIL.Image.Image object
-    "metadata": {
-        "split": "train",
-        "category": "animals"
-    },
-    "dataset_name": "my_dataset"
-}
-```
-
-## HuggingFace Format
-
-When using HuggingFace datasets, the dataset should have `text` and `image` columns. The `image` column can be in HuggingFace's Image feature format.
+## Examples
 
 ```python
-from datasets import load_dataset
+# Dual-modality
+{"text": "caption", "image": "path.jpg"}
 
-dataset = load_dataset("your_dataset_name")
-# Dataset should have 'text' and 'image' columns
+# Text-only
+{"text": "caption", "image": None}
+
+# Image-only
+{"text": None, "image": "path.jpg"}
 ```
 
-## Validation Rules
+## Validation
 
-1. **Text**: Must be a non-empty string
-2. **Image**: Must be either:
-   - A PIL Image object
-   - A path string with valid image extension (.jpg, .jpeg, .png, .gif, .bmp, .webp, .tiff, .tif, .svg)
-3. **Dataset Name**: Must be sanitizable (lowercase alphanumeric with underscores)
+- Both `None` rejected
+- Text must be non-empty when provided
+- Image: PIL Image, valid path, or `None`
+- Valid extensions: .jpg, .jpeg, .png, .gif, .bmp, .webp, .tiff, .tif, .svg
 
-## Collection Naming
+## Embedding
 
-Dataset names are sanitized for use in collection names:
-- Converted to lowercase
-- Special characters replaced with underscores
-- Multiple underscores collapsed to single underscore
-- Leading/trailing underscores trimmed
-- Maximum length: 63 characters (ChromaDB limit)
-
-Example: `"Conceptual Captions"` → `"conceptual_captions"`
+- Dual-modality: alpha-weighted combination
+- Single-modality: alpha ignored

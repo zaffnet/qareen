@@ -81,14 +81,33 @@ class Settings(BaseSettings):
             return v.lower()
         return v
 
-    def ensure_directories(self) -> None:
+    def __init__(self, **kwargs):
+        """Initialize Settings with internal state."""
+        super().__init__(**kwargs)
+        self._dirs_ensured: bool = False
+
+    def ensure_directories(self) -> bool:
         """Create filesystem directories if they do not exist.
 
-        Side effect: Creates data_dir and chroma_db_dir directories on the filesystem
-        with parents=True and exist_ok=True.
+        Handles race conditions where directories might be created concurrently.
+        Returns True if directories were ensured (newly created or already existed).
+
+        Returns:
+            bool: True if directories were successfully ensured, False otherwise.
         """
-        self.data_dir.mkdir(parents=True, exist_ok=True)
-        self.chroma_db_dir.mkdir(parents=True, exist_ok=True)
+        if self._dirs_ensured:
+            return True
+
+        try:
+            self.data_dir.mkdir(parents=True, exist_ok=True)
+            self.chroma_db_dir.mkdir(parents=True, exist_ok=True)
+            self._dirs_ensured = True
+            return True
+        except (FileExistsError, OSError):
+            if self.data_dir.exists() and self.chroma_db_dir.exists():
+                self._dirs_ensured = True
+                return True
+            raise
 
     @field_validator("embedding_models")
     @classmethod

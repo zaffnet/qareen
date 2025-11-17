@@ -6,40 +6,46 @@ from pathlib import Path
 from typing import Any, ClassVar
 
 from PIL import Image
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 
 class DatasetItem(BaseModel):
-    """Schema for a single dataset item with text and image.
+    """Schema for a single dataset item with text and/or image.
 
     Attributes:
-        text: Text content (caption, description, etc.)
-        image: Image (PIL Image object or path to image file)
+        text: Text content (caption, description, etc.) - optional
+        image: Image (PIL Image object or path to image file) - optional
         metadata: Optional metadata dictionary
         dataset_name: Optional dataset identifier
+
+    Note:
+        At least one of text or image must be provided.
     """
 
     INVALID_IMAGE_EXTENSION: ClassVar[str] = "Image path must have valid extension: {path}"
     INVALID_IMAGE_TYPE: ClassVar[str] = "Image must be PIL Image or path string"
     TEXT_EMPTY_ERROR: ClassVar[str] = "Text must be a non-empty string"
+    BOTH_NONE_ERROR: ClassVar[str] = "At least one modality (text or image) must be provided"
 
-    text: str
-    image: str | Path | Image.Image
+    text: str | None = None
+    image: str | Path | Image.Image | None = None
     metadata: dict[str, Any] | None = Field(default=None)
     dataset_name: str | None = Field(default=None)
 
     @field_validator("text")
     @classmethod
-    def validate_text(cls, v: str) -> str:
-        """Validate text is non-empty."""
-        if not v or not v.strip():
+    def validate_text(cls, v: str | None) -> str | None:
+        """Validate text is non-empty if provided."""
+        if v is not None and (not v or not v.strip()):
             raise ValueError(cls.TEXT_EMPTY_ERROR)
         return v
 
     @field_validator("image")
     @classmethod
-    def validate_image(cls, v: str | Path | Image.Image) -> str | Path | Image.Image:
-        """Validate image is PIL Image or valid path format."""
+    def validate_image(cls, v: str | Path | Image.Image | None) -> str | Path | Image.Image | None:
+        """Validate image is PIL Image or valid path format if provided."""
+        if v is None:
+            return None
         if isinstance(v, (str, Path)):
             path = Path(v)
             if path.suffix.lower() not in {
@@ -57,6 +63,13 @@ class DatasetItem(BaseModel):
         elif not isinstance(v, Image.Image):
             raise TypeError(cls.INVALID_IMAGE_TYPE)
         return v
+
+    @model_validator(mode="after")
+    def validate_at_least_one_modality(self) -> DatasetItem:
+        """Validate that at least one of text or image is provided."""
+        if self.text is None and self.image is None:
+            raise ValueError(self.BOTH_NONE_ERROR)
+        return self
 
     model_config = {"arbitrary_types_allowed": True}
 

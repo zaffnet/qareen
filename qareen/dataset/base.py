@@ -23,11 +23,8 @@ class DatasetLoader(ABC):
         pass
 
     @abstractmethod
-    def validate_schema(self) -> bool:
+    def validate_schema(self) -> None:
         """Validate dataset has required fields (text, image).
-
-        Returns:
-            True if schema is valid
 
         Raises:
             ValueError: If required fields are missing
