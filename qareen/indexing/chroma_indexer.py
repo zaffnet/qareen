@@ -8,6 +8,7 @@ from io import BytesIO
 from typing import cast
 
 import chromadb
+from chromadb.errors import NotFoundError
 from langchain_chroma import Chroma
 from langchain_core.embeddings import Embeddings
 from langchain_core.vectorstores import VectorStore
@@ -157,7 +158,7 @@ class ChromaIndexer(VectorStoreIndexer):
             try:
                 chroma_client.delete_collection(name=collection_name)
                 logger.info(f"Successfully deleted collection: {collection_name}")
-            except ValueError as e:
+            except (ValueError, NotFoundError) as e:
                 logger.info(f"Collection {collection_name} did not exist or deletion failed: {e}")
 
             vectorstore = Chroma(
