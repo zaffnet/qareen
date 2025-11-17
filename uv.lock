@@ -3330,12 +3330,6 @@ dev = [
     { name = "ruff" },
 ]
 
-[package.dev-dependencies]
-dev = [
-    { name = "pytest" },
-    { name = "ruff" },
-]
-
 [package.metadata]
 requires-dist = [
     { name = "datasets" },
@@ -3355,12 +3349,6 @@ requires-dist = [
     { name = "transformers", specifier = "~=4.57.0" },
 ]
 provides-extras = ["gpu", "dev"]
-
-[package.metadata.requires-dev]
-dev = [
-    { name = "pytest", specifier = ">=8.0.2" },
-    { name = "ruff", specifier = ">=0.14.5" },
-]
 
 [[package]]
 name = "referencing"
