@@ -8,7 +8,6 @@ from pathlib import Path
 from qareen.config import Settings
 from qareen.dataset.hf_dataset import HuggingFaceDatasetLoader
 
-
 DEFAULT_DATASET_ID = "zafar/sqid"
 
 

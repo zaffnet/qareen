@@ -27,7 +27,12 @@ def test_dataset_schema_contract() -> None:
     }
 
     item = DatasetItem(text="caption", image="img.png")
-    assert item.model_dump() == {"text": "caption", "image": "img.png", "metadata": None, "dataset_name": None}
+    assert item.model_dump() == {
+        "text": "caption",
+        "image": "img.png",
+        "metadata": None,
+        "dataset_name": None,
+    }
 
 
 @pytest.mark.parametrize("payload", INVALID_PAYLOADS)

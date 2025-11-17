@@ -105,7 +105,7 @@ __all__ = ["Settings"]
 class LenientEnvSettingsSource(EnvSettingsSource):
     """Env source that falls back to raw strings when JSON decoding fails."""
 
-    def decode_complex_value(self, field_name, field, value):  # type: ignore[override]
+    def decode_complex_value(self, field_name, field, value):
         try:
             return super().decode_complex_value(field_name, field, value)
         except json.JSONDecodeError:

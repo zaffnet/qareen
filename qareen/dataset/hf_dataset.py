@@ -31,7 +31,7 @@ class HuggingFaceDatasetLoader(DatasetLoader):
         elif isinstance(dataset, (IterableDataset, Dataset)):
             raw_records = dataset
         else:
-            raw_records = dataset  # type: ignore[assignment]
+            raw_records = dataset
         return self.validate_schema(raw_records)
 
     def validate_schema(self, records: Iterable[dict[str, Any]]) -> Sequence[DatasetItem]:
