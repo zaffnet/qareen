@@ -10,9 +10,7 @@ from langchain_core.vectorstores import VectorStore
 from qareen.indexing.base import VectorStoreIndexer
 from qareen.indexing.chroma_indexer import ChromaIndexer
 
-REQUIRED_INDEXER_METHODS = frozenset(
-    {"index", "get_collection_name", "create_vectorstore", "get_embeddings"}
-)
+REQUIRED_INDEXER_METHODS = frozenset({"index", "create_vectorstore", "get_embeddings"})
 
 
 def test_vector_store_indexer_contract_and_naming() -> None:

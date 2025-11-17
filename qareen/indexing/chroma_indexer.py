@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import logging
 import re
+from typing import cast
 
 import chromadb
 from langchain_chroma import Chroma
@@ -14,7 +16,10 @@ from tqdm import tqdm
 from qareen.config.settings import Settings
 from qareen.dataset.base import DatasetLoader
 from qareen.indexing.base import VectorStoreIndexer
+from qareen.indexing.exceptions import InvalidEmbeddingError, UnsupportedImageTypeError
 from qareen.indexing.models import EmbeddingModel
+
+logger = logging.getLogger(__name__)
 
 
 class EmbeddingModelWrapper(Embeddings):
@@ -43,14 +48,18 @@ class EmbeddingModelWrapper(Embeddings):
 
         Returns:
             List of dummy embedding vectors (will be ignored when embeddings parameter is used)
+
+        Raises:
+            RuntimeError: If embedding dimension cannot be determined
         """
         if not texts:
             return []
         if self._embedding_dim is None:
             try:
-                self._embedding_dim = len(self.embedding_model.embed_text("dummy"))
-            except Exception:
-                self._embedding_dim = 0
+                self._embedding_dim = self.embedding_model.embedding_dim
+            except (AttributeError, RuntimeError, TypeError) as e:
+                logger.exception("Failed to get embedding dimension")
+                raise RuntimeError("Cannot determine embedding dimension") from e
         return [[0.0] * self._embedding_dim for _ in texts]
 
     def embed_query(self, text: str) -> list[float]:
@@ -63,7 +72,7 @@ class EmbeddingModelWrapper(Embeddings):
             Text embedding vector as list of floats
         """
         embedding = self.embedding_model.embed_text(text)
-        return list(embedding.tolist())
+        return cast(list[float], embedding.tolist())
 
 
 class ChromaIndexer(VectorStoreIndexer):
@@ -143,10 +152,12 @@ class ChromaIndexer(VectorStoreIndexer):
                 environment=environment,
             )
 
-            from contextlib import suppress
-
-            with suppress(ValueError):
+            logger.info(f"Attempting to delete collection: {collection_name}")
+            try:
                 chroma_client.delete_collection(name=collection_name)
+                logger.info(f"Successfully deleted collection: {collection_name}")
+            except ValueError as e:
+                logger.info(f"Collection {collection_name} did not exist or deletion failed: {e}")
 
             vectorstore = Chroma(
                 client=chroma_client,
@@ -174,23 +185,36 @@ class ChromaIndexer(VectorStoreIndexer):
                     text = batch["text"][i]
                     image = batch["image"][i]
 
-                    if isinstance(image, dict) and "bytes" in image:
-                        from io import BytesIO
+                    try:
+                        if isinstance(image, Image.Image):
+                            pass
+                        elif isinstance(image, dict) and "bytes" in image:
+                            from io import BytesIO
 
-                        image = Image.open(BytesIO(image["bytes"]))
-                    elif isinstance(image, str):
-                        image = Image.open(image)
+                            image = Image.open(BytesIO(image["bytes"]))
+                        elif isinstance(image, str):
+                            image = Image.open(image)
+                        else:
+                            raise UnsupportedImageTypeError(type(image))
 
-                    embedding = self.embedding_model.embed_multimodal(
-                        image=image,
-                        text=text,
-                        alpha=alpha,
-                    )
+                        embedding = self.embedding_model.embed_multimodal(
+                            image=image,
+                            text=text,
+                            alpha=alpha,
+                        )
 
-                    batch_documents.append(text)
-                    batch_embeddings.append(embedding.tolist())
-                    batch_metadatas.append({"alpha": alpha, "index": idx + i})
-                    batch_ids.append(f"{idx + i}")
+                        if not hasattr(embedding, "tolist"):
+                            raise InvalidEmbeddingError(type(embedding))
+
+                        batch_documents.append(text)
+                        batch_embeddings.append(embedding.tolist())
+                        batch_metadatas.append({"alpha": alpha, "index": idx + i})
+                        batch_ids.append(f"{idx + i}")
+                    except Exception as e:
+                        logger.exception(
+                            f"Failed to process item {idx + i} (alpha={alpha:.2f})",
+                        )
+                        raise RuntimeError(f"Embedding failed for item {idx + i}") from e
 
                 vectorstore.add_texts(
                     texts=batch_documents,
@@ -244,26 +268,6 @@ class ChromaIndexer(VectorStoreIndexer):
         """
         return EmbeddingModelWrapper(self.embedding_model)
 
-    def get_collection_name(
-        self,
-        dataset_name: str,
-        model_id: str,
-        alpha: float | None = None,
-        environment: str = "dev",
-    ) -> str:
-        """Generate sanitized collection name using base class implementation.
-
-        Args:
-            dataset_name: Dataset identifier
-            model_id: Model identifier
-            alpha: Alpha value (optional)
-            environment: Environment (dev/staging/prod)
-
-        Returns:
-            Sanitized collection name
-        """
-        return super().get_collection_name(dataset_name, model_id, alpha, environment)
-
     def list_available_alphas(
         self,
         dataset_name: str,
@@ -293,7 +297,7 @@ class ChromaIndexer(VectorStoreIndexer):
 
         for collection in collections:
             if collection.name.startswith(prefix):
-                match = re.search(r"alpha(\d+\.\d+)", collection.name)
+                match = re.search(r"alpha(\d+(?:\.\d+)?)", collection.name)
                 if match:
                     alphas.append(float(match.group(1)))
 

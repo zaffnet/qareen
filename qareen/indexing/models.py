@@ -17,7 +17,7 @@ class EmbeddingModel(ABC):
 
     @abstractmethod
     def load_model(self) -> None:
-        """Load HuggingFace model with proper caching and device placement."""
+        """Load the embedding model with proper caching and device placement."""
         pass
 
     @abstractmethod
@@ -75,6 +75,16 @@ class EmbeddingModel(ABC):
         """
         pass
 
+    @property
+    @abstractmethod
+    def embedding_dim(self) -> int:
+        """Return the embedding dimension.
+
+        Returns:
+            Embedding dimension as integer
+        """
+        pass
+
     @staticmethod
     def normalize_l2(vector: np.ndarray) -> np.ndarray:
         """L2-normalize a vector.
@@ -84,8 +94,11 @@ class EmbeddingModel(ABC):
 
         Returns:
             L2-normalized vector
+
+        Raises:
+            ValueError: If the input vector has zero norm (zero vector)
         """
         norm: float = float(np.linalg.norm(vector))
         if norm == 0:
-            return vector
-        return np.array(vector / norm)
+            raise ValueError("cannot L2-normalize zero vector")
+        return vector / norm

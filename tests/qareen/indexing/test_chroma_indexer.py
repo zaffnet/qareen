@@ -25,8 +25,17 @@ class MockEmbeddingModel(EmbeddingModel):
         Args:
             embedding_dim: Embedding dimension
         """
-        self.embedding_dim = embedding_dim
+        self._embedding_dim = embedding_dim
         self.model_loaded = False
+
+    @property
+    def embedding_dim(self) -> int:
+        """Return embedding dimension.
+
+        Returns:
+            Embedding dimension
+        """
+        return self._embedding_dim
 
     def load_model(self) -> None:
         """Mark model as loaded."""

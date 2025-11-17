@@ -21,6 +21,7 @@ class DatasetItem(BaseModel):
 
     INVALID_IMAGE_EXTENSION: ClassVar[str] = "Image path must have valid extension: {path}"
     INVALID_IMAGE_TYPE: ClassVar[str] = "Image must be PIL Image or path string"
+    TEXT_EMPTY_ERROR: ClassVar[str] = "Text must be a non-empty string"
 
     text: str
     image: str | Path | Image.Image
@@ -32,7 +33,7 @@ class DatasetItem(BaseModel):
     def validate_text(cls, v: str) -> str:
         """Validate text is non-empty."""
         if not v or not v.strip():
-            raise ValueError("Text must be a non-empty string")
+            raise ValueError(cls.TEXT_EMPTY_ERROR)
         return v
 
     @field_validator("image")

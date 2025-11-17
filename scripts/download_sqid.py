@@ -45,12 +45,6 @@ def build_parser() -> argparse.ArgumentParser:
     )
 
     parser.add_argument(
-        "--validate",
-        action="store_true",
-        help="Validate dataset schema",
-    )
-
-    parser.add_argument(
         "--sample-size",
         type=int,
         default=None,
@@ -89,19 +83,25 @@ def main() -> int:
             logger.info(f"Sampling {args.sample_size} items")
             dataset = dataset.select(range(min(args.sample_size, len(dataset))))
 
-        if args.validate:
-            logger.info("Validating schema...")
-            loader.validate_schema()
-            logger.info("Schema validation passed")
+        logger.info("Validating schema...")
+        loader.validate_schema()
 
         info: dict[str, Any]
         if isinstance(dataset, dict):
-            info = {
-                "dataset_name": loader.get_dataset_name(),
-                "splits": list(dataset.keys()),
-                "num_rows": {k: len(v) for k, v in dataset.items()},
-                "features": list(next(iter(dataset.values())).features.keys()),
-            }
+            if dataset:
+                info = {
+                    "dataset_name": loader.get_dataset_name(),
+                    "splits": list(dataset.keys()),
+                    "num_rows": {k: len(v) for k, v in dataset.items()},
+                    "features": list(next(iter(dataset.values())).features.keys()),
+                }
+            else:
+                info = {
+                    "dataset_name": loader.get_dataset_name(),
+                    "splits": [],
+                    "num_rows": {},
+                    "features": [],
+                }
         else:
             info = {
                 "dataset_name": loader.get_dataset_name(),

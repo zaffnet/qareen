@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import sys
 import tempfile
 from pathlib import Path
 from unittest.mock import MagicMock, patch
@@ -39,10 +40,15 @@ def test_download_sqid_sample_size_logs_correct_row_count(caplog: pytest.LogCapt
             with patch("scripts.download_sqid.Settings") as mock_settings:
                 mock_settings.return_value.data_dir = output_dir
 
-                with patch("sys.argv", ["download_sqid.py", "--sample-size", "5"]):
+                with patch.object(sys, "argv", ["download_sqid.py", "--sample-size", "5"]):
                     result = main()
 
                 assert result == 0
+                mock_loader.load.assert_called()
+                mock_loader.validate_schema.assert_called()
+                mock_loader.get_dataset_name.assert_called()
+                mock_loader_class.assert_called()
+                mock_settings.assert_called()
 
         log_messages = [record.message for record in caplog.records]
         info_log = [msg for msg in log_messages if "Dataset info:" in msg]

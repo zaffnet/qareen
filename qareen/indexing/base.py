@@ -49,7 +49,6 @@ class VectorStoreIndexer(ABC):
         """
         pass
 
-    @abstractmethod
     def get_collection_name(
         self,
         dataset_name: str,

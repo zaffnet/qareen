@@ -22,6 +22,10 @@ class HuggingFaceDatasetLoader(DatasetLoader):
         dataset: Loaded dataset instance
     """
 
+    MISSING_FIELDS_ERROR = (
+        "Dataset missing required fields: {missing_fields}. Available fields: {available_fields}"
+    )
+
     def __init__(
         self,
         dataset_name: str,
@@ -75,16 +79,27 @@ class HuggingFaceDatasetLoader(DatasetLoader):
 
         if missing_fields:
             raise ValueError(
-                f"Dataset missing required fields: {missing_fields}. "
-                f"Available fields: {set(features.keys())}"
+                self.MISSING_FIELDS_ERROR.format(
+                    missing_fields=missing_fields,
+                    available_fields=set(features.keys()),
+                )
             )
 
-        if len(dataset) > 0:
-            if not isinstance(dataset, dict):
+        if isinstance(dataset, dict):
+            non_empty_split = None
+            for split in dataset.values():
+                if len(split) > 0:
+                    non_empty_split = split
+                    break
+            if non_empty_split is None:
+                raise ValueError("Dataset contains no non-empty splits")
+            sample = non_empty_split[0]
+        else:
+            if len(dataset) > 0:
                 sample = dataset[0]
             else:
-                sample = next(iter(dataset.values()))[0]
-            DatasetSchema(**sample)
+                raise ValueError("Dataset is empty")
+        DatasetSchema(**sample)
 
         return True
 

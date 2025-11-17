@@ -25,13 +25,13 @@ dependencies = [
     "numpy~=1.26.0",
     "pandas~=2.2.0",
     "sentence-transformers~=5.1.0",
-    "datasets>=2.0.0",
-    "langchain>=0.1.0",
-    "langchain-chroma>=0.1.0",
-    "pydantic>=2.0.0",
-    "pydantic-settings>=2.0.0",
-    "pillow>=10.0.0",
-    "tqdm>=4.65.0",
+    "datasets~=2.0",
+    "langchain~=0.1",
+    "langchain-chroma~=0.1",
+    "pydantic~=2.0",
+    "pydantic-settings~=2.0",
+    "pillow~=10.0",
+    "tqdm~=4.65",
 ]
 
 [project.optional-dependencies]

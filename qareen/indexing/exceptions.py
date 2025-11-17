@@ -91,3 +91,45 @@ class InvalidCollectionNameError(Exception):
             f"Collection names must match pattern ^[a-z0-9_]+$"
         )
         super().__init__(message)
+
+
+class InvalidAlphaError(Exception):
+    """Raised when alpha value is outside the valid range [0.0, 1.0].
+
+    Attributes:
+        alpha: Invalid alpha value
+    """
+
+    def __init__(self, alpha: float) -> None:
+        self.alpha = alpha
+        message = f"Alpha must be in range [0.0, 1.0], got {alpha}"
+        super().__init__(message)
+
+
+class UnsupportedImageTypeError(ValueError):
+    """Raised when image type is not supported.
+
+    Attributes:
+        image_type: Type of the unsupported image object
+    """
+
+    def __init__(self, image_type: type) -> None:
+        self.image_type = image_type
+        message = (
+            f"Unsupported image type: {image_type}. "
+            "Expected PIL.Image, dict with 'bytes', or str path."
+        )
+        super().__init__(message)
+
+
+class InvalidEmbeddingError(TypeError):
+    """Raised when embedding object does not have required tolist() method.
+
+    Attributes:
+        embedding_type: Type of the invalid embedding object
+    """
+
+    def __init__(self, embedding_type: type) -> None:
+        self.embedding_type = embedding_type
+        message = f"Embedding must have tolist() method, got {embedding_type}"
+        super().__init__(message)

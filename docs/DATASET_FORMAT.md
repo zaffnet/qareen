@@ -44,7 +44,7 @@ dataset = load_dataset("your_dataset_name")
 1. **Text**: Must be a non-empty string
 2. **Image**: Must be either:
    - A PIL Image object
-   - A path string with valid image extension (.jpg, .jpeg, .png, .gif, .bmp, .webp)
+   - A path string with valid image extension (.jpg, .jpeg, .png, .gif, .bmp, .webp, .tiff, .tif, .svg)
 3. **Dataset Name**: Must be sanitizable (lowercase alphanumeric with underscores)
 
 ## Collection Naming

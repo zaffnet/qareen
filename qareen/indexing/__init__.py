@@ -5,7 +5,10 @@ from qareen.indexing.chroma_indexer import ChromaIndexer
 from qareen.indexing.exceptions import (
     AlphaNotAvailableError,
     CollectionNameTooLongError,
+    InvalidAlphaError,
     InvalidCollectionNameError,
+    InvalidEmbeddingError,
+    UnsupportedImageTypeError,
 )
 from qareen.indexing.models import EmbeddingModel
 from qareen.indexing.siglip_model import SIGLIPEmbeddingModel
@@ -15,7 +18,10 @@ __all__ = [
     "ChromaIndexer",
     "CollectionNameTooLongError",
     "EmbeddingModel",
+    "InvalidAlphaError",
     "InvalidCollectionNameError",
+    "InvalidEmbeddingError",
     "SIGLIPEmbeddingModel",
+    "UnsupportedImageTypeError",
     "VectorStoreIndexer",
 ]

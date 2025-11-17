@@ -87,8 +87,7 @@ def main() -> int:
     args = parser.parse_args()
 
     try:
-        settings = Settings()
-        settings.environment = args.environment.lower()
+        settings = Settings(environment=args.environment.lower())
         settings.ensure_directories()
 
         models = args.models or settings.default_embedding_models

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import re
 from pathlib import Path
 
@@ -10,7 +11,10 @@ import torch
 from PIL import Image
 from transformers import AutoModel, AutoProcessor
 
+from qareen.indexing.exceptions import InvalidAlphaError
 from qareen.indexing.models import EmbeddingModel
+
+logger = logging.getLogger(__name__)
 
 
 class SIGLIPEmbeddingModel(EmbeddingModel):
@@ -24,6 +28,8 @@ class SIGLIPEmbeddingModel(EmbeddingModel):
         model: Loaded model instance
         processor: Loaded processor instance
     """
+
+    IMAGE_TYPE_ERROR: str = "Image must be PIL Image or path string"
 
     def __init__(self, model_id: str = "google/siglip-base-patch16-224") -> None:
         """Initialize SIGLIP model.
@@ -39,12 +45,24 @@ class SIGLIPEmbeddingModel(EmbeddingModel):
     def load_model(self) -> None:
         """Load HuggingFace SIGLIP model and processor."""
         if self.model is None:
-            self.model = AutoModel.from_pretrained(self.model_id)
-            self.model.to(self.device)
-            self.model.eval()
+            try:
+                self.model = AutoModel.from_pretrained(self.model_id)
+                self.model.to(self.device)
+                self.model.eval()
+            except Exception as e:
+                error_msg = (
+                    f"Failed to load SIGLIP model '{self.model_id}' on device '{self.device}': {e}"
+                )
+                logger.exception(error_msg)
+                raise RuntimeError(error_msg) from e
 
         if self.processor is None:
-            self.processor = AutoProcessor.from_pretrained(self.model_id)
+            try:
+                self.processor = AutoProcessor.from_pretrained(self.model_id)
+            except Exception as e:
+                error_msg = f"Failed to load SIGLIP processor for model '{self.model_id}': {e}"
+                logger.exception(error_msg)
+                raise RuntimeError(error_msg) from e
 
     def embed_text(self, text: str) -> np.ndarray:
         """Generate L2-normalized text embedding.
@@ -87,7 +105,7 @@ class SIGLIPEmbeddingModel(EmbeddingModel):
             image = Image.open(image)
 
         if not isinstance(image, Image.Image):
-            raise TypeError("Image must be PIL Image or path string")
+            raise TypeError(self.IMAGE_TYPE_ERROR)
 
         inputs = self.processor(  # type: ignore[misc]
             images=image,
@@ -120,7 +138,7 @@ class SIGLIPEmbeddingModel(EmbeddingModel):
             L2-normalized combined embedding vector
         """
         if not (0.0 <= alpha <= 1.0):
-            raise ValueError(f"Alpha must be in range [0.0, 1.0], got {alpha}")
+            raise InvalidAlphaError(alpha)
 
         image_embedding = self.embed_image(image)
         text_embedding = self.embed_text(text)
@@ -137,3 +155,33 @@ class SIGLIPEmbeddingModel(EmbeddingModel):
         normalized = self.model_id.lower()
         normalized = re.sub(r"[^a-z0-9_\-/]+", "_", normalized)
         return normalized
+
+    @property
+    def embedding_dim(self) -> int:
+        """Return the embedding dimension.
+
+        Returns:
+            Embedding dimension as integer
+        """
+        if self.model is None:
+            self.load_model()
+
+        try:
+            config = self.model.config  # type: ignore[union-attr]
+            if hasattr(config, "projection_dim") and config.projection_dim is not None:
+                return int(config.projection_dim)
+            if hasattr(config, "text_config") and hasattr(config.text_config, "hidden_size"):
+                return int(config.text_config.hidden_size)
+        except AttributeError as e:
+            config_state = (
+                f"config={getattr(self.model, 'config', None)}, "
+                f"has_config={hasattr(self.model, 'config')}"
+            )
+            logger.warning(
+                f"Failed to infer embedding_dim from config for model '{self.model_id}'. "
+                f"{config_state}. AttributeError: {e}. "
+                f"Falling back to sampling with embed_text('dummy')."
+            )
+
+        embedding = self.embed_text("dummy")
+        return len(embedding)
