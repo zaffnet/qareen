@@ -11,6 +11,8 @@ permissions:
 
 jobs:
   code-review:
+    env:
+      BLOCKING_REVIEW: ${{ vars.BLOCKING_REVIEW || 'false' }}
     runs-on: ubuntu-latest # Skip automated code review for draft PRs
     if: github.event.pull_request.draft == false
     steps:
@@ -20,9 +22,27 @@ jobs:
           fetch-depth: 0
           ref: ${{ github.event.pull_request.head.sha }}
 
+      - name: Cache Cursor CLI
+        id: cache-cursor
+        uses: actions/cache@v4
+        with:
+          path: ~/.cursor
+          key: cursor-cli-${{ runner.os }}-v1
+
       - name: Install Cursor CLI
+        if: steps.cache-cursor.outputs.cache-hit != 'true'
         run: |
-          curl https://cursor.com/install -fsS | bash
+          curl -fsS https://cursor.com/install -o /tmp/cursor-install.sh
+          if [ ! -s /tmp/cursor-install.sh ]; then
+            echo "Error: Downloaded installer is empty"
+            exit 1
+          fi
+          chmod +x /tmp/cursor-install.sh
+          bash /tmp/cursor-install.sh
+          rm /tmp/cursor-install.sh
+
+      - name: Add Cursor to PATH
+        run: |
           echo "$HOME/.cursor/bin" >> $GITHUB_PATH
 
       - name: Configure git identity
@@ -35,9 +55,9 @@ jobs:
           CURSOR_API_KEY: ${{ secrets.CURSOR_API_KEY }}
           MODEL: gpt-5
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          BLOCKING_REVIEW: ${{ vars.BLOCKING_REVIEW || 'false' }}
         run: |
-          cursor-agent --force --model "$MODEL" --output-format=text --print 'You are operating in a GitHub Actions runner performing automated code review. The gh CLI is available and authenticated via GH_TOKEN. You may comment on pull requests.
+          cursor-agent --force --model "$MODEL" --output-format=text --print <<PROMPT_END
+          You are operating in a GitHub Actions runner performing automated code review. The gh CLI is available and authenticated via GH_TOKEN. You may comment on pull requests.
 
           Context:
           - Repo: ${{ github.repository }}
@@ -94,7 +114,7 @@ jobs:
           - If BLOCKING_REVIEW is true and any 🚨 or 🔒 issues were posted: echo "CRITICAL_ISSUES_FOUND=true" >> $GITHUB_ENV
           - Otherwise: echo "CRITICAL_ISSUES_FOUND=false" >> $GITHUB_ENV
           - Always set CRITICAL_ISSUES_FOUND at the end
-          '
+          PROMPT_END
 
       - name: Check blocking review results
         if: env.BLOCKING_REVIEW == 'true'

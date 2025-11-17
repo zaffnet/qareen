@@ -6,7 +6,7 @@ import argparse
 import logging
 import random
 import sys
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 
 from datasets import load_from_disk
@@ -163,11 +163,11 @@ def main() -> int:
         logger.info(f"Generating markdown visualization at: {args.output}")
         args.output.parent.mkdir(parents=True, exist_ok=True)
 
-        with open(args.output, "w") as f:
+        with open(args.output, "w", encoding="utf-8") as f:
             f.write("# Similarity Search Visualization\n\n")
 
             f.write("## Reproducibility Information\n\n")
-            f.write(f"**Generated**: {datetime.now().isoformat()}\n\n")
+            f.write(f"**Generated**: {datetime.now(UTC).isoformat()}\n\n")
             f.write("**Command**:\n```bash\n")
             cmd_parts = [
                 "uv run python scripts/visualize_retrieval.py",
@@ -271,7 +271,7 @@ def main() -> int:
         logger.info(f"View the file with: open {args.output}")
 
     except Exception as e:
-        logger.error(f"Error generating visualization: {e}", exc_info=True)
+        logger.exception(f"Error generating visualization: {e}")
         return 1
     else:
         return 0

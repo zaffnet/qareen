@@ -70,7 +70,7 @@ class LocalDatasetLoader(DatasetLoader):
         dataset = self.load()
 
         if isinstance(dataset, dict):
-            if not dataset or len(dataset) == 0:
+            if not dataset:
                 features: list[str] = []
             else:
                 features = list(next(iter(dataset.values())).features.keys())

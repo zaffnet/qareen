@@ -38,7 +38,7 @@ def _positive_float(value: str) -> float:
     except ValueError as err:
         raise argparse.ArgumentTypeError(f"'{value}' is not a valid float") from err
     if fvalue <= 0:
-        raise argparse.ArgumentTypeError(f"timeout must be > 0, got {fvalue}")
+        raise argparse.ArgumentTypeError(f"'{value}' must be > 0, got {fvalue}")
     return fvalue
 
 
@@ -123,42 +123,43 @@ def main() -> int:
             allowed_methods=["GET"],
         )
         adapter = HTTPAdapter(max_retries=retry_strategy, pool_connections=10, pool_maxsize=20)
-        session = requests.Session()
-        session.mount("http://", adapter)
-        session.mount("https://", adapter)
 
         logger.info("Downloading images...")
         downloaded_images = []
         failed_downloads = 0
 
-        for idx in tqdm(range(len(dataset)), desc="Downloading images"):
-            sample = dataset[idx]
-            image_url = sample.get("image")
-            product_id = sample.get("metadata", {}).get("product_id", f"unknown_{idx}")
+        with requests.Session() as session:
+            session.mount("http://", adapter)
+            session.mount("https://", adapter)
 
-            if not image_url:
-                logger.debug(f"No image URL for index {idx}, product_id {product_id}")
-                failed_downloads += 1
-                continue
+            for idx in tqdm(range(len(dataset)), desc="Downloading images"):
+                sample = dataset[idx]
+                image_url = sample.get("image")
+                product_id = sample.get("metadata", {}).get("product_id", f"unknown_{idx}")
 
-            image_filename = f"{product_id}.jpg"
-            image_path = args.output_dir / image_filename
+                if not image_url:
+                    logger.debug(f"No image URL for index {idx}, product_id {product_id}")
+                    failed_downloads += 1
+                    continue
 
-            if image_path.exists():
-                downloaded_images.append((idx, image_url, product_id, image_filename))
-                continue
+                image_filename = f"{product_id}.jpg"
+                image_path = args.output_dir / image_filename
 
-            try:
-                response = session.get(image_url, timeout=args.timeout)
-                response.raise_for_status()
-                image_path.write_bytes(response.content)
-                downloaded_images.append((idx, image_url, product_id, image_filename))
-            except requests.RequestException as e:
-                logger.debug(f"Failed to download image for {product_id}: {e}")
-                failed_downloads += 1
-            except OSError as e:
-                logger.debug(f"Failed to write image file for {product_id}: {e}")
-                failed_downloads += 1
+                if image_path.exists():
+                    downloaded_images.append((idx, image_url, product_id, image_filename))
+                    continue
+
+                try:
+                    response = session.get(image_url, timeout=args.timeout)
+                    response.raise_for_status()
+                    image_path.write_bytes(response.content)
+                    downloaded_images.append((idx, image_url, product_id, image_filename))
+                except requests.RequestException as e:
+                    logger.debug(f"Failed to download image for {product_id}: {e}")
+                    failed_downloads += 1
+                except OSError as e:
+                    logger.debug(f"Failed to write image file for {product_id}: {e}")
+                    failed_downloads += 1
 
         logger.info(f"Downloaded {len(downloaded_images)} images, {failed_downloads} failed")
 
@@ -197,10 +198,10 @@ def main() -> int:
         logger.info(f"View the gallery with: open {args.output_markdown}")
 
     except (OSError, requests.RequestException) as e:
-        logger.error(f"Error generating image gallery: {e}", exc_info=True)
+        logger.exception(f"Error generating image gallery: {e}")
         return 1
     except Exception as e:
-        logger.error(f"Unexpected error generating image gallery: {e}", exc_info=True)
+        logger.exception(f"Unexpected error generating image gallery: {e}")
         return 1
     else:
         return 0

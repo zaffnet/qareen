@@ -29,7 +29,6 @@ class VectorStoreIndexer(ABC):
         Returns:
             LangChain VectorStore instance or dict of VectorStore instances
         """
-        pass
 
     @abstractmethod
     def create_vectorstore(self, *args: Any, **kwargs: Any) -> VectorStore:
@@ -38,7 +37,6 @@ class VectorStoreIndexer(ABC):
         Returns:
             VectorStore instance for the collection
         """
-        pass
 
     @abstractmethod
     def get_embeddings(self, *args: Any, **kwargs: Any) -> Embeddings:
@@ -47,7 +45,6 @@ class VectorStoreIndexer(ABC):
         Returns:
             Embeddings instance for the model
         """
-        pass
 
     def get_collection_name(
         self,
@@ -82,13 +79,14 @@ class VectorStoreIndexer(ABC):
             raise ValueError("model_id must be a non-empty string")  # noqa: TRY003
 
         environment = environment.strip()
-        if environment.lower() not in ("dev", "staging", "prod"):
+        env = environment.lower()
+        if env not in ("dev", "staging", "prod"):
             raise ValueError(  # noqa: TRY003
                 f"environment must be one of 'dev', 'staging', or 'prod', got '{environment}'"
             )
 
         parts = [
-            environment.lower(),
+            env,
             dataset_name,
             model_id,
         ]

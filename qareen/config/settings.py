@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Literal
+from typing import Any, Literal
 
 from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -77,7 +77,7 @@ class Settings(BaseSettings):
             if not (0.0 <= alpha <= 1.0):
                 raise ValueError(ALPHA_RANGE_ERR.format(alpha=alpha))
 
-        return sorted(list(set(v)))
+        return sorted(set(v))
 
     @field_validator("environment", mode="before")
     @classmethod
@@ -87,7 +87,7 @@ class Settings(BaseSettings):
             return v.lower()
         return v
 
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs: Any) -> None:
         """Initialize Settings with internal state."""
         super().__init__(**kwargs)
         self._dirs_ensured: bool = False

@@ -226,9 +226,8 @@ def test_embedding_model_returns_image_only_embedding() -> None:
 def test_embedding_model_rejects_both_none() -> None:
     """Embedding model must reject when both modalities are None."""
     model = SingleModalityEmbeddingModel(embedding_dim=128)
-    with pytest.raises(ValueError) as exc_info:
+    with pytest.raises(ValueError, match="(?i)at least one modality"):
         model.embed_multimodal(image=None, text=None, alpha=0.5)
-    assert "at least one modality" in str(exc_info.value).lower()
 
 
 def test_indexer_handles_text_only_samples() -> None:

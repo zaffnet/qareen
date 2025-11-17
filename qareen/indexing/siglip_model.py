@@ -8,7 +8,7 @@ from pathlib import Path
 
 import numpy as np
 import torch
-from PIL import Image
+from PIL import Image, UnidentifiedImageError
 from transformers import AutoModel, AutoProcessor
 
 from qareen.indexing.exceptions import InvalidAlphaError
@@ -108,7 +108,10 @@ class SIGLIPEmbeddingModel(EmbeddingModel):
             self.load_model()
 
         if isinstance(image, (str, Path)):
-            image = Image.open(image)
+            try:
+                image = Image.open(image)
+            except (FileNotFoundError, UnidentifiedImageError) as e:
+                raise TypeError(f"{self.IMAGE_TYPE_ERROR}: {e}") from e
 
         if not isinstance(image, Image.Image):
             raise TypeError(self.IMAGE_TYPE_ERROR)
@@ -211,9 +214,14 @@ class SIGLIPEmbeddingModel(EmbeddingModel):
                 f"Falling back to sampling with embed_text('dummy')."
             )
 
-        embedding = self.embed_text("dummy")
-        if embedding is None:
+        try:
+            embedding = self.embed_text("dummy")
+            if embedding is None:
+                raise RuntimeError(
+                    f"Failed to determine embedding dimension for model '{self.model_id}'"
+                ) from None
+            return len(embedding)
+        except Exception:
             raise RuntimeError(
                 f"Failed to determine embedding dimension for model '{self.model_id}'"
-            )
-        return len(embedding)
+            ) from None

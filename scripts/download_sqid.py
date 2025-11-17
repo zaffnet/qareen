@@ -24,6 +24,8 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+SQID_SUBSET_ERROR = "Expected 'product_image_urls' subset in SQID dataset"
+
 
 def validate_parquet_file(file_path: Path) -> None:
     """Validate a parquet file by attempting to read it.
@@ -72,7 +74,7 @@ def download_and_validate_parquet(
                 validate_parquet_file(file_path)
                 logger.info(f"Successfully validated {file_path}")
                 break
-        except Exception:
+        except (requests.exceptions.RequestException, OSError, ValueError, TypeError):
             if attempt == max_retries - 1:
                 logger.exception(
                     f"Failed to download and validate {file_path} after {max_retries} attempts"
@@ -172,7 +174,7 @@ def load_and_combine_sqid_esci(
         if "product_image_urls" in sqid_raw:
             sqid_dataset = sqid_raw["product_image_urls"]
         else:
-            raise ValueError("Expected 'product_image_urls' subset in SQID dataset")
+            raise ValueError(SQID_SUBSET_ERROR)
     else:
         sqid_dataset = sqid_raw
 
@@ -319,7 +321,7 @@ def main() -> int:
         logger.info(f"Dataset saved to {save_path}")
 
     except Exception as e:
-        logger.error(f"Error downloading dataset: {e}", exc_info=True)
+        logger.exception(f"Error downloading dataset: {e}")
         return 1
     else:
         return 0

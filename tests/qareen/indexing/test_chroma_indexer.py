@@ -18,8 +18,6 @@ from qareen.indexing.models import EmbeddingModel
 class MissingModalityError(ValueError):
     """Raised when no modalities are present for embedding."""
 
-    pass
-
 
 MISSING_MODALITY_MSG = "At least one modality must be present"
 
@@ -120,7 +118,7 @@ class MockEmbeddingModel(EmbeddingModel):
 class MockDatasetLoader(DatasetLoader):
     """Mock dataset loader for testing."""
 
-    def __init__(self, dataset_size: int = 3, track_select: bool = False) -> None:
+    def __init__(self, dataset_size: int = 3, *, track_select: bool = False) -> None:
         """Initialize mock dataset loader.
 
         Args:
@@ -201,7 +199,7 @@ class MockDatasetLoader(DatasetLoader):
 
     def validate_schema(self) -> None:
         """Validate schema."""
-        pass
+        ...
 
     def get_dataset_info(self) -> dict[str, object]:
         """Return dataset info."""

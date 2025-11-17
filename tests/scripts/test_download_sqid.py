@@ -40,7 +40,7 @@ def test_download_sqid_sample_size_logs_correct_row_count(caplog: pytest.LogCapt
             mock_loader.load.return_value = mock_dataset
             mock_loader.get_dataset_name.return_value = "test_dataset"
             mock_loader.split = "train"
-            mock_loader.validate_schema.return_value = True
+            mock_loader.validate_schema.return_value = None
             mock_loader_class.return_value = mock_loader
 
             with patch("scripts.download_sqid.Settings") as mock_settings:

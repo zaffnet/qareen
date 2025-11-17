@@ -21,7 +21,6 @@ class EmbeddingModel(ABC):
     @abstractmethod
     def load_model(self) -> None:
         """Load the embedding model with proper caching and device placement."""
-        pass
 
     @abstractmethod
     def embed_text(self, text: str | None) -> np.ndarray | None:
@@ -33,7 +32,6 @@ class EmbeddingModel(ABC):
         Returns:
             L2-normalized text embedding vector or None if text is None
         """
-        pass
 
     @abstractmethod
     def embed_image(self, image: Image.Image | str | Path | None) -> np.ndarray | None:
@@ -45,7 +43,6 @@ class EmbeddingModel(ABC):
         Returns:
             L2-normalized image embedding vector or None if image is None
         """
-        pass
 
     @abstractmethod
     def embed_multimodal(
@@ -75,7 +72,6 @@ class EmbeddingModel(ABC):
         Raises:
             ValueError: If both image and text are None
         """
-        pass
 
     @abstractmethod
     def get_model_id(self) -> str:
@@ -84,7 +80,6 @@ class EmbeddingModel(ABC):
         Returns:
             Model identifier string
         """
-        pass
 
     @property
     @abstractmethod
@@ -94,7 +89,6 @@ class EmbeddingModel(ABC):
         Returns:
             Embedding dimension as integer
         """
-        pass
 
     @staticmethod
     def normalize_l2(vector: np.ndarray) -> np.ndarray:

@@ -306,20 +306,22 @@ class ChromaIndexer(VectorStoreIndexer):
         else:
             limit = None
 
-        if limit is not None and hasattr(dataset, "select") and callable(dataset.select):
+        dataset_len = len(dataset)
+        if limit is not None:
             try:
-                selected = dataset.select(range(min(limit, len(dataset))))
+                selected = dataset.select(range(min(limit, dataset_len)))
                 if len(selected) > 0:
                     dataset = selected
+                    dataset_len = len(dataset)
                     logger.info(
                         f"Successfully created sample: requested limit={limit}, "
-                        f"selected length={len(selected)}, dataset type={type(dataset).__name__}"
+                        f"selected length={dataset_len}, dataset type={type(dataset).__name__}"
                     )
             except (AttributeError, TypeError) as e:
                 logger.warning(
                     f"Sampling failed, falling back to full dataset: "
                     f"exception={type(e).__name__}:{e}, "
-                    f"dataset type={type(dataset).__name__}, dataset length={len(dataset)}"
+                    f"dataset type={type(dataset).__name__}, dataset length={dataset_len}"
                 )
 
         self.embedding_model.load_model()
@@ -349,7 +351,7 @@ class ChromaIndexer(VectorStoreIndexer):
             )
 
             for idx in tqdm(
-                range(0, len(dataset), batch_size),
+                range(0, dataset_len, batch_size),
                 desc=f"[Model: {model_id}] [Alpha: {alpha:.2f}]",
             ):
                 batch = dataset[idx : idx + batch_size]
