@@ -20,12 +20,12 @@ maintainers = [
     {name = "Zafarullah Mahmood", email = "zafar@zafarmahmood.com"}
 ]
 dependencies = [
-    "datasets",
-    "langchain",
-    "langchain-chroma",
-    "pydantic",
-    "pydantic-settings",
-    "pillow",
+    "datasets~=4.4.1",
+    "langchain~=1.0.7",
+    "langchain-chroma~=1.0.0",
+    "pydantic~=2.12.4",
+    "pydantic-settings~=2.10.1",
+    "pillow~=11.3.0",
     "gradio~=4.0.0",
     "transformers~=4.57.0",
     "numpy~=1.26.0",
@@ -67,20 +67,14 @@ markers = [
 [tool.ruff]
 line-length = 100
 target-version = "py311"
-[tool.ruff.lint]
 select = [
-    # pycodestyle
-    "E",
-    # Pyflakes
-    "F",
-    # pyupgrade
-    "UP",
-    # flake8-bugbear
-    "B",
-    # flake8-simplify
-    "SIM",
-    # isort
-    "I",
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # isort
+    "B",   # flake8-bugbear
+    "C4",  # flake8-comprehensions
+    "UP",  # pyupgrade
 ]
 
 extend-select = ["E501"]  # line-too-long: Ruff omits rules that overlap with formatters by default

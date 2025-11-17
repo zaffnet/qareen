@@ -1,6 +1,7 @@
 {
     "chatgpt.openOnStartup": true,
     "ruff.enable": true,
+    "ruff.path": ["${workspaceFolder}/.venv/bin/ruff"],
     "ruff.organizeImports": true,
     "ruff.fixAll": true,
     "ruff.codeAction.fixViolation": {

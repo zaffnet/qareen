@@ -32,6 +32,8 @@ class TestSchema(unittest.TestCase):
             DatasetItem(image=self.image_path)  # Missing text
         with self.assertRaises(ValidationError):
             DatasetItem(text="A red square")  # Missing image
+        with self.assertRaises(ValidationError):
+            DatasetItem(text="A red square", image=123) # Invalid image type
 
     def test_valid_dataset_schema(self):
         items = [

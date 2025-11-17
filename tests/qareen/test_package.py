@@ -2,4 +2,4 @@
 
 
 def test_import_qareen_package() -> None:
-    pass
+    import qareen  # noqa: F401

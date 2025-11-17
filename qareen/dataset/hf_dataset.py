@@ -14,13 +14,21 @@ class HuggingFaceDatasetLoader(DatasetLoader):
 
     def load(self) -> DatasetSchema:
         """Loads the dataset from HuggingFace and returns it as a DatasetSchema object."""
-        self._dataset = datasets.load_dataset(self.dataset_name, split='train') # Default to train split
+        try:
+            self._dataset = datasets.load_dataset(self.dataset_name, split='train') # Default to train split
+        except Exception as e:
+            raise RuntimeError(f"Failed to load dataset '{self.dataset_name}': {e}") from e
 
         if self.sample_size > 0:
             num_samples = min(self.sample_size, len(self._dataset))
             self._dataset = self._dataset.select(range(num_samples))
 
-        items = [DatasetItem(text=row['text'], image=row['image']) for row in self._dataset]
+        items = []
+        for row in self._dataset:
+            if 'text' not in row or 'image' not in row:
+                raise ValueError(f"Dataset row missing required fields 'text' or 'image': {row.keys()}")
+            items.append(DatasetItem(text=row['text'], image=row['image']))
+
         return DatasetSchema(dataset_name=self.dataset_name, data=items)
 
     def validate_schema(self, data: Any) -> bool:

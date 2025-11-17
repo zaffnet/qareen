@@ -1,397 +1,306 @@
 <!-- 12614abd-33f3-4396-9363-64cce909b572 b3643e85-2911-4c67-8833-29d2e5a35f56 -->
-# qareen Project Implementation Plan - Test-Driven Development Edition
-
-
-## Project Overview
-
-**qareen** (قرين) is Arabic for "constant companion"—a tool for analyzing and optimizing multimodal few-shot example selection for LLMs. It balances relevance, diversity, and modality weighting (image vs. text similarity) when selecting examples.
-
-**TDD Approach**: Review existing tests → Implement code → Verify with test suite → Test end-to-end.
-
-**Deliverables**: Interfaces (ABCs), structure, configuration system, Pydantic schemas, CLI scripts, full implementation.
-
----
-
-## Key Concepts
-
-### 1. Multimodal Embeddings
-
-Numerical representations capturing semantic meaning. Multimodal models (CLIP, SIGLIP) create embeddings for text and images in the same space, enabling cross-modal similarity.
-
-### 2. Vector Stores
-
-Databases optimized for similarity search (ChromaDB, FAISS). Used for fast nearest neighbor search on large datasets.
-
-### 3. Alpha Parameter
-
-Weight (0.0-1.0) for combining image/text embeddings:
-
-- 0.0 = image-only
-- 0.5 = balanced
-- 1.0 = text-only
-
-Formula: `V_combined = Normalize(alpha × V_image + (1 - alpha) × V_text)` (both embeddings L2-normalized).
-
-### 4. Collection Naming
-
-Format: `{environment}_{dataset_name}_{model_id}_alpha{alpha_value}`
-
-Example: `dev_sqid_siglip-base-patch16-224_alpha0.50`
-
-Sanitization: lowercase, replace special chars with underscores, collapse multiple underscores, trim.
-
-Alpha formatting: `f"{alpha:.2f}"` (e.g., 0.5 → "0.50").
-
-Validation: Pattern `^[a-z0-9_]+$`, max 63 chars (ChromaDB limit).
-
-### 5. Pre-computation
-
-Pre-compute combined embeddings during indexing (not query-time) for speed and flexibility.
-
----
+# qareen Project Scaffolding Plan
 
 ## Architecture Principles
 
-1. **Design for 10x scale** (redesign at 20x)
-2. **Plugin-based architecture** for embedding models
-3. **Configuration-driven** (env vars, config files, defaults)
-4. **Separation of concerns** (dataset/indexing/config modules)
-5. **Abstract base classes** for extensibility
-6. **Pydantic-first** for all data structures
-7. **LangChain VectorStore** abstraction (backend-agnostic)
-8. **User experience first** (prompt engineer workflows)
-
----
+- Design for 10x scale, redesign at 20x
+- Plugin-based architecture for embedding models
+- Configuration-driven approach using Pydantic
+- Clear separation of concerns (dataset, indexing, retrieval)
+- Abstract base classes for extensibility
+- Pydantic-first: Use Pydantic models for all data structures, configs, and schemas
+- LangChain vector store abstraction for backend flexibility (Chroma → FAISS migration path)
 
 ## Directory Structure
 
-```text
+```
 qareen/
 ├── qareen/
 │   ├── __init__.py
-│   ├── dataset/
-│   │   ├── __init__.py          # Exports: DatasetLoader, HuggingFaceDatasetLoader, schema models
-│   │   ├── base.py              # Abstract base class
-│   │   ├── hf_dataset.py        # HuggingFace implementation
-│   │   └── schema.py            # Pydantic models
-│   ├── indexing/
-│   │   ├── __init__.py          # Exports: VectorStoreIndexer, ChromaIndexer, EmbeddingModel, exceptions
-│   │   ├── base.py              # Abstract base class
-│   │   ├── chroma_indexer.py   # ChromaDB implementation
-│   │   ├── models.py            # Embedding model abstractions
-│   │   └── exceptions.py        # Custom exceptions
-│   └── config/
-│       ├── __init__.py          # Exports: Settings
-│       └── settings.py          # Pydantic BaseSettings
+│   ├── dataset/              # Dataset management module
+│   │   ├── __init__.py
+│   │   ├── base.py           # Abstract base class for dataset loaders
+│   │   ├── hf_dataset.py     # HuggingFace dataset implementation
+│   │   └── schema.py          # Pydantic models for dataset schema
+│   ├── indexing/              # Vector store indexing module
+│   │   ├── __init__.py
+│   │   ├── base.py           # Abstract base class using LangChain VectorStore
+│   │   ├── chroma_indexer.py # ChromaDB implementation via LangChain
+│   │   └── models.py          # Embedding model abstractions
+│   └── config/                # Configuration management
+│       ├── __init__.py
+│       └── settings.py        # Pydantic BaseSettings for all config
 ├── scripts/
-│   ├── download_sqid.py
-│   └── build_index.py
-├── data/                         # Gitignored
-├── chroma_db/                    # Gitignored
+│   ├── download_sqid.py      # Script to download SQID dataset
+│   └── build_index.py         # Script to build vector store indexes
+├── data/                      # Dataset storage (gitignored, cursor ignored)
+├── chroma_db/                 # ChromaDB storage (gitignored, cursor ignored)
 ├── docs/
-│   └── DATASET_FORMAT.md
-├── .gitignore
-└── .cursorignore
+│   └── DATASET_FORMAT.md     # Documentation on dataset schema/format
+├── .gitignore                 # Add data/ and chroma_db/ entries
+└── .cursorignore              # Add data/ and chroma_db/ entries
 ```
-
----
 
 ## File-by-File Breakdown
 
-### Dataset Module
+### PART 1: Dataset Module
 
 #### `qareen/dataset/__init__.py`
 
-Exports: `DatasetLoader`, `HuggingFaceDatasetLoader`, `DatasetSchema`, exceptions.
+**Purpose:** Public API exports for the dataset module
+
+**Contents:**
+
+- Export `DatasetLoader` abstract base class
+- Export `HuggingFaceDatasetLoader` concrete implementation
+- Export dataset schema Pydantic models
+- Export any dataset-related exceptions
 
 #### `qareen/dataset/base.py`
 
-Abstract `DatasetLoader` class with methods:
+**Purpose:** Abstract base class defining the dataset loader interface
 
-- `load()`: Loads dataset, returns standardized format
-- `validate_schema()`: Validates required fields (text, image)
-- `get_dataset_name()`: Returns dataset identifier
-- `get_dataset_info()`: Returns metadata dict/model
+**Contents:**
+
+- Abstract `DatasetLoader` class (ABC)
+- Abstract method `load()`: Returns dataset with validated schema
+- Abstract method `validate_schema()`: Validates dataset against expected schema
+- Abstract method `get_dataset_name()`: Extracts/returns dataset identifier
+- Abstract method `get_dataset_info()`: Returns metadata about the dataset
+- All methods use type hints, no implementation
 
 #### `qareen/dataset/hf_dataset.py`
 
-Concrete `HuggingFaceDatasetLoader` implementing all abstract methods. Uses HuggingFace `datasets` library, validates with `DatasetSchema`.
+**Purpose:** HuggingFace datasets library implementation
+
+**Contents:**
+
+- `HuggingFaceDatasetLoader` class inheriting from `DatasetLoader`
+- Implements all abstract methods from base class
+- Uses HuggingFace `datasets` library to load datasets
+- Integrates with Pydantic schema validation
+- Handles dataset name extraction from HuggingFace dataset info
+- Methods: `load()`, `validate_schema()`, `get_dataset_name()`, `get_dataset_info()`
+- All methods are stubs with `pass` or minimal structure
 
 #### `qareen/dataset/schema.py`
 
-Pydantic models:
+**Purpose:** Pydantic models defining expected dataset structure
 
-- `DatasetSchema`: Full dataset schema (text, image, optional metadata, optional dataset_name)
-- `DatasetItem`: Single item schema
-- Validators for image (PIL Image or path) and text (non-empty string)
+**Contents:**
 
-### Indexing Module
+- Pydantic `BaseModel` classes for dataset schema
+- `DatasetSchema`: Main schema model with fields:
+  - `text`: Required text field (str)
+  - `image`: Required image field (PIL Image or path)
+  - `metadata`: Optional dict for additional fields
+  - `dataset_name`: Optional str for dataset identifier
+- `DatasetItem`: Model for individual dataset items
+- Validation rules and field types defined via Pydantic
+- Custom validators if needed (all via Pydantic decorators)
+
+### PART 2: Indexing Module
 
 #### `qareen/indexing/__init__.py`
 
-Exports: `VectorStoreIndexer`, `ChromaIndexer`, `EmbeddingModel`, exceptions.
+**Purpose:** Public API exports for the indexing module
 
-#### `qareen/indexing/exceptions.py`
+**Contents:**
 
-Custom exceptions:
-
-- `AlphaNotAvailableError`: Query with unavailable alpha (attributes: alpha, available_alphas, model_id, dataset_name, environment)
-- `CollectionNameTooLongError`: Name exceeds 63 chars (attributes: collection_name, max_length, suggested_alternatives)
-- `InvalidCollectionNameError`: Invalid characters (attributes: collection_name, invalid_characters)
+- Export `VectorStoreIndexer` abstract base class
+- Export `ChromaIndexer` concrete implementation
+- Export `EmbeddingModel` abstract base class
+- Export any indexing-related exceptions
 
 #### `qareen/indexing/base.py`
 
-Abstract `VectorStoreIndexer` with methods:
+**Purpose:** Abstract base class for vector store indexers using LangChain interface
 
-- `index()`: Creates vector store index (returns LangChain VectorStore)
-- `get_collection_name()`: Generates collection name with sanitization/validation
-- `create_vectorstore()`: Creates LangChain VectorStore instance
-- `get_embeddings()`: Returns LangChain Embeddings instance
-- `list_available_alphas()`: Returns sorted list of indexed alpha values
-- `validate_alpha_available()`: Checks alpha availability, raises `AlphaNotAvailableError` if not
+**Contents:**
+
+- Abstract `VectorStoreIndexer` class (ABC)
+- Uses LangChain's `VectorStore` as the interface type
+- Abstract method `index()`: Takes dataset and creates vector store
+- Abstract method `get_collection_name()`: Generates collection name from `dataset_name`, `environment`, `model_id`
+  - Pattern: `{environment}_{dataset_name}_{model_id}`
+  - Example: `dev_sqid_siglip-base-patch16-224`
+- Abstract method `create_vectorstore()`: Creates LangChain VectorStore instance
+- Abstract method `get_embeddings()`: Returns LangChain Embeddings instance
+- All methods use type hints with LangChain types, no implementation
 
 #### `qareen/indexing/chroma_indexer.py`
 
-Concrete `ChromaIndexer` implementing all abstract methods. Uses `langchain_chroma.Chroma`, supports environments (dev/staging/prod), configurable dev sample size, always rebuilds collections.
+**Purpose:** ChromaDB implementation via LangChain
+
+**Contents:**
+
+- `ChromaIndexer` class inheriting from `VectorStoreIndexer`
+- Uses `langchain_chroma.Chroma` for vector store creation
+- Implements collection naming: `{environment}_{dataset_name}_{model_id}`
+- Supports environment parameter (dev/staging/prod)
+- Configurable sample size for dev environment (subset of data)
+- Methods are stubs with `pass` or minimal structure
+- All configuration via Pydantic models
 
 #### `qareen/indexing/models.py`
 
-Abstract `EmbeddingModel` base class with methods:
+**Purpose:** Embedding model abstractions
 
-- `load_model()`: Loads HuggingFace model (handles caching, device placement)
-- `embed_text(text: str) -> np.ndarray`: Returns L2-normalized text embedding
-- `embed_image(image: PIL.Image.Image | str | Path) -> np.ndarray`: Returns L2-normalized image embedding
-- `embed_multimodal(image, text, alpha: float) -> np.ndarray`: Combines with alpha weighting (both inputs L2-normalized, alpha in [0.0, 1.0])
-- `get_model_id() -> str`: Returns normalized model identifier
+**Contents:**
 
-Implementations: CLIP, SIGLIP via HuggingFace Transformers.
+- Abstract `EmbeddingModel` base class (ABC)
+- Integrates with LangChain's `Embeddings` interface
+- Abstract method `load_model()`: Loads HuggingFace model
+- Abstract method `embed_text()`: Generates text embeddings
+- Abstract method `embed_image()`: Generates image embeddings
+- Abstract method `embed_multimodal()`: Handles multimodal embedding
+- Concrete implementations for HuggingFace models (CLIP, SIGLIP, etc.)
+- All models are stubs with type hints, no implementation
 
 ### Configuration Module
 
 #### `qareen/config/__init__.py`
 
-Exports: `Settings` class.
+**Purpose:** Public API exports for configuration
+
+**Contents:**
+
+- Export `Settings` class (Pydantic BaseSettings)
+- Export any configuration-related models
 
 #### `qareen/config/settings.py`
 
-`Settings` class (Pydantic BaseSettings) with fields:
+**Purpose:** Centralized configuration using Pydantic BaseSettings
 
-- `default_embedding_models: List[str]`: Default model IDs
-- `default_alpha_values: List[float]`: Default alphas (default: [0.5], validated [0.0, 1.0], deduplicated)
-- `data_dir: Path`: Dataset storage (default: "data/", auto-created)
-- `chroma_db_dir: Path`: ChromaDB storage (default: "chroma_db/", auto-created)
-- `dev_sample_size: int`: Dev samples (default: 1000, positive)
-- `environment: Literal["dev", "staging", "prod"]`: Environment (default: "dev", case-insensitive)
+**Contents:**
 
-Env vars: `QAREEN_{FIELD_NAME}` (list fields: comma-separated).
-
-Precedence: env vars > config file (.env/qareen.env) > defaults.
+- `Settings` class inheriting from Pydantic `BaseSettings`
+- Fields (all with type hints and defaults):
+  - `default_embedding_models`: List[str] - Default model IDs (e.g., ["google/siglip-base-patch16-224"])
+  - `data_dir`: Path - Directory for dataset storage (default: "data/")
+  - `chroma_db_dir`: Path - Directory for ChromaDB storage (default: "chroma_db/")
+  - `dev_sample_size`: int - Number of samples for dev environment (default: 1000)
+  - `environment`: Literal["dev", "staging", "prod"] - Current environment
+- Environment variable support via Pydantic
+- Validation via Pydantic validators
+- Settings loading from config files (optional, via Pydantic)
 
 ### Scripts
 
 #### `scripts/download_sqid.py`
 
-CLI script (argparse/click) to download SQID from HuggingFace. Arguments: `--dataset-name`, `--output-dir`, `--validate`, `--sample-size`. Downloads, validates schema, prints info.
+**Purpose:** CLI script to download SQID dataset
+
+**Contents:**
+
+- Uses `argparse` or `click` for CLI
+- Uses HuggingFace `datasets` library
+- Downloads SQID dataset
+- Saves to `data/` directory (from config)
+- Validates dataset schema after download
+- Prints dataset info (name, size, etc.)
+- Minimal implementation - just structure and argument parsing
 
 #### `scripts/build_index.py`
 
-CLI script to build vector store indexes. Arguments:
+**Purpose:** CLI script to build vector store indexes
 
-- `--dataset-name` (required): Dataset identifier
-- `--models` (optional): Model IDs (default: from config, deduplicated)
-- `--alpha-values` (optional): Alpha values (default: from config, validated [0.0, 1.0], deduplicated)
-- `--environment` (optional): dev/staging/prod (default: dev, case-insensitive)
-- `--sample-size` (optional): Override dev sample size
-- `--batch-size` (optional): Batch size (default: 100)
+**Contents:**
 
-Workflow:
-
-1. Load dataset
-   1. For each model:
-
-   - Load model once
-   - For each alpha: delete existing collection, create new collection
-   - Process in batches
-   - For each item: compute V_image, V_text, combine with each alpha, store
-
-   1. Report completion
-
-Progress: tqdm with format `[Model: {model_id}] [Alpha: {alpha}] {current}/{total} ({percent}%) ETA: {eta}`.
-
-Error handling: Network retry (3 attempts, exponential backoff), validation errors, file I/O checks, memory suggestions, collection name suggestions.
-
-Logging: Python logging, INFO level, console output, structured format.
+- Uses `argparse` or `click` for CLI
+- Arguments:
+  - `--dataset-name`: Required, dataset identifier
+  - `--models`: Optional list of model IDs (defaults from config)
+  - `--environment`: Optional environment flag (dev/staging/prod, default: dev)
+  - `--sample-size`: Optional, override dev sample size
+- Loads dataset using `HuggingFaceDatasetLoader`
+- For each model:
+  - Creates embeddings using model
+  - Creates ChromaDB collection via LangChain
+  - Collection name: `{environment}_{dataset_name}_{model_id}`
+  - Indexes dataset items
+- Progress reporting
+- Error handling structure
+- Minimal implementation - just structure and orchestration logic
 
 ### Documentation
 
 #### `docs/DATASET_FORMAT.md`
 
-Required fields: `text` (string), `image` (PIL Image or path). Optional: `metadata` (dict). Dataset name must be sanitizable. Example structure, HuggingFace format expectations, validation rules.
+**Purpose:** Document expected dataset schema and format
+
+**Contents:**
+
+- Required fields: text, image
+- Optional fields: metadata
+- Dataset name/identifier requirements
+- Example dataset structure
+- HuggingFace dataset format expectations
+- Schema validation rules
+- Examples of valid datasets
 
 ### Ignore Files
 
-#### `.gitignore`
+#### `.gitignore` updates
 
-Add: `data/`, `chroma_db/`.
+**Purpose:** Exclude data and database directories from git
 
-#### `.cursorignore`
+**Contents:**
 
-Add: `data/`, `chroma_db/`, `*.parquet`, `*.arrow`.
+- Add `data/` directory
+- Add `chroma_db/` directory
+- Keep existing ignore patterns
 
----
+#### `.cursorignore` (new file)
+
+**Purpose:** Exclude data and database from Cursor AI context
+
+**Contents:**
+
+- Add `data/` directory
+- Add `chroma_db/` directory
+- Pattern matching for data files
 
 ## Dependencies
 
-Add to `pyproject.toml` `[project.dependencies]`:
+### Update `pyproject.toml`
 
-- `datasets`: HuggingFace datasets library
-- `langchain`: Vector store abstractions
-- `langchain-chroma`: ChromaDB via LangChain
-- `pydantic`: Data validation
-- `pydantic-settings`: Settings support
-- `pillow`: Image handling
-- `numpy`: Vector operations
-- `tqdm`: Progress bars
+Add to `[project.dependencies]`:
 
----
+- `datasets` - HuggingFace datasets library
+- `langchain` - Core vector store abstractions
+- `langchain-chroma` - ChromaDB integration via LangChain
+- `pydantic` - Data validation and settings management
+- `pydantic-settings` - Enhanced settings support for Pydantic
+- `pillow` - Image handling
+
+**Note:** `langchain-chroma` provides ChromaDB via LangChain interface. For future FAISS support, add `langchain-community` which includes FAISS integration. This keeps architecture backend-agnostic.
 
 ## Implementation Approach
 
-### TDD Workflow
-
-1. Review existing tests in `tests/`
-2. Implement code to pass tests
-3. Run `uv run pytest` continuously
-4. Iterate until all pass
-5. Verify end-to-end with scripts
-
 ### Code Style
 
-- Type hints required on all functions/methods
-- Docstrings required on all classes/public methods
-- ABCs define method signatures with type hints
-- Full implementation of all abstract methods
+- Type hints on all functions and methods
+- Docstrings for all classes and public methods
+- Abstract base classes with minimal method signatures
+- Concrete implementations as stubs (`pass` or minimal structure)
 - Pydantic models for all data structures
 - Configuration via Pydantic BaseSettings
 
-### Collection Naming
+### No Business Logic
 
-Format: `{environment}_{dataset_name}_{model_id}_alpha{alpha_value}`
+- No actual embedding generation
+- No actual indexing implementation
+- No dataset processing logic
+- Only structure, interfaces, and type definitions
+- Focus on extensible architecture
 
-Sanitization: lowercase → replace special chars → collapse underscores → trim.
+### Collection Naming Convention
 
-Alpha: `f"{alpha:.2f}"`.
-
-Validation: Pattern `^[a-z0-9_]+$`, max 63 chars.
-
-### Alpha Parameter
-
-**Indexing**: Pre-compute for specified alphas, one collection per (model, alpha). Compute V_image/V_text once, combine with multiple alphas.
-
-**Query**: Validate alpha available (collection exists), raise `AlphaNotAvailableError` if not. No query-time re-indexing.
-
-### Multiple Models/Alphas
-
-Creates collections for all (model, alpha) combinations. Load model once, compute embeddings once per item, combine with each alpha. Process in batches (default: 100).
-
----
-
-## Testing Strategy
-
-### Philosophy
-
-Use existing tests to guide implementation. Focus on contract compliance, functional correctness, integration, error handling.
-
-### Test Categories
-
-1. **Unit Tests**: Pydantic models, configuration, collection naming, ABCs, exceptions
-2. **Integration Tests**: Dataset loading, config integration, CLI parsing, file operations
-3. **Contract Tests**: ABC interface compliance, method signatures
-4. **CLI Tests**: Argument parsing, validation, error messages
-5. **Error Handling Tests**: Custom exceptions, error context, user guidance
-
-### Test Infrastructure
-
-- Framework: pytest
-- Mocking: External services, file system, environment, vector stores
-- Coverage: ≥90% for implementation code
-- CI: Automated on every commit
-
-### Testing Workflow
-
-1. Review tests in `tests/qareen/` and `tests/scripts/`
-2. Run `uv run pytest` to see failures
-3. Implement code to pass tests
-4. Run tests frequently during development
-5. Refactor while maintaining coverage
-6. Verify end-to-end: `uv run python scripts/download_sqid.py --sample-size 100` then `uv run python scripts/build_index.py --dataset-name sqid --sample-size 100`
-
----
-
-## Additional Considerations
-
-### Logging
-
-Python logging, INFO level, console output, format: `{timestamp} [{level}] {module}: {message}`. Log: model loading, collection operations, indexing progress, errors, config loading.
-
-### Error Handling
-
-- Network: Retry with exponential backoff (3 attempts)
-- Validation: Clear messages with suggestions
-- File I/O: Check permissions, disk space, paths
-- Memory: Suggest reducing batch/sample size
-- Collection names: Suggest shorter names
-- Alpha: Normalize to 2 decimal places before comparison
-
-### Performance
-
-- Batch processing (configurable, default: 100)
-- Model caching (reuse across alphas)
-- Progress reporting (tqdm)
-- Memory-efficient embedding computation
-
----
-
-## Verification Steps
-
-### Step 1: Download Dataset
-
-```bash
-uv run python scripts/download_sqid.py --dataset-name sqid --sample-size 100
-```
-
-Verify: Dataset in `data/`, has text/image fields, ~100 samples.
-
-### Step 2: Build Index
-
-```bash
-uv run python scripts/build_index.py --dataset-name sqid --sample-size 100
-```
-
-Verify: Collection in `chroma_db/`, name follows convention `dev_sqid_{model_id}_alpha0.50`, contains embeddings.
-
-### Step 3: Multiple Alphas
-
-```bash
-uv run python scripts/build_index.py --dataset-name sqid --alpha-values 0.0 0.5 1.0 --sample-size 100
-```
-
-Verify: Three collections exist with correct names (`_alpha0.00`, `_alpha0.50`, `_alpha1.00`), same item count.
-
-### Step 4: Full Test Suite
-
-```bash
-uv run pytest
-```
-
-Verify: All tests pass, no linting/type errors.
-
----
-
-## Summary
-
-TDD implementation: Review tests → Implement code → Verify with test suite → Test end-to-end.
-
-Creates: Interfaces (ABCs), structure, configuration, Pydantic schemas, CLI scripts, full implementation.
-
-Verification: Download dataset (100 samples) and build index to verify end-to-end functionality.
+- Format: `{environment}_{dataset_name}_{model_id}`
+- Examples:
+  - `dev_sqid_siglip-base-patch16-224`
+  - `staging_sqid_clip-vit-base-patch32`
+  - `prod_sqid_siglip-base-patch16-224`
+- Sanitization: Replace special characters with underscores
+- Validation: Ensure valid collection name format

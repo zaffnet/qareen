@@ -33,4 +33,4 @@ def test_chroma_indexer_collection_naming() -> None:
         environment="Staging",
         model_id="google/siglip-base-patch16-224",
         alpha=0.5,
-    ) == "staging_sqid_shots_google-siglip-base-patch16-224_0.5"
+    ) == "staging_sqid_shots_google-siglip-base-patch16-224_0.50"

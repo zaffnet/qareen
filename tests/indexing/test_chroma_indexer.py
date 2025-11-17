@@ -11,7 +11,7 @@ class TestChromaIndexer(unittest.TestCase):
             alpha=0.5,
             environment="dev"
         )
-        self.assertEqual(collection_name, "dev_sqid_google-siglip-base-patch16-224_0.5")
+        self.assertEqual(collection_name, "dev_sqid_google-siglip-base-patch16-224_0.50")
 
     def test_index(self):
         indexer = ChromaIndexer()

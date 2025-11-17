@@ -16,7 +16,7 @@ class ChromaIndexer(VectorStoreIndexer):
         """Generates collection name from dataset_name, environment, model_id, and alpha."""
         sanitized_dataset_name = re.sub(r'\s+', '_', dataset_name).lower()
         sanitized_model_id = model_id.replace("/", "-")
-        return f"{environment.lower()}_{sanitized_dataset_name}_{sanitized_model_id}_{alpha}"
+        return f"{environment.lower()}_{sanitized_dataset_name}_{sanitized_model_id}_{alpha:.2f}"
 
     def create_vectorstore(self, collection_name: str) -> Any:
         """Creates LangChain VectorStore instance."""

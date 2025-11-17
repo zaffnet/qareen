@@ -1,51 +1,23 @@
 """qareen: A tool for analyzing and optimizing multimodal few-shot example selection."""
 
-import os
 import warnings
+
+# Check for GPU availability if torch is installed
+try:
+    import torch
+
+    if not torch.cuda.is_available():
+        warnings.warn(
+            "CUDA is not available. For GPU support, please install a CUDA-enabled "
+            "PyTorch build from https://pytorch.org/get-started/locally/ before "
+            "installing qareen. The package will work with CPU-only PyTorch, but "
+            "GPU acceleration will not be available.",
+            UserWarning,
+            stacklevel=2,
+        )
+except ImportError:
+    # torch not installed yet, which is fine - it will be installed via dependencies
+    pass
 
 __version__ = "0.1.0"
 
-
-def check_gpu_available() -> bool:
-    """
-    Check if GPU (CUDA) is available for PyTorch operations.
-
-    This function performs a lazy check, importing torch only when called.
-    It respects the QAREEN_SUPPRESS_GPU_WARNING environment variable to suppress
-    warnings when CUDA is not available.
-
-    Returns:
-        bool: True if CUDA is available, False otherwise.
-
-    Example:
-        >>> if check_gpu_available():
-        ...     device = "cuda"
-        ... else:
-        ...     device = "cpu"
-    """
-    try:
-        import torch
-
-        is_available = torch.cuda.is_available()
-
-        if not is_available:
-            suppress_warning = os.getenv("QAREEN_SUPPRESS_GPU_WARNING", "").lower() in (
-                "1",
-                "true",
-                "yes",
-            )
-            if not suppress_warning:
-                warnings.warn(
-                    "CUDA is not available. For GPU support, please install a CUDA-enabled "
-                    "PyTorch build from https://pytorch.org/get-started/locally/ before "
-                    "installing qareen. The package will work with CPU-only PyTorch, but "
-                    "GPU acceleration will not be available.",
-                    UserWarning,
-                    stacklevel=2,
-                )
-
-        return is_available
-    except ImportError:
-        # torch not installed, which is fine - it may be absent due to
-        # environment or optional dependency
-        return False
