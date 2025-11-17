@@ -48,5 +48,5 @@ def test_vector_store_indexer_contract_and_naming() -> None:
             environment="staging",
             model_id="google/siglip-base-patch16-224",
         )
-        == "staging_conceptual_captions_google_siglip-base-patch16-224"
+        == "staging_conceptual_captions_google_siglip_base_patch16_224"
     )

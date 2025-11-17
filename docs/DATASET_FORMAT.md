@@ -2,9 +2,10 @@
 
 ## Required Fields
 
-At least one of:
-- `text`: Non-empty string
-- `image`: PIL Image or path string
+At least one of `text` or `image` must be provided. Each field may be `None` individually, but not both simultaneously.
+
+- `text`: Non-empty string or `None`
+- `image`: PIL Image, path string, or `None`
 
 ## Optional Fields
 

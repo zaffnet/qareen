@@ -67,7 +67,8 @@ class SingleModalityEmbeddingModel(EmbeddingModel):
         """
         if image is None:
             return None
-        np.random.seed(42)
+        image_hash = hash(str(image.tobytes() if isinstance(image, Image.Image) else image))
+        np.random.seed(image_hash % 2**32)
         embedding = np.random.randn(self.embedding_dim).astype(np.float32)
         return self.normalize_l2(embedding)
 

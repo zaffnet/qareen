@@ -99,7 +99,7 @@ class VectorStoreIndexer(ABC):
         name = "_".join(parts)
 
         name = name.lower()
-        name = re.sub(r"[^a-z0-9_\-]+", "_", name)
+        name = re.sub(r"[^a-z0-9_]+", "_", name)
         name = re.sub(r"_+", "_", name)
         name = name.strip("_")
 

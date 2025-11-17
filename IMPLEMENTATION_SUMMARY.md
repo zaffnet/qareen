@@ -71,7 +71,7 @@ Successfully implemented the qareen project following the TDD (Test-Driven Devel
 - **`pyproject.toml`**: Updated with all dependencies
   - datasets, langchain, langchain-chroma, pydantic, pydantic-settings, pillow, tqdm
 - **`.gitignore`**: Added data/ and chroma_db/
-- **`.cursorignore`**: Added data/, chroma_db/, *.parquet, *.arrow
+- `.cursorignore`: Added data/, chroma_db/, *.parquet, *.arrow
 
 ## Test Results
 
