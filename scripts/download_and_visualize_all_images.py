@@ -167,7 +167,10 @@ def main() -> int:
 
         markdown_parent = args.output_markdown.parent.resolve()
         images_dir = args.output_dir.resolve()
-        image_rel_path = Path(os.path.relpath(images_dir, markdown_parent))
+        try:
+            image_rel_path = Path(os.path.relpath(images_dir, markdown_parent))
+        except ValueError:
+            image_rel_path = images_dir
 
         with open(args.output_markdown, "w") as f:
             f.write("# Image Gallery\n\n")

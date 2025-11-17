@@ -168,16 +168,16 @@ def main() -> int:
                 logger.info(f"✓ Completed collection: {collection_name} (alpha={alpha:.2f})")
 
     except FileNotFoundError as e:
-        logger.exception(f"File or directory not found: {e}")
+        logger.exception("File or directory not found: %s", e)
         return 1
     except ValueError as e:
-        logger.exception(f"Invalid value or configuration: {e}")
+        logger.exception("Invalid value or configuration: %s", e)
         return 1
     except ValidationError as e:
-        logger.exception(f"Validation error: {e}")
+        logger.exception("Validation error: %s", e)
         return 1
     except Exception as e:
-        logger.exception(f"Unexpected error building index: {e}")
+        logger.exception("Unexpected error building index: %s", e)
         return 1
     else:
         logger.info("✓ All indexes built successfully")

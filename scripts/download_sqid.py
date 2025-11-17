@@ -12,6 +12,7 @@ from typing import Any
 
 import pandas as pd
 import requests
+from datasets import Dataset as HFDataset
 from datasets import DatasetDict
 
 from qareen.config.settings import Settings
@@ -144,7 +145,7 @@ def load_and_combine_sqid_esci(
     esci_products_url: str,
     cache_dir: Path,
     esci_download_timeout: int | None = None,
-) -> Any:
+) -> HFDataset:
     """Load and combine SQID and ESCI datasets.
 
     Args:
@@ -160,7 +161,6 @@ def load_and_combine_sqid_esci(
     """
     if esci_download_timeout is None:
         esci_download_timeout = int(os.getenv("ESCI_DOWNLOAD_TIMEOUT", "600"))
-    from datasets import Dataset as HFDataset
 
     cache_dir.mkdir(parents=True, exist_ok=True)
 
@@ -310,7 +310,14 @@ def main() -> int:
             logger.info("Validating schema...")
             loader.validate_schema()
 
-        logger.info(f"Dataset info: {len(dataset)} rows, features: {list(dataset.features.keys())}")
+        if isinstance(dataset, DatasetDict):
+            total_rows = sum(len(split) for split in dataset.values())
+            features = list(next(iter(dataset.values())).features.keys())
+        else:
+            total_rows = len(dataset)
+            features = list(dataset.features.keys())
+
+        logger.info("Dataset info: %d rows, features: %s", total_rows, features)
 
         if args.combined:
             safe_name = "combined_sqid_esci"
