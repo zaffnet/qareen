@@ -25,6 +25,12 @@ dependencies = [
     "numpy~=1.26.0",
     "pandas~=2.2.0",
     "sentence-transformers~=5.1.0",
+    "datasets>=2.21.0",
+    "langchain>=0.2.0",
+    "langchain-chroma>=0.1.0",
+    "pydantic>=2.8.0",
+    "pydantic-settings>=2.5.0",
+    "pillow>=10.4.0",
 ]
 
 [project.optional-dependencies]
@@ -92,5 +98,6 @@ module = [
     "gradio.*",
     "transformers.*",
     "sentence_transformers.*",
+    "datasets.*",
 ]
 ignore_missing_imports = true
