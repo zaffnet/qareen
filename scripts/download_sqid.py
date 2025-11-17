@@ -9,9 +9,12 @@ import sys
 from pathlib import Path
 from typing import Any
 
+import pandas as pd
+import requests  # type: ignore[import-untyped]
 from datasets import DatasetDict
 
 from qareen.config.settings import Settings
+from qareen.dataset.base import DatasetLoader
 from qareen.dataset.hf_dataset import HuggingFaceDatasetLoader
 
 logging.basicConfig(
@@ -53,7 +56,149 @@ def build_parser() -> argparse.ArgumentParser:
         help="Download only a sample of the dataset",
     )
 
+    parser.add_argument(
+        "--combined",
+        action="store_true",
+        help="Download and combine SQID with ESCI dataset",
+    )
+
+    parser.add_argument(
+        "--esci-examples-url",
+        type=str,
+        default="https://github.com/amazon-science/esci-data/raw/main/shopping_queries_dataset/shopping_queries_dataset_examples.parquet",
+        help="URL to ESCI examples parquet file",
+    )
+
+    parser.add_argument(
+        "--esci-products-url",
+        type=str,
+        default="https://github.com/amazon-science/esci-data/raw/main/shopping_queries_dataset/shopping_queries_dataset_products.parquet",
+        help="URL to ESCI products parquet file",
+    )
+
     return parser
+
+
+def load_and_combine_sqid_esci(
+    sqid_dataset_name: str,
+    esci_examples_url: str,
+    esci_products_url: str,
+    cache_dir: Path,
+) -> Any:
+    """Load and combine SQID and ESCI datasets.
+
+    Args:
+        sqid_dataset_name: SQID dataset name on HuggingFace
+        esci_examples_url: URL to ESCI examples parquet
+        esci_products_url: URL to ESCI products parquet
+        cache_dir: Cache directory for ESCI files
+
+    Returns:
+        Combined HuggingFace Dataset
+    """
+    from datasets import Dataset as HFDataset
+
+    cache_dir.mkdir(parents=True, exist_ok=True)
+
+    logger.info("Loading SQID dataset...")
+    sqid_loader = HuggingFaceDatasetLoader(
+        dataset_name=sqid_dataset_name, split="train", name="product_image_urls"
+    )
+    sqid_raw = sqid_loader.load()
+
+    if isinstance(sqid_raw, dict):
+        if "product_image_urls" in sqid_raw:
+            sqid_dataset = sqid_raw["product_image_urls"]
+        else:
+            raise ValueError("Expected 'product_image_urls' subset in SQID dataset")
+    else:
+        sqid_dataset = sqid_raw
+
+    logger.info("Loading ESCI dataset...")
+    examples_file = cache_dir / "shopping_queries_dataset_examples.parquet"
+    products_file = cache_dir / "shopping_queries_dataset_products.parquet"
+
+    if not examples_file.exists():
+        logger.info(f"Downloading {esci_examples_url}")
+        response = requests.get(esci_examples_url, timeout=120)
+        response.raise_for_status()
+        examples_file.write_bytes(response.content)
+
+    if not products_file.exists():
+        logger.info(f"Downloading {esci_products_url}")
+        response = requests.get(esci_products_url, timeout=120)
+        response.raise_for_status()
+        products_file.write_bytes(response.content)
+
+    df_examples = pd.read_parquet(examples_file)
+    df_products = pd.read_parquet(products_file)
+
+    logger.info("Filtering ESCI for small_version=1, split='test', product_locale='us'")
+    df_examples = df_examples[
+        (df_examples["small_version"] == 1)
+        & (df_examples["split"] == "test")
+        & (df_examples["product_locale"] == "us")
+    ]
+    df_products = df_products[df_products["product_locale"] == "us"]
+
+    logger.info("Joining ESCI examples with products...")
+    df_esci = df_examples.merge(df_products, on=["product_id", "product_locale"], how="left")
+
+    logger.info("Joining with SQID images...")
+    df_sqid = sqid_dataset.to_pandas()
+    df_combined = df_esci.merge(df_sqid[["product_id", "image_url"]], on="product_id", how="left")
+
+    logger.info("Constructing text fields...")
+
+    def construct_text(row: Any) -> str:
+        parts = []
+        if pd.notna(row.get("product_title")) and row.get("product_title"):
+            parts.append(str(row["product_title"]).strip())
+        if pd.notna(row.get("product_description")) and row.get("product_description"):
+            parts.append(str(row["product_description"]).strip())
+        if pd.notna(row.get("product_bullet_point")) and row.get("product_bullet_point"):
+            bp = row["product_bullet_point"]
+            if isinstance(bp, str):
+                parts.append(bp.strip())
+            elif isinstance(bp, list):
+                parts.append("\n".join(str(b).strip() for b in bp if b))
+        return "\n\n".join(parts) if parts else ""
+
+    df_combined["text"] = df_combined.apply(construct_text, axis=1)
+
+    logger.info("Constructing metadata...")
+    metadata_fields = [
+        "esci_label",
+        "query",
+        "query_id",
+        "product_id",
+        "product_locale",
+        "example_id",
+        "product_brand",
+        "product_color",
+    ]
+    df_combined["metadata"] = df_combined.apply(
+        lambda row: {
+            f: row[f] if pd.notna(row.get(f)) else None for f in metadata_fields if f in row
+        },
+        axis=1,
+    )
+
+    df_final = pd.DataFrame(
+        {
+            "text": df_combined["text"],
+            "image": df_combined["image_url"].where(df_combined["image_url"].notna(), None),
+            "metadata": df_combined["metadata"],
+        }
+    )
+
+    both_none = ((df_final["text"] == "") | df_final["text"].isna()) & df_final["image"].isna()
+    if both_none.sum() > 0:
+        logger.warning(f"Dropping {both_none.sum()} records with both text and image as None")
+        df_final = df_final[~both_none]
+
+    logger.info(f"Final combined dataset: {len(df_final)} records")
+    return HFDataset.from_pandas(df_final, preserve_index=False)
 
 
 def main() -> int:
@@ -73,13 +218,22 @@ def main() -> int:
 
         logger.info(f"Downloading dataset: {args.dataset_name}")
         logger.info(f"Output directory: {output_dir}")
+        logger.info(f"Combined mode: {args.combined}")
 
-        loader = HuggingFaceDatasetLoader(
-            dataset_name=args.dataset_name,
-            split="train",
-        )
-
-        dataset = loader.load()
+        if args.combined:
+            logger.info("Loading and combining SQID+ESCI datasets...")
+            dataset = load_and_combine_sqid_esci(
+                sqid_dataset_name=args.dataset_name,
+                esci_examples_url=args.esci_examples_url,
+                esci_products_url=args.esci_products_url,
+                cache_dir=output_dir / "esci_cache",
+            )
+        else:
+            loader: DatasetLoader = HuggingFaceDatasetLoader(
+                dataset_name=args.dataset_name,
+                split="train",
+            )
+            dataset = loader.load()
 
         if args.sample_size:
             logger.info(f"Sampling {args.sample_size} items")
@@ -92,37 +246,19 @@ def main() -> int:
             else:
                 dataset = dataset.select(range(min(args.sample_size, len(dataset))))
 
-        logger.info("Validating schema...")
-        loader.validate_schema()
+        if not args.combined:
+            logger.info("Validating schema...")
+            loader.validate_schema()
 
-        info: dict[str, Any]
-        if isinstance(dataset, dict):
-            if dataset:
-                info = {
-                    "dataset_name": loader.get_dataset_name(),
-                    "splits": list(dataset.keys()),
-                    "num_rows": {k: len(v) for k, v in dataset.items()},
-                    "features": list(next(iter(dataset.values())).features.keys()),
-                }
-            else:
-                info = {
-                    "dataset_name": loader.get_dataset_name(),
-                    "splits": [],
-                    "num_rows": {},
-                    "features": [],
-                }
+        logger.info(f"Dataset info: {len(dataset)} rows, features: {list(dataset.features.keys())}")
+
+        if args.combined:
+            safe_name = "combined_sqid_esci"
         else:
-            info = {
-                "dataset_name": loader.get_dataset_name(),
-                "split": loader.split,
-                "num_rows": len(dataset),
-                "features": list(dataset.features.keys()),
-            }
-        logger.info(f"Dataset info: {info}")
-
-        safe_name = re.sub(r"[^a-zA-Z0-9_\-]", "_", args.dataset_name)
-        dataset.save_to_disk(output_dir / safe_name)
-        logger.info(f"Dataset saved to {output_dir / safe_name}")
+            safe_name = re.sub(r"[^a-zA-Z0-9_\-]", "_", args.dataset_name)
+        save_path = str(output_dir / safe_name)
+        dataset.save_to_disk(save_path)
+        logger.info(f"Dataset saved to {save_path}")
 
     except Exception as e:
         logger.error(f"Error downloading dataset: {e}", exc_info=True)

@@ -50,7 +50,7 @@ class Settings(BaseSettings):
     )
 
     dev_sample_size: int = Field(
-        default=1000,
+        default=300,
         description="Number of samples to use in development environment",
         gt=0,
     )

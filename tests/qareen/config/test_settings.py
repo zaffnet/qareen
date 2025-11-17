@@ -18,7 +18,7 @@ def test_settings_defaults_match_plan() -> None:
 
     assert settings.data_dir == Path("data")
     assert settings.chroma_db_dir == Path("chroma_db")
-    assert settings.dev_sample_size == 1000
+    assert settings.dev_sample_size == 300
     assert settings.environment in {"dev", "staging", "prod"}
 
 

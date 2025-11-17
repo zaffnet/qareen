@@ -39,6 +39,7 @@ def test_download_sqid_sample_size_logs_correct_row_count(caplog: pytest.LogCapt
 
             with patch("scripts.download_sqid.Settings") as mock_settings:
                 mock_settings.return_value.data_dir = output_dir
+                mock_settings.return_value.ensure_directories.return_value = None
 
                 with patch.object(sys, "argv", ["download_sqid.py", "--sample-size", "5"]):
                     result = main()
@@ -46,7 +47,6 @@ def test_download_sqid_sample_size_logs_correct_row_count(caplog: pytest.LogCapt
                 assert result == 0
                 mock_loader.load.assert_called()
                 mock_loader.validate_schema.assert_called()
-                mock_loader.get_dataset_name.assert_called()
                 mock_loader_class.assert_called()
                 mock_settings.assert_called()
 
@@ -54,4 +54,4 @@ def test_download_sqid_sample_size_logs_correct_row_count(caplog: pytest.LogCapt
         info_log = [msg for msg in log_messages if "Dataset info:" in msg]
         assert len(info_log) == 1
 
-        assert '"num_rows": 5' in info_log[0] or "'num_rows': 5" in info_log[0]
+        assert "5 rows" in info_log[0]

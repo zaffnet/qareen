@@ -8,6 +8,7 @@ from io import BytesIO
 from typing import cast
 
 import chromadb
+import requests  # type: ignore[import-untyped]
 from chromadb.errors import NotFoundError
 from langchain_chroma import Chroma
 from langchain_core.embeddings import Embeddings
@@ -201,9 +202,32 @@ class ChromaIndexer(VectorStoreIndexer):
                             elif isinstance(image, dict) and "bytes" in image:
                                 image = Image.open(BytesIO(image["bytes"]))
                             elif isinstance(image, str):
-                                image = Image.open(image)
+                                if image.startswith("http://") or image.startswith("https://"):
+                                    max_retries = 3
+                                    for attempt in range(max_retries):
+                                        try:
+                                            response = requests.get(image, timeout=30)
+                                            response.raise_for_status()
+                                            image = Image.open(BytesIO(response.content))
+                                            break
+                                        except (requests.exceptions.RequestException, Exception):
+                                            if attempt == max_retries - 1:
+                                                logger.warning(
+                                                    f"Failed to download image after "
+                                                    f"{max_retries} attempts: {image}"
+                                                )
+                                                image = None
+                                            else:
+                                                logger.debug(
+                                                    f"Retry {attempt + 1}/{max_retries} for {image}"
+                                                )
+                                else:
+                                    image = Image.open(image)
                             else:
                                 raise UnsupportedImageTypeError(type(image))
+
+                            if image.mode != "RGB":
+                                image = image.convert("RGB")
 
                         embedding = self.embedding_model.embed_multimodal(
                             image=image,

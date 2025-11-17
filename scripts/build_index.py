@@ -7,7 +7,9 @@ import logging
 import sys
 
 from qareen.config.settings import Settings
+from qareen.dataset.base import DatasetLoader
 from qareen.dataset.hf_dataset import HuggingFaceDatasetLoader
+from qareen.dataset.local_dataset import LocalDatasetLoader
 from qareen.indexing.chroma_indexer import ChromaIndexer
 from qareen.indexing.siglip_model import SIGLIPEmbeddingModel
 
@@ -112,10 +114,16 @@ def main() -> int:
             sample_size = args.sample_size or settings.dev_sample_size
             logger.info(f"Dev sample size: {sample_size}")
 
-        dataset_loader = HuggingFaceDatasetLoader(
-            dataset_name=args.dataset_name,
-            split="train",
-        )
+        dataset_loader: DatasetLoader
+        if args.dataset_name.startswith("data/") or args.dataset_name.startswith("/"):
+            logger.info(f"Loading dataset from local path: {args.dataset_name}")
+            dataset_loader = LocalDatasetLoader(dataset_path=args.dataset_name)
+        else:
+            logger.info(f"Loading dataset from HuggingFace Hub: {args.dataset_name}")
+            dataset_loader = HuggingFaceDatasetLoader(
+                dataset_name=args.dataset_name,
+                split="train",
+            )
 
         logger.info("Loading dataset...")
         dataset_loader.load()
@@ -141,8 +149,9 @@ def main() -> int:
             )
 
             for alpha, _vectorstore in vectorstores.items():
+                dataset_name_for_collection = dataset_loader.get_dataset_name()
                 collection_name = indexer.get_collection_name(
-                    dataset_name=args.dataset_name,
+                    dataset_name=dataset_name_for_collection,
                     model_id=embedding_model.get_model_id(),
                     alpha=alpha,
                     environment=settings.environment,
