@@ -17,16 +17,48 @@ from qareen.indexing.base import VectorStoreIndexer
 from qareen.indexing.models import EmbeddingModel
 
 
-class DummyEmbeddings(Embeddings):
-    """Dummy embeddings for pre-computed vectors."""
+class EmbeddingModelWrapper(Embeddings):
+    """LangChain Embeddings wrapper for EmbeddingModel.
+
+    Allows query embedding while documents use pre-computed embeddings.
+    """
+
+    def __init__(self, embedding_model: EmbeddingModel) -> None:
+        """Initialize wrapper.
+
+        Args:
+            embedding_model: Embedding model instance for query embedding
+        """
+        self.embedding_model = embedding_model
 
     def embed_documents(self, texts: list[str]) -> list[list[float]]:
-        """Not used - embeddings are pre-computed."""
-        raise NotImplementedError("Embeddings are pre-computed")
+        """Return dummy embeddings - actual embeddings are provided via add_texts.
+
+        LangChain Chroma calls this even when embeddings are provided, so we return
+        dummy values that will be ignored in favor of the provided embeddings.
+
+        Args:
+            texts: Input texts (not used)
+
+        Returns:
+            List of dummy embedding vectors (will be ignored when embeddings parameter is used)
+        """
+        if not texts:
+            return []
+        dummy_dim = len(self.embedding_model.embed_text("dummy"))
+        return [[0.0] * dummy_dim for _ in texts]
 
     def embed_query(self, text: str) -> list[float]:
-        """Not used - embeddings are pre-computed."""
-        raise NotImplementedError("Embeddings are pre-computed")
+        """Embed query text using the embedding model.
+
+        Args:
+            text: Query text to embed
+
+        Returns:
+            Text embedding vector as list of floats
+        """
+        embedding = self.embedding_model.embed_text(text)
+        return list(embedding.tolist())
 
 
 class ChromaIndexer(VectorStoreIndexer):
@@ -82,8 +114,14 @@ class ChromaIndexer(VectorStoreIndexer):
         model_id = self.embedding_model.get_model_id()
         environment = self.settings.environment
 
-        if environment == "dev":
-            limit = sample_size or self.settings.dev_sample_size
+        if sample_size is not None:
+            limit = sample_size
+        elif environment == "dev":
+            limit = self.settings.dev_sample_size
+        else:
+            limit = None
+
+        if limit is not None:
             dataset = dataset.select(range(min(limit, len(dataset))))
 
         self.embedding_model.load_model()
@@ -100,63 +138,63 @@ class ChromaIndexer(VectorStoreIndexer):
                     environment=environment,
                 )
 
-            from contextlib import suppress
+                from contextlib import suppress
 
-            with suppress(Exception):
-                chroma_client.delete_collection(name=collection_name)
+                with suppress(Exception):
+                    chroma_client.delete_collection(name=collection_name)
 
-            documents = []
-            embeddings_list = []
-            metadatas = []
-            ids = []
+                vectorstore = Chroma(
+                    client=chroma_client,
+                    collection_name=collection_name,
+                    embedding_function=EmbeddingModelWrapper(self.embedding_model),
+                )
 
-            for idx in tqdm(
-                range(0, len(dataset), batch_size),
-                desc=f"[Model: {model_id}] [Alpha: {alpha:.2f}]",
-            ):
-                batch = dataset[idx : idx + batch_size]
+                for idx in tqdm(
+                    range(0, len(dataset), batch_size),
+                    desc=f"[Model: {model_id}] [Alpha: {alpha:.2f}]",
+                ):
+                    batch = dataset[idx : idx + batch_size]
 
-                if not isinstance(batch, dict):
-                    batch = {col: batch[col] for col in batch.column_names}
+                    if not isinstance(batch, dict):
+                        batch = {col: batch[col] for col in batch.column_names}
 
-                batch_size_actual = len(batch["text"])
+                    batch_size_actual = len(batch["text"])
 
-                for i in range(batch_size_actual):
-                    text = batch["text"][i]
-                    image = batch["image"][i]
+                    batch_documents = []
+                    batch_embeddings = []
+                    batch_metadatas = []
+                    batch_ids = []
 
-                    if isinstance(image, dict) and "bytes" in image:
-                        from io import BytesIO
+                    for i in range(batch_size_actual):
+                        text = batch["text"][i]
+                        image = batch["image"][i]
 
-                        image = Image.open(BytesIO(image["bytes"]))
-                    elif isinstance(image, str):
-                        image = Image.open(image)
+                        if isinstance(image, dict) and "bytes" in image:
+                            from io import BytesIO
 
-                    embedding = self.embedding_model.embed_multimodal(
-                        image=image,
-                        text=text,
-                        alpha=alpha,
+                            image = Image.open(BytesIO(image["bytes"]))
+                        elif isinstance(image, str):
+                            image = Image.open(image)
+
+                        embedding = self.embedding_model.embed_multimodal(
+                            image=image,
+                            text=text,
+                            alpha=alpha,
+                        )
+
+                        batch_documents.append(text)
+                        batch_embeddings.append(embedding.tolist())
+                        batch_metadatas.append({"alpha": alpha, "index": idx + i})
+                        batch_ids.append(f"{idx + i}")
+
+                    vectorstore.add_texts(
+                        texts=batch_documents,
+                        embeddings=batch_embeddings,
+                        metadatas=batch_metadatas,
+                        ids=batch_ids,
                     )
 
-                    documents.append(text)
-                    embeddings_list.append(embedding.tolist())
-                    metadatas.append({"alpha": alpha, "index": idx + i})
-                    ids.append(f"{idx + i}")
-
-            vectorstore = Chroma(
-                client=chroma_client,
-                collection_name=collection_name,
-                embedding_function=DummyEmbeddings(),
-            )
-
-            vectorstore.add_texts(
-                texts=documents,
-                embeddings=embeddings_list,
-                metadatas=metadatas,
-                ids=ids,
-            )
-
-            vectorstores[alpha] = vectorstore
+                vectorstores[alpha] = vectorstore
         finally:
             pass
 
@@ -192,16 +230,16 @@ class ChromaIndexer(VectorStoreIndexer):
         return Chroma(
             client=chroma_client,
             collection_name=collection_name,
-            embedding_function=DummyEmbeddings(),
+            embedding_function=EmbeddingModelWrapper(self.embedding_model),
         )
 
     def get_embeddings(self) -> Embeddings:
-        """Return dummy embeddings instance.
+        """Return embeddings wrapper instance.
 
         Returns:
-            Dummy embeddings (actual embeddings are pre-computed)
+            EmbeddingModelWrapper that can embed queries
         """
-        return DummyEmbeddings()
+        return EmbeddingModelWrapper(self.embedding_model)
 
     def get_collection_name(
         self,

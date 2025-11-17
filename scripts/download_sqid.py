@@ -7,6 +7,7 @@ import logging
 import re
 import sys
 from pathlib import Path
+from typing import Any
 
 from qareen.config.settings import Settings
 from qareen.dataset.hf_dataset import HuggingFaceDatasetLoader
@@ -92,7 +93,21 @@ def main() -> int:
             loader.validate_schema()
             logger.info("Schema validation passed")
 
-        info = loader.get_dataset_info()
+        info: dict[str, Any]
+        if isinstance(dataset, dict):
+            info = {
+                "dataset_name": loader.get_dataset_name(),
+                "splits": list(dataset.keys()),
+                "num_rows": {k: len(v) for k, v in dataset.items()},
+                "features": list(next(iter(dataset.values())).features.keys()),
+            }
+        else:
+            info = {
+                "dataset_name": loader.get_dataset_name(),
+                "split": loader.split,
+                "num_rows": len(dataset),
+                "features": list(dataset.features.keys()),
+            }
         logger.info(f"Dataset info: {info}")
 
         safe_name = re.sub(r"[^a-zA-Z0-9_\-]", "_", args.dataset_name)

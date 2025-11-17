@@ -74,7 +74,7 @@ def check_gpu_available() -> bool:
                     "installing qareen. The package will work with CPU-only PyTorch, but "
                     "GPU acceleration will not be available.",
                     UserWarning,
-                    stacklevel=2,
+                    stacklevel=3,
                 )
 
         return is_available
