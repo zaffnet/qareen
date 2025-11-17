@@ -22,6 +22,7 @@ class HuggingFaceDatasetLoader(DatasetLoader):
         self.dataset_name = dataset_name
         self.sample_size = sample_size
         self.dataset: Dataset | None = None
+        self._schema_validated = False
 
     def load(self) -> Any:
         """Load the dataset from HuggingFace."""
@@ -39,8 +40,15 @@ class HuggingFaceDatasetLoader(DatasetLoader):
             self.load()
         if not self.dataset:
             return False
-        for item in self.dataset:
-            DatasetSchema(**item)
+        # Use sample if sample_size is provided, else full dataset
+        if sample_size is not None:
+            indices = range(min(sample_size, len(self.dataset)))
+            items = (self.dataset[i] for i in indices)
+        else:
+            items = self.dataset
+        for item in items:
+            DatasetItem(**item)
+        self._schema_validated = True
         return True
 
     def get_dataset_name(self) -> str:
@@ -53,4 +61,4 @@ class HuggingFaceDatasetLoader(DatasetLoader):
             self.load()
         if not self.dataset:
             raise RuntimeError("Dataset failed to load; cannot retrieve info.")
-        return dict(self.dataset.info)
+        return self.dataset.info.to_dict()  # type: ignore[no-any-return]

@@ -5,7 +5,7 @@ from typing import Any
 
 import numpy as np
 from PIL import Image
-from transformers import AutoProcessor, SiglipModel
+from transformers import AutoProcessor, ProcessorMixin, SiglipModel
 
 
 class EmbeddingModel(ABC):
@@ -53,8 +53,9 @@ class SigLIPEmbeddingModel(EmbeddingModel):
             device: The device to use for inference.
         """
         self.model_id = model_id
+        self.device = device
         self.model: SiglipModel | None = None
-        self.processor: SiglipImageProcessor | None = None
+        self.processor: ProcessorMixin | None = None
 
     def load_model(self) -> Any:
         """Load the embedding model."""
