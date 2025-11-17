@@ -17,7 +17,8 @@ class HuggingFaceDatasetLoader(DatasetLoader):
         self._dataset = datasets.load_dataset(self.dataset_name, split='train') # Default to train split
 
         if self.sample_size > 0:
-            self._dataset = self._dataset.select(range(self.sample_size))
+            num_samples = min(self.sample_size, len(self._dataset))
+            self._dataset = self._dataset.select(range(num_samples))
 
         items = [DatasetItem(text=row['text'], image=row['image']) for row in self._dataset]
         return DatasetSchema(dataset_name=self.dataset_name, data=items)
