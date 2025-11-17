@@ -25,9 +25,7 @@ class HuggingFaceDatasetLoader(DatasetLoader):
         self._dataset = dataset  # Cache for downstream metadata access
 
         if isinstance(dataset, DatasetDict):
-            raw_records = (
-                record for split_dataset in dataset.values() for record in split_dataset
-            )
+            raw_records = (record for split_dataset in dataset.values() for record in split_dataset)
         elif isinstance(dataset, (IterableDataset, Dataset)):
             raw_records = dataset
         else:

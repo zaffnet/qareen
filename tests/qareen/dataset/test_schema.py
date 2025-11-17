@@ -38,4 +38,4 @@ def test_dataset_schema_contract() -> None:
 @pytest.mark.parametrize("payload", INVALID_PAYLOADS)
 def test_dataset_schema_requires_text_and_image(payload: dict[str, object]) -> None:
     with pytest.raises(ValidationError):
-        DatasetSchema(**payload)  # type: ignore[arg-type]
+        DatasetSchema(**payload)
