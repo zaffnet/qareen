@@ -61,6 +61,16 @@ jobs:
         run: |
           echo "$HOME/.cursor/bin" >> $GITHUB_PATH
 
+      - name: Verify Cursor CLI installation
+        run: |
+          export PATH="$HOME/.cursor/bin:$PATH"
+          if [ -d "$HOME/.cursor/bin" ]; then
+            echo "Cursor bin directory exists"
+            ls -la "$HOME/.cursor/bin" || true
+          fi
+          which cursor || echo "cursor command not found in PATH"
+          cursor --version || cursor --help || echo "cursor command not working"
+
       - name: Configure git identity
         run: |
           git config user.name "Cursor Agent"
@@ -72,7 +82,8 @@ jobs:
           MODEL: gpt-5
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          cursor-agent --force --model "$MODEL" --output-format=text --print <<PROMPT_END
+          export PATH="$HOME/.cursor/bin:$PATH"
+          cursor agent --force --model "$MODEL" --output-format=text --print <<PROMPT_END
           You are operating in a GitHub Actions runner performing automated code review. The gh CLI is available and authenticated via GH_TOKEN. You may comment on pull requests.
 
           Context:
