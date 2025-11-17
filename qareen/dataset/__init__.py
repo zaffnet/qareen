@@ -1,5 +1,5 @@
 from .base import DatasetLoader
 from .hf_dataset import HuggingFaceDatasetLoader
-from .schema import DatasetItem, DatasetSchema
+from .schema import DatasetItem
 
-__all__ = ["DatasetLoader", "HuggingFaceDatasetLoader", "DatasetSchema", "DatasetItem"]
+__all__ = ["DatasetItem", "DatasetLoader", "HuggingFaceDatasetLoader"]

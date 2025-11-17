@@ -5,7 +5,7 @@ from __future__ import annotations
 import pytest
 from pydantic import BaseModel, ValidationError
 
-from qareen.dataset.schema import DatasetItem, DatasetSchema
+from qareen.dataset.schema import DatasetItem
 
 INVALID_PAYLOADS = (
     pytest.param({"text": "caption"}, id="missing-image"),
@@ -13,12 +13,11 @@ INVALID_PAYLOADS = (
 )
 
 
-def test_dataset_schema_contract() -> None:
+def test_dataset_item_contract() -> None:
     """Schema must capture text/image pairs while keeping metadata optional."""
-    assert issubclass(DatasetSchema, BaseModel)
     assert issubclass(DatasetItem, BaseModel)
 
-    sample = DatasetSchema(text="caption", image="sample.jpg", metadata={"split": "train"})
+    sample = DatasetItem(text="caption", image="sample.jpg", metadata={"split": "train"})
     assert sample.model_dump() == {
         "text": "caption",
         "image": "sample.jpg",
@@ -36,6 +35,6 @@ def test_dataset_schema_contract() -> None:
 
 
 @pytest.mark.parametrize("payload", INVALID_PAYLOADS)
-def test_dataset_schema_requires_text_and_image(payload: dict[str, object]) -> None:
+def test_dataset_item_requires_text_and_image(payload: dict[str, object]) -> None:
     with pytest.raises(ValidationError):
-        DatasetSchema(**payload)
+        DatasetItem(**payload)

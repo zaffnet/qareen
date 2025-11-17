@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import sys
 
 from qareen.config.settings import Settings
 from qareen.dataset.hf_dataset import HuggingFaceDatasetLoader
@@ -9,6 +10,7 @@ from qareen.indexing.models import SigLIPEmbeddingModel
 
 
 def main():
+    """Build vector store indexes for a dataset."""
     settings = Settings()
     parser = argparse.ArgumentParser(description="Build vector store indexes.")
     parser.add_argument(
@@ -41,34 +43,32 @@ def main():
         type=int,
         help="Override the dev sample size.",
     )
-    parser.add_argument(
-        "--batch-size",
-        type=int,
-        default=100,
-        help="The batch size for indexing.",
-    )
     args = parser.parse_args()
 
-    loader = HuggingFaceDatasetLoader(
-        args.dataset_name,
-        sample_size=args.sample_size,
-    )
-    loader.load()
+    try:
+        loader = HuggingFaceDatasetLoader(
+            args.dataset_name,
+            sample_size=args.sample_size,
+        )
+        loader.load()
 
-    for model_id in args.models:
-        model = SigLIPEmbeddingModel(model_id)
-        model.load_model()
-        for alpha in args.alpha_values:
-            indexer = ChromaIndexer()
-            collection_name = indexer.get_collection_name(
-                dataset_name=args.dataset_name,
-                environment=args.environment,
-                model_id=model_id,
-                alpha=alpha,
-            )
-            print(f"Indexing collection: {collection_name}")
-            # The actual indexing logic will be added here.
-            # For now, this just prints the collection name.
+        for model_id in args.models:
+            model = SigLIPEmbeddingModel(model_id)
+            model.load_model()
+            for alpha in args.alpha_values:
+                indexer = ChromaIndexer()
+                collection_name = indexer.get_collection_name(
+                    dataset_name=args.dataset_name,
+                    environment=args.environment,
+                    model_id=model_id,
+                    alpha=alpha,
+                )
+                print(f"Indexing collection: {collection_name}")
+                # The actual indexing logic will be added here.
+                # For now, this just prints the collection name.
+    except Exception as e:
+        print(f"Error: {e}", file=sys.stderr)
+        sys.exit(1)
 
 
 if __name__ == "__main__":

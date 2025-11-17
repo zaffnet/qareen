@@ -4,8 +4,11 @@ from __future__ import annotations
 
 from abc import ABC
 
+import pytest
+
 from qareen.indexing.base import VectorStoreIndexer
 from qareen.indexing.chroma_indexer import ChromaIndexer
+from qareen.indexing.exceptions import InvalidCollectionNameError
 
 REQUIRED_INDEXER_METHODS = frozenset(
     {"index", "get_collection_name", "create_vectorstore", "get_embeddings"}
@@ -30,12 +33,10 @@ def test_vector_store_indexer_contract_and_naming() -> None:
             raise NotImplementedError()
 
     indexer = StubChromaIndexer()
-    assert (
+    with pytest.raises(InvalidCollectionNameError):
         indexer.get_collection_name(
             dataset_name="SQID Shots",
             environment="Staging",
             model_id="google/siglip-base-patch16-224",
             alpha=0.5,
         )
-        == "staging_sqid_shots_google_siglip-base-patch16-224_alpha0_50"
-    )
