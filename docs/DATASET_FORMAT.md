@@ -56,4 +56,4 @@ Dataset names are sanitized for use in collection names:
 - Leading/trailing underscores trimmed
 - Maximum length: 63 characters (ChromaDB limit)
 
-Example: `"SQID Shots"` → `"sqid_shots"`
+Example: `"Conceptual Captions"` → `"conceptual_captions"`

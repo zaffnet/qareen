@@ -90,10 +90,10 @@ def main() -> int:
         settings = Settings(environment=args.environment.lower())
         settings.ensure_directories()
 
-        models = args.models or settings.default_embedding_models
+        models = args.models or settings.embedding_models
         models = list(dict.fromkeys(models))
 
-        alpha_values = args.alpha_values or settings.default_alpha_values
+        alpha_values = args.alpha_values or settings.alpha_values
         alpha_values = sorted(list(set(alpha_values)))
 
         for alpha in alpha_values:

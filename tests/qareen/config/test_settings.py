@@ -13,8 +13,8 @@ def test_settings_defaults_match_plan() -> None:
     assert issubclass(Settings, BaseSettings)
 
     settings = Settings()
-    assert settings.default_embedding_models, "At least one default embedding model is required"
-    assert all(isinstance(model, str) for model in settings.default_embedding_models)
+    assert settings.embedding_models, "At least one embedding model is required"
+    assert all(isinstance(model, str) for model in settings.embedding_models)
 
     assert settings.data_dir == Path("data")
     assert settings.chroma_db_dir == Path("chroma_db")

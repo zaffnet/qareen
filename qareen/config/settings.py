@@ -10,7 +10,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 ALPHA_REQUIRED_ERR = "At least one alpha value is required"
 ALPHA_RANGE_ERR = "Alpha value {alpha} must be in range [0.0, 1.0]"
-EMBEDDING_MODEL_REQUIRED_ERR = "At least one default embedding model is required"
+EMBEDDING_MODEL_REQUIRED_ERR = "At least one embedding model is required"
 
 
 class Settings(BaseSettings):
@@ -29,14 +29,14 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
-    default_embedding_models: list[str] = Field(
+    embedding_models: list[str] = Field(
         default=["google/siglip-base-patch16-224"],
-        description="Default embedding model IDs",
+        description="Embedding model IDs",
     )
 
-    default_alpha_values: list[float] = Field(
+    alpha_values: list[float] = Field(
         default=[0.5],
-        description="Default alpha values for multimodal embedding combination (0.0-1.0)",
+        description="Alpha values for multimodal embedding combination (0.0-1.0)",
     )
 
     data_dir: Path = Field(
@@ -60,7 +60,7 @@ class Settings(BaseSettings):
         description="Environment (dev/staging/prod)",
     )
 
-    @field_validator("default_alpha_values")
+    @field_validator("alpha_values")
     @classmethod
     def validate_alpha_values(cls, v: list[float]) -> list[float]:
         """Validate alpha values are in [0.0, 1.0] range and deduplicate."""
@@ -90,7 +90,7 @@ class Settings(BaseSettings):
         self.data_dir.mkdir(parents=True, exist_ok=True)
         self.chroma_db_dir.mkdir(parents=True, exist_ok=True)
 
-    @field_validator("default_embedding_models")
+    @field_validator("embedding_models")
     @classmethod
     def validate_models(cls, v: list[str]) -> list[str]:
         """Validate at least one model is provided and deduplicate."""
