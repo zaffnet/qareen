@@ -30,6 +30,7 @@ class EmbeddingModelWrapper(Embeddings):
             embedding_model: Embedding model instance for query embedding
         """
         self.embedding_model = embedding_model
+        self._embedding_dim: int | None = None
 
     def embed_documents(self, texts: list[str]) -> list[list[float]]:
         """Return dummy embeddings - actual embeddings are provided via add_texts.
@@ -45,8 +46,12 @@ class EmbeddingModelWrapper(Embeddings):
         """
         if not texts:
             return []
-        dummy_dim = len(self.embedding_model.embed_text("dummy"))
-        return [[0.0] * dummy_dim for _ in texts]
+        if self._embedding_dim is None:
+            try:
+                self._embedding_dim = len(self.embedding_model.embed_text("dummy"))
+            except Exception:
+                self._embedding_dim = 0
+        return [[0.0] * self._embedding_dim for _ in texts]
 
     def embed_query(self, text: str) -> list[float]:
         """Embed query text using the embedding model.
@@ -87,6 +92,7 @@ class ChromaIndexer(VectorStoreIndexer):
             settings: Configuration settings (uses defaults if not provided)
         """
         self.settings = settings or Settings()
+        self.settings.ensure_directories()
         self.dataset_loader = dataset_loader
         self.embedding_model = embedding_model
 
@@ -129,74 +135,71 @@ class ChromaIndexer(VectorStoreIndexer):
         vectorstores: dict[float, VectorStore] = {}
         chroma_client = chromadb.PersistentClient(path=str(self.settings.chroma_db_dir))
 
-        try:
-            for alpha in alpha_values:
-                collection_name = self.get_collection_name(
-                    dataset_name=dataset_name,
-                    model_id=model_id,
-                    alpha=alpha,
-                    environment=environment,
-                )
+        for alpha in alpha_values:
+            collection_name = self.get_collection_name(
+                dataset_name=dataset_name,
+                model_id=model_id,
+                alpha=alpha,
+                environment=environment,
+            )
 
-                from contextlib import suppress
+            from contextlib import suppress
 
-                with suppress(Exception):
-                    chroma_client.delete_collection(name=collection_name)
+            with suppress(ValueError):
+                chroma_client.delete_collection(name=collection_name)
 
-                vectorstore = Chroma(
-                    client=chroma_client,
-                    collection_name=collection_name,
-                    embedding_function=EmbeddingModelWrapper(self.embedding_model),
-                )
+            vectorstore = Chroma(
+                client=chroma_client,
+                collection_name=collection_name,
+                embedding_function=EmbeddingModelWrapper(self.embedding_model),
+            )
 
-                for idx in tqdm(
-                    range(0, len(dataset), batch_size),
-                    desc=f"[Model: {model_id}] [Alpha: {alpha:.2f}]",
-                ):
-                    batch = dataset[idx : idx + batch_size]
+            for idx in tqdm(
+                range(0, len(dataset), batch_size),
+                desc=f"[Model: {model_id}] [Alpha: {alpha:.2f}]",
+            ):
+                batch = dataset[idx : idx + batch_size]
 
-                    if not isinstance(batch, dict):
-                        batch = {col: batch[col] for col in batch.column_names}
+                if not isinstance(batch, dict):
+                    batch = {col: batch[col] for col in batch.column_names}
 
-                    batch_size_actual = len(batch["text"])
+                batch_size_actual = len(batch["text"])
 
-                    batch_documents = []
-                    batch_embeddings = []
-                    batch_metadatas = []
-                    batch_ids = []
+                batch_documents = []
+                batch_embeddings = []
+                batch_metadatas = []
+                batch_ids = []
 
-                    for i in range(batch_size_actual):
-                        text = batch["text"][i]
-                        image = batch["image"][i]
+                for i in range(batch_size_actual):
+                    text = batch["text"][i]
+                    image = batch["image"][i]
 
-                        if isinstance(image, dict) and "bytes" in image:
-                            from io import BytesIO
+                    if isinstance(image, dict) and "bytes" in image:
+                        from io import BytesIO
 
-                            image = Image.open(BytesIO(image["bytes"]))
-                        elif isinstance(image, str):
-                            image = Image.open(image)
+                        image = Image.open(BytesIO(image["bytes"]))
+                    elif isinstance(image, str):
+                        image = Image.open(image)
 
-                        embedding = self.embedding_model.embed_multimodal(
-                            image=image,
-                            text=text,
-                            alpha=alpha,
-                        )
-
-                        batch_documents.append(text)
-                        batch_embeddings.append(embedding.tolist())
-                        batch_metadatas.append({"alpha": alpha, "index": idx + i})
-                        batch_ids.append(f"{idx + i}")
-
-                    vectorstore.add_texts(
-                        texts=batch_documents,
-                        embeddings=batch_embeddings,
-                        metadatas=batch_metadatas,
-                        ids=batch_ids,
+                    embedding = self.embedding_model.embed_multimodal(
+                        image=image,
+                        text=text,
+                        alpha=alpha,
                     )
 
-                vectorstores[alpha] = vectorstore
-        finally:
-            pass
+                    batch_documents.append(text)
+                    batch_embeddings.append(embedding.tolist())
+                    batch_metadatas.append({"alpha": alpha, "index": idx + i})
+                    batch_ids.append(f"{idx + i}")
+
+                vectorstore.add_texts(
+                    texts=batch_documents,
+                    embeddings=batch_embeddings,
+                    metadatas=batch_metadatas,
+                    ids=batch_ids,
+                )
+
+            vectorstores[alpha] = vectorstore
 
         return vectorstores
 

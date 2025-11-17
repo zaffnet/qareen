@@ -32,8 +32,8 @@ __all__ = [
     "EmbeddingModel",
     "HuggingFaceDatasetLoader",
     "InvalidCollectionNameError",
-    "Settings",
     "SIGLIPEmbeddingModel",
+    "Settings",
     "VectorStoreIndexer",
     "check_gpu_available",
 ]

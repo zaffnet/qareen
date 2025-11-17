@@ -89,6 +89,7 @@ def main() -> int:
     try:
         settings = Settings()
         settings.environment = args.environment.lower()
+        settings.ensure_directories()
 
         models = args.models or settings.default_embedding_models
         models = list(dict.fromkeys(models))
@@ -149,12 +150,12 @@ def main() -> int:
                 )
                 logger.info(f"✓ Completed collection: {collection_name} (alpha={alpha:.2f})")
 
-        logger.info("✓ All indexes built successfully")
-        return 0
-
     except Exception as e:
         logger.error(f"Error building index: {e}", exc_info=True)
         return 1
+    else:
+        logger.info("✓ All indexes built successfully")
+        return 0
 
 
 if __name__ == "__main__":

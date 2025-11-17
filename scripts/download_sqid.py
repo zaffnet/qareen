@@ -71,6 +71,7 @@ def main() -> int:
 
     try:
         settings = Settings()
+        settings.ensure_directories()
         output_dir = args.output_dir or settings.data_dir
         output_dir.mkdir(parents=True, exist_ok=True)
 

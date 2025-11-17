@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
+from typing import Any, ClassVar
 
 from PIL import Image
 from pydantic import BaseModel, Field, field_validator
@@ -18,6 +18,9 @@ class DatasetItem(BaseModel):
         metadata: Optional metadata dictionary
         dataset_name: Optional dataset identifier
     """
+
+    INVALID_IMAGE_EXTENSION: ClassVar[str] = "Image path must have valid extension: {path}"
+    INVALID_IMAGE_TYPE: ClassVar[str] = "Image must be PIL Image or path string"
 
     text: str
     image: str | Path | Image.Image
@@ -49,9 +52,9 @@ class DatasetItem(BaseModel):
                 ".tif",
                 ".svg",
             }:
-                raise ValueError(f"Image path must have valid extension: {path}")
+                raise ValueError(cls.INVALID_IMAGE_EXTENSION.format(path=path))
         elif not isinstance(v, Image.Image):
-            raise TypeError("Image must be PIL Image or path string")
+            raise TypeError(cls.INVALID_IMAGE_TYPE)
         return v
 
     model_config = {"arbitrary_types_allowed": True}
