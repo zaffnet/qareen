@@ -41,9 +41,9 @@ Pydantic-first: use Pydantic models for all data structures, configs, schemas. U
 - ❌ "Improving" variable names in passing
 
 **Speaking rules:**
-- Errors: state problem + fix (1 line)
-- Clarifications: ask question directly
-- Completion: "Done." or "✅ [what was done]" (max 2 sentences)
+- Errors: state problem + fix concisely; include enough context to reproduce (logs, steps, inputs) when relevant
+- Clarifications: ask question directly; brief context or examples are permitted to aid understanding
+- Completion: "✅ [what was done]" with 1–3 sentences; optional note about caveats or next steps for handoff
 
 ## ⚠️ CRITICAL: Pre-commit Checks - REQUIRED BEFORE COMPLETION
 

@@ -45,7 +45,7 @@ def test_vector_store_indexer_contract_and_naming() -> None:
     assert (
         indexer.get_collection_name(
             dataset_name="SQID Shots",
-            environment="Staging",
+            environment="staging",
             model_id="google/siglip-base-patch16-224",
         )
         == "staging_sqid_shots_google_siglip-base-patch16-224"

@@ -112,7 +112,7 @@ def main() -> int:
         logger.info(f"Dataset info: {info}")
 
         safe_name = re.sub(r"[^a-zA-Z0-9_\-]", "_", args.dataset_name)
-        dataset.save_to_disk(str(output_dir / safe_name))
+        dataset.save_to_disk(output_dir / safe_name)
         logger.info(f"Dataset saved to {output_dir / safe_name}")
 
     except Exception as e:

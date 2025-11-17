@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 import re
+from io import BytesIO
 from typing import cast
 
 import chromadb
@@ -189,8 +190,6 @@ class ChromaIndexer(VectorStoreIndexer):
                         if isinstance(image, Image.Image):
                             pass
                         elif isinstance(image, dict) and "bytes" in image:
-                            from io import BytesIO
-
                             image = Image.open(BytesIO(image["bytes"]))
                         elif isinstance(image, str):
                             image = Image.open(image)

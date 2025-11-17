@@ -70,8 +70,23 @@ class VectorStoreIndexer(ABC):
             Sanitized collection name
 
         Raises:
+            ValueError: If dataset_name, model_id, or environment validation fails
             CollectionNameTooLongError: If name exceeds 63 characters
         """
+        dataset_name = dataset_name.strip()
+        if not dataset_name:
+            raise ValueError("dataset_name must be a non-empty string")
+
+        model_id = model_id.strip()
+        if not model_id:
+            raise ValueError("model_id must be a non-empty string")
+
+        environment = environment.strip()
+        if environment.lower() not in ("dev", "staging", "prod"):
+            raise ValueError(
+                f"environment must be one of 'dev', 'staging', or 'prod', got '{environment}'"
+            )
+
         parts = [
             environment.lower(),
             dataset_name,
