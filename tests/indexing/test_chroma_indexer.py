@@ -15,8 +15,11 @@ class TestChromaIndexer(unittest.TestCase):
 
     def test_index(self):
         indexer = ChromaIndexer()
+        from unittest.mock import MagicMock
+        mock_data = MagicMock()
+        mock_model = MagicMock()
         with self.assertRaises(NotImplementedError):
-            indexer.index(data=None, model=None, alpha=0.5)
+            indexer.index(data=mock_data, model=mock_model, alpha=0.5)
 
 if __name__ == '__main__':
     unittest.main()

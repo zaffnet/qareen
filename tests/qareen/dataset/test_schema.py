@@ -7,11 +7,13 @@ def test_dataset_item_contract() -> None:
 
     # Text and image are required
     sample = DatasetItem(text="caption", image="sample.jpg")
-    assert sample.text and sample.image
+    assert sample.text == "caption"
+    assert sample.image == "sample.jpg"
+    assert sample.metadata == {}  # Verify default
 
     # Metadata is optional and can be any dict
     sample_with_meta = DatasetItem(text="caption", image="sample.jpg", metadata={"split": "train"})
-    assert sample_with_meta.metadata
+    assert sample_with_meta.metadata == {"split": "train"}
 
 
 def test_dataset_schema_contract() -> None:
@@ -22,3 +24,9 @@ def test_dataset_schema_contract() -> None:
     schema = DatasetSchema(data=[item])
     assert schema.data
     assert len(schema.data) == 1
+    assert schema.dataset_name is None  # Verify default
+    assert schema.data[0].text == "caption"
+
+    # Test with dataset_name provided
+    named_schema = DatasetSchema(dataset_name="test_dataset", data=[item])
+    assert named_schema.dataset_name == "test_dataset"

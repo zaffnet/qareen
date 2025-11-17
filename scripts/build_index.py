@@ -6,9 +6,6 @@ from qareen.indexing.models import EmbeddingModel # This will be a mock for now
 import sys
 import os
 
-# Add the project root to the Python path
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-
 def main():
     parser = argparse.ArgumentParser(description="Build vector store indexes for a dataset.")
     parser.add_argument(
@@ -50,7 +47,7 @@ def main():
         dataset_name=args.dataset_name,
         sample_size=args.sample_size if args.environment == "dev" else -1,
     )
-    dataset = loader.load()
+    loader.load()
 
     indexer = ChromaIndexer()
 

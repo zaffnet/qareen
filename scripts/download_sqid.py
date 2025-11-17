@@ -1,5 +1,4 @@
 import argparse
-from qareen.config.settings import settings
 from qareen.dataset.hf_dataset import HuggingFaceDatasetLoader
 
 def main():
@@ -15,12 +14,14 @@ def main():
     print(f"Downloading {args.dataset_name}...")
     loader = HuggingFaceDatasetLoader(dataset_name=args.dataset_name)
 
-    # The load method will download and save the data. We need to implement saving to the data_dir.
-    # For now, this will just load it into memory.
-    dataset = loader.load()
-
-    print(f"Dataset '{dataset.dataset_name}' downloaded successfully.")
-    print(f"Number of items: {len(dataset.data)}")
+    try:
+        dataset = loader.load()
+        print(f"Dataset '{dataset.dataset_name}' downloaded successfully.")
+        print(f"Number of items: {len(dataset.data)}")
+    except Exception as e:
+        import sys
+        print(f"Error downloading dataset: {e}")
+        sys.exit(1)
 
 if __name__ == "__main__":
     main()

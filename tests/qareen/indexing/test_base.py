@@ -2,7 +2,7 @@ from abc import ABC
 from qareen.indexing.base import VectorStoreIndexer
 from qareen.indexing.chroma_indexer import ChromaIndexer
 
-REQUIRED_INDEXER_METHODS = {"index", "create_vectorstore", "get_embeddings", "get_collection_name"}
+REQUIRED_INDEXER_METHODS = frozenset({"index", "create_vectorstore", "get_embeddings", "get_collection_name"})
 
 
 def test_vector_store_indexer_is_abc() -> None:

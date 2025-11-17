@@ -10,7 +10,7 @@ class ChromaIndexer(VectorStoreIndexer):
 
     def index(self, data: DatasetSchema, model: Any, alpha: float) -> None:
         """Takes dataset and creates vector store."""
-        raise NotImplementedError
+        raise NotImplementedError("index method not yet implemented")
 
     def get_collection_name(self, dataset_name: str, model_id: str, alpha: float, environment: str) -> str:
         """Generates collection name from dataset_name, environment, model_id, and alpha."""
@@ -20,8 +20,8 @@ class ChromaIndexer(VectorStoreIndexer):
 
     def create_vectorstore(self, collection_name: str) -> Any:
         """Creates LangChain VectorStore instance."""
-        raise NotImplementedError
+        raise NotImplementedError("create_vectorstore method not yet implemented")
 
     def get_embeddings(self, model: Any) -> Any:
         """Returns LangChain Embeddings instance."""
-        raise NotImplementedError
+        raise NotImplementedError("get_embeddings method not yet implemented")

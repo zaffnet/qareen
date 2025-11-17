@@ -6,6 +6,8 @@ import datasets
 class HuggingFaceDatasetLoader(DatasetLoader):
 
     def __init__(self, dataset_name: str, sample_size: int = -1):
+        if sample_size != -1 and sample_size <= 0:
+            raise ValueError("sample_size must be -1 (full dataset) or a positive integer")
         self.dataset_name = dataset_name
         self.sample_size = sample_size
         self._dataset = None

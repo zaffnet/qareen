@@ -18,10 +18,9 @@ class TestAbstractDatasetLoader(unittest.TestCase):
             def get_dataset_info(self):
                 pass
 
-        try:
-            ConcreteLoader()
-        except TypeError:
-            self.fail("Should be able to instantiate a concrete subclass of DatasetLoader")
+        # Should instantiate without error
+        loader = ConcreteLoader()
+        self.assertIsInstance(loader, DatasetLoader)
 
 if __name__ == '__main__':
     unittest.main()
