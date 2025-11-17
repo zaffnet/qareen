@@ -75,15 +75,15 @@ class VectorStoreIndexer(ABC):
         """
         dataset_name = dataset_name.strip()
         if not dataset_name:
-            raise ValueError("dataset_name must be a non-empty string")
+            raise ValueError("dataset_name must be a non-empty string")  # noqa: TRY003
 
         model_id = model_id.strip()
         if not model_id:
-            raise ValueError("model_id must be a non-empty string")
+            raise ValueError("model_id must be a non-empty string")  # noqa: TRY003
 
         environment = environment.strip()
         if environment.lower() not in ("dev", "staging", "prod"):
-            raise ValueError(
+            raise ValueError(  # noqa: TRY003
                 f"environment must be one of 'dev', 'staging', or 'prod', got '{environment}'"
             )
 

@@ -28,6 +28,12 @@ def test_download_sqid_sample_size_logs_correct_row_count(caplog: pytest.LogCapt
                 "image": [f"image_{i}" for i in range(100)],
             }
         )
+        sampled_dataset = Dataset.from_dict(
+            {
+                "text": [f"text_{i}" for i in range(5)],
+                "image": [f"image_{i}" for i in range(5)],
+            }
+        )
 
         with patch("scripts.download_sqid.HuggingFaceDatasetLoader") as mock_loader_class:
             mock_loader = MagicMock()
@@ -41,14 +47,20 @@ def test_download_sqid_sample_size_logs_correct_row_count(caplog: pytest.LogCapt
                 mock_settings.return_value.data_dir = output_dir
                 mock_settings.return_value.ensure_directories.return_value = None
 
-                with patch.object(sys, "argv", ["download_sqid.py", "--sample-size", "5"]):
-                    result = main()
+                with patch.object(
+                    mock_dataset, "select", return_value=sampled_dataset
+                ) as mock_select:
+                    with patch.object(sys, "argv", ["download_sqid.py", "--sample-size", "5"]):
+                        result = main()
 
-                assert result == 0
-                mock_loader.load.assert_called()
-                mock_loader.validate_schema.assert_called()
-                mock_loader_class.assert_called()
-                mock_settings.assert_called()
+                    assert result == 0
+                    mock_loader.load.assert_called()
+                    mock_loader.validate_schema.assert_called()
+                    mock_loader_class.assert_called()
+                    mock_settings.assert_called()
+                    mock_select.assert_called_once()
+                    call_args = mock_select.call_args[0][0]
+                    assert list(call_args) == list(range(5))
 
         log_messages = [record.message for record in caplog.records]
         info_log = [msg for msg in log_messages if "Dataset info:" in msg]

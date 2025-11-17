@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import pytest
 from PIL import Image
 from pydantic import BaseModel, ValidationError
@@ -9,23 +11,29 @@ from pydantic import BaseModel, ValidationError
 from qareen.dataset.schema import DatasetItem, DatasetSchema
 
 
-def test_dataset_schema_contract() -> None:
+def test_dataset_schema_contract(tmp_path: Path) -> None:
     """Schema must capture text/image pairs while keeping metadata optional."""
     assert issubclass(DatasetSchema, BaseModel)
     assert issubclass(DatasetItem, BaseModel)
 
-    sample = DatasetSchema(text="caption", image="sample.jpg", metadata={"split": "train"})
+    sample_img_path = tmp_path / "sample.jpg"
+    Image.new("RGB", (224, 224), color="red").save(sample_img_path)
+
+    sample = DatasetSchema(text="caption", image=str(sample_img_path), metadata={"split": "train"})
     assert sample.model_dump() == {
         "text": "caption",
-        "image": "sample.jpg",
+        "image": str(sample_img_path),
         "metadata": {"split": "train"},
         "dataset_name": None,
     }
 
-    item = DatasetItem(text="caption", image="img.png")
+    img_path = tmp_path / "img.png"
+    Image.new("RGB", (224, 224), color="blue").save(img_path)
+
+    item = DatasetItem(text="caption", image=str(img_path))
     assert item.model_dump() == {
         "text": "caption",
-        "image": "img.png",
+        "image": str(img_path),
         "metadata": None,
         "dataset_name": None,
     }
@@ -40,11 +48,14 @@ def test_dataset_schema_accepts_text_only() -> None:
     assert item.dataset_name is None
 
 
-def test_dataset_schema_accepts_image_only() -> None:
+def test_dataset_schema_accepts_image_only(tmp_path: Path) -> None:
     """Schema must accept samples with only image when text is None."""
-    item = DatasetItem(text=None, image="sample.jpg")
+    sample_img_path = tmp_path / "sample.jpg"
+    Image.new("RGB", (224, 224), color="red").save(sample_img_path)
+
+    item = DatasetItem(text=None, image=str(sample_img_path))
     assert item.text is None
-    assert item.image == "sample.jpg"
+    assert item.image == str(sample_img_path)
     assert item.metadata is None
     assert item.dataset_name is None
 
@@ -73,10 +84,19 @@ def test_dataset_schema_rejects_empty_text_when_image_none() -> None:
         DatasetItem(text="   ", image=None)
 
 
-def test_dataset_schema_accepts_empty_text_when_image_present() -> None:
-    """Schema may accept empty text when image is present - implementation specific."""
-    try:
-        item = DatasetItem(text="", image="sample.jpg")
-        assert item.image == "sample.jpg"
-    except ValidationError:
-        pass
+def test_dataset_schema_rejects_empty_text_when_image_present(tmp_path: Path) -> None:
+    """Schema must reject empty text when image is present."""
+    sample_img_path = tmp_path / "sample.jpg"
+    Image.new("RGB", (224, 224), color="red").save(sample_img_path)
+
+    with pytest.raises(ValidationError):
+        DatasetItem(text="", image=str(sample_img_path))
+
+
+def test_dataset_schema_accepts_nonexistent_path_with_valid_extension(tmp_path: Path) -> None:
+    """Schema must accept paths with valid extensions even if file doesn't exist yet."""
+    nonexistent_path = tmp_path / "future_image.jpg"
+    assert not nonexistent_path.exists()
+
+    item = DatasetItem(text="caption", image=str(nonexistent_path))
+    assert item.image == str(nonexistent_path)

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from pathlib import Path
+from typing import ClassVar
 
 import numpy as np
 from PIL import Image
@@ -14,6 +15,8 @@ class EmbeddingModel(ABC):
 
     Provides interface for multimodal embedding generation with text and images.
     """
+
+    ZERO_VECTOR_ERROR: ClassVar[str] = "cannot L2-normalize zero vector"
 
     @abstractmethod
     def load_model(self) -> None:
@@ -108,5 +111,5 @@ class EmbeddingModel(ABC):
         """
         norm: float = float(np.linalg.norm(vector))
         if norm == 0:
-            raise ValueError("cannot L2-normalize zero vector")
+            raise ValueError(EmbeddingModel.ZERO_VECTOR_ERROR)
         return vector / norm

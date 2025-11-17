@@ -1,5 +1,6 @@
 """Test that qareen module imports successfully and has expected attributes."""
 
+import inspect
 import warnings
 from unittest.mock import patch
 
@@ -27,6 +28,8 @@ def test_gpu_warning_stacklevel() -> None:
         warnings.catch_warnings(record=True) as w,
     ):
         warnings.simplefilter("always")
+        frame = inspect.currentframe()
+        call_line = (frame.f_lineno if frame is not None else 0) + 1
         _call_check_gpu_available()
 
         assert len(w) > 0, "Warning should be emitted when CUDA is not available"
@@ -34,4 +37,4 @@ def test_gpu_warning_stacklevel() -> None:
         assert warning.category is UserWarning
         assert "CUDA is not available" in str(warning.message)
         assert warning.filename == __file__
-        assert warning.lineno > 0
+        assert warning.lineno == call_line

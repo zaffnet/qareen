@@ -3,23 +3,29 @@
 from __future__ import annotations
 
 import logging
+import random
 import re
+import time
 from io import BytesIO
 from typing import cast
 
 import chromadb
-import requests  # type: ignore[import-untyped]
+import requests
 from chromadb.errors import NotFoundError
 from langchain_chroma import Chroma
 from langchain_core.embeddings import Embeddings
 from langchain_core.vectorstores import VectorStore
-from PIL import Image
+from PIL import Image, UnidentifiedImageError
 from tqdm import tqdm
 
 from qareen.config.settings import Settings
 from qareen.dataset.base import DatasetLoader
 from qareen.indexing.base import VectorStoreIndexer
-from qareen.indexing.exceptions import InvalidEmbeddingError, UnsupportedImageTypeError
+from qareen.indexing.exceptions import (
+    CollectionNotFoundError,
+    InvalidEmbeddingError,
+    UnsupportedImageTypeError,
+)
 from qareen.indexing.models import EmbeddingModel
 
 logger = logging.getLogger(__name__)
@@ -41,19 +47,17 @@ class EmbeddingModelWrapper(Embeddings):
         self._embedding_dim: int | None = None
 
     def embed_documents(self, texts: list[str]) -> list[list[float]]:
-        """Return dummy embeddings - actual embeddings are provided via add_texts.
-
-        LangChain Chroma calls this even when embeddings are provided, so we return
-        dummy values that will be ignored in favor of the provided embeddings.
+        """Embed documents using the embedding model.
 
         Args:
-            texts: Input texts (not used)
+            texts: Input texts to embed
 
         Returns:
-            List of dummy embedding vectors (will be ignored when embeddings parameter is used)
+            List of embedding vectors as lists of floats
 
         Raises:
-            RuntimeError: If embedding dimension cannot be determined
+            RuntimeError: If embedding dimension cannot be determined or embedding fails
+            ValueError: If embedding model returns None for any text
         """
         if not texts:
             return []
@@ -63,7 +67,29 @@ class EmbeddingModelWrapper(Embeddings):
             except (AttributeError, RuntimeError, TypeError) as e:
                 logger.exception("Failed to get embedding dimension")
                 raise RuntimeError("Cannot determine embedding dimension") from e
-        return [[0.0] * self._embedding_dim for _ in texts]
+
+        embeddings = []
+        for text in texts:
+            try:
+                embedding = self.embedding_model.embed_text(text)
+                if embedding is None:
+                    model_id = self.embedding_model.get_model_id()
+                    raise ValueError(
+                        f"Embedding returned None for text. "
+                        f"Model: {model_id}, Text: {text[:100] if text else 'None'}..."
+                    )
+                embedding_list = cast(list[float], embedding.tolist())
+                if len(embedding_list) != self._embedding_dim:
+                    raise RuntimeError(
+                        f"Embedding dimension mismatch: expected {self._embedding_dim}, "
+                        f"got {len(embedding_list)}"
+                    )
+                embeddings.append(embedding_list)
+            except Exception as e:
+                logger.exception(f"Failed to embed text: {text[:100] if text else 'None'}...")
+                raise RuntimeError("Embedding failed for text") from e
+
+        return embeddings
 
     def embed_query(self, text: str) -> list[float]:
         """Embed query text using the embedding model.
@@ -76,7 +102,11 @@ class EmbeddingModelWrapper(Embeddings):
         """
         embedding = self.embedding_model.embed_text(text)
         if embedding is None:
-            raise ValueError("Cannot embed query with None text")
+            model_id = self.embedding_model.get_model_id()
+            raise ValueError(
+                f"Embedding returned None for provided text. "
+                f"Model: {model_id}, Text: {text[:100] if text else 'None'}..."
+            )
         return cast(list[float], embedding.tolist())
 
 
@@ -109,6 +139,141 @@ class ChromaIndexer(VectorStoreIndexer):
         self.settings.ensure_directories()
         self.dataset_loader = dataset_loader
         self.embedding_model = embedding_model
+
+    def _download_image_with_retry(
+        self,
+        image_url: str,
+        max_retries: int = 3,
+        base_delay: float = 1.0,
+        max_size_bytes: int = 10 * 1024 * 1024,
+    ) -> Image.Image | None:
+        """Download image from URL with retry logic and validation.
+
+        Args:
+            image_url: URL of the image to download
+            max_retries: Maximum number of retry attempts
+            base_delay: Base delay in seconds for exponential backoff
+            max_size_bytes: Maximum allowed image size in bytes
+
+        Returns:
+            PIL Image if successful, None otherwise
+        """
+        for attempt in range(max_retries):
+            try:
+                response = requests.get(image_url, timeout=30, stream=True)
+                response.raise_for_status()
+
+                content_type = response.headers.get("Content-Type", "").lower()
+                if not content_type.startswith("image/"):
+                    logger.warning(
+                        f"Invalid Content-Type '{content_type}' "
+                        f"for image URL: {image_url} "
+                        f"(attempt {attempt + 1}/{max_retries})"
+                    )
+                    response.close()
+                    if attempt == max_retries - 1:
+                        return None
+                    delay = base_delay * (2**attempt) + random.uniform(0, 0.1 * base_delay)
+                    time.sleep(delay)
+                    continue
+
+                content_length = response.headers.get("Content-Length")
+                if content_length:
+                    try:
+                        size = int(content_length)
+                        if size > max_size_bytes:
+                            logger.warning(
+                                f"Content-Length {size} exceeds max "
+                                f"{max_size_bytes} bytes for image "
+                                f"URL: {image_url} "
+                                f"(attempt {attempt + 1}/{max_retries})"
+                            )
+                            response.close()
+                            if attempt == max_retries - 1:
+                                return None
+                            delay = base_delay * (2**attempt) + random.uniform(0, 0.1 * base_delay)
+                            time.sleep(delay)
+                            continue
+                    except (ValueError, TypeError) as e:
+                        logger.warning(
+                            f"Invalid Content-Length header "
+                            f"'{content_length}' for image URL: "
+                            f"{image_url} "
+                            f"(attempt {attempt + 1}/{max_retries}): "
+                            f"{e}"
+                        )
+                        response.close()
+                        if attempt == max_retries - 1:
+                            return None
+                        delay = base_delay * (2**attempt) + random.uniform(0, 0.1 * base_delay)
+                        time.sleep(delay)
+                        continue
+
+                content = bytearray()
+                try:
+                    for chunk in response.iter_content(chunk_size=8192):
+                        if len(content) + len(chunk) > max_size_bytes:
+                            logger.warning(
+                                f"Image size exceeds max "
+                                f"{max_size_bytes} bytes during "
+                                f"download for image URL: {image_url} "
+                                f"(attempt {attempt + 1}/{max_retries})"
+                            )
+                            response.close()
+                            return None
+                        content.extend(chunk)
+                    else:
+                        if len(content) > 0:
+                            try:
+                                image_buffer = BytesIO(content)
+                                img = Image.open(image_buffer)
+                                img.verify()
+                                image_buffer.seek(0)
+                                image = Image.open(image_buffer)
+                                return image
+                            except (
+                                UnidentifiedImageError,
+                                OSError,
+                                ValueError,
+                            ) as e:
+                                logger.warning(
+                                    f"Invalid image data for URL: "
+                                    f"{image_url} "
+                                    f"(attempt {attempt + 1}/{max_retries}): {e}"
+                                )
+                                return None
+                        else:
+                            logger.warning(
+                                f"Empty response body for image URL: "
+                                f"{image_url} "
+                                f"(attempt {attempt + 1}/{max_retries})"
+                            )
+                            return None
+                finally:
+                    response.close()
+            except (
+                requests.exceptions.RequestException,
+                UnidentifiedImageError,
+                OSError,
+                ValueError,
+            ) as e:
+                if attempt == max_retries - 1:
+                    logger.warning(
+                        f"Failed to download image after "
+                        f"{max_retries} attempts: {image_url} "
+                        f"(error: {type(e).__name__}: {e})"
+                    )
+                    return None
+                else:
+                    delay = base_delay * (2**attempt) + random.uniform(0, 0.1 * base_delay)
+                    logger.debug(
+                        f"Retry {attempt + 1}/{max_retries}: {image_url}, "
+                        f"sleeping {delay:.2f}s "
+                        f"(error: {type(e).__name__}: {e})"
+                    )
+                    time.sleep(delay)
+
+        return None
 
     def index(
         self,
@@ -146,8 +311,16 @@ class ChromaIndexer(VectorStoreIndexer):
                 selected = dataset.select(range(min(limit, len(dataset))))
                 if len(selected) > 0:
                     dataset = selected
-            except (AttributeError, TypeError):
-                pass
+                    logger.info(
+                        f"Successfully created sample: requested limit={limit}, "
+                        f"selected length={len(selected)}, dataset type={type(dataset).__name__}"
+                    )
+            except (AttributeError, TypeError) as e:
+                logger.warning(
+                    f"Sampling failed, falling back to full dataset: "
+                    f"exception={type(e).__name__}:{e}, "
+                    f"dataset type={type(dataset).__name__}, dataset length={len(dataset)}"
+                )
 
         self.embedding_model.load_model()
 
@@ -203,30 +376,28 @@ class ChromaIndexer(VectorStoreIndexer):
                                 image = Image.open(BytesIO(image["bytes"]))
                             elif isinstance(image, str):
                                 if image.startswith("http://") or image.startswith("https://"):
-                                    max_retries = 3
-                                    for attempt in range(max_retries):
-                                        try:
-                                            response = requests.get(image, timeout=30)
-                                            response.raise_for_status()
-                                            image = Image.open(BytesIO(response.content))
-                                            break
-                                        except (requests.exceptions.RequestException, Exception):
-                                            if attempt == max_retries - 1:
-                                                logger.warning(
-                                                    f"Failed to download image after "
-                                                    f"{max_retries} attempts: {image}"
-                                                )
-                                                image = None
-                                            else:
-                                                logger.debug(
-                                                    f"Retry {attempt + 1}/{max_retries} for {image}"
-                                                )
+                                    image = self._download_image_with_retry(
+                                        image_url=image,
+                                        max_retries=3,
+                                        base_delay=1.0,
+                                        max_size_bytes=self.settings.max_image_bytes,
+                                    )
                                 else:
-                                    image = Image.open(image)
+                                    try:
+                                        image = Image.open(image)
+                                    except FileNotFoundError:
+                                        logger.exception(f"Image file not found: {image}")
+                                        image = None
+                                    except UnidentifiedImageError:
+                                        logger.exception(f"Cannot identify image file: {image}")
+                                        image = None
+                                    except Exception:
+                                        logger.exception(f"Failed to open image file: {image}")
+                                        image = None
                             else:
                                 raise UnsupportedImageTypeError(type(image))
 
-                            if image.mode != "RGB":
+                            if image is not None and image.mode != "RGB":
                                 image = image.convert("RGB")
 
                         embedding = self.embedding_model.embed_multimodal(
@@ -293,6 +464,17 @@ class ChromaIndexer(VectorStoreIndexer):
         )
 
         chroma_client = chromadb.PersistentClient(path=str(self.settings.chroma_db_dir))
+
+        try:
+            chroma_client.get_collection(name=collection_name)
+        except NotFoundError:
+            raise CollectionNotFoundError(
+                collection_name=collection_name,
+                dataset_name=dataset_name,
+                model_id=model_id,
+                alpha=alpha,
+                environment=environment,
+            ) from None
 
         return Chroma(
             client=chroma_client,

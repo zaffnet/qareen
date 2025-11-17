@@ -79,7 +79,7 @@ def test_ensure_directories_with_existing_directories(tmp_path: Path) -> None:
     assert settings._dirs_ensured
 
 
-def test_ensure_directories_handles_race_condition(tmp_path: Path) -> None:
+def test_ensure_directories_with_partial_existing_directories(tmp_path: Path) -> None:
     data_dir = tmp_path / "data"
     chroma_db_dir = tmp_path / "chroma_db"
 

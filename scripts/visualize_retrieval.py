@@ -23,6 +23,19 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
+def truncate_text(text: str, max_length: int) -> str:
+    """Truncate text to max_length, appending '...' if truncated.
+
+    Args:
+        text: Text to truncate
+        max_length: Maximum length before truncation
+
+    Returns:
+        Truncated text with '...' if needed, or original text
+    """
+    return text[:max_length] + "..." if len(text) > max_length else text
+
+
 def build_parser() -> argparse.ArgumentParser:
     """Build argument parser for visualization script.
 
@@ -192,7 +205,7 @@ def main() -> int:
                 f.write("*No image available*\n\n")
 
             f.write("**Text**:\n")
-            preview_text = query_text[:500] + "..." if len(query_text) > 500 else query_text
+            preview_text = truncate_text(query_text, 500)
             f.write(f"```\n{preview_text}\n```\n\n")
 
             if query_metadata:
@@ -237,7 +250,7 @@ def main() -> int:
 
                 f.write("**Text**:\n")
                 doc_text = doc.page_content
-                preview_text = doc_text[:300] + "..." if len(doc_text) > 300 else doc_text
+                preview_text = truncate_text(doc_text, 300)
                 f.write(f"```\n{preview_text}\n```\n\n")
 
                 if doc_index != "unknown":

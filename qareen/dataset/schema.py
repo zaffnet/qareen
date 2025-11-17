@@ -8,6 +8,20 @@ from typing import Any, ClassVar
 from PIL import Image
 from pydantic import BaseModel, Field, field_validator, model_validator
 
+IMAGE_FILE_EXTENSIONS: frozenset[str] = frozenset(
+    {
+        ".jpg",
+        ".jpeg",
+        ".png",
+        ".gif",
+        ".bmp",
+        ".webp",
+        ".tiff",
+        ".tif",
+        ".svg",
+    }
+)
+
 
 class DatasetItem(BaseModel):
     """Schema for a single dataset item with text and/or image.
@@ -20,6 +34,8 @@ class DatasetItem(BaseModel):
 
     Note:
         At least one of text or image must be provided.
+        Image paths are validated for format/extension at creation time,
+        but file existence is not checked until the image is loaded.
     """
 
     INVALID_IMAGE_EXTENSION: ClassVar[str] = "Image path must have valid extension: {path}"
@@ -43,22 +59,17 @@ class DatasetItem(BaseModel):
     @field_validator("image")
     @classmethod
     def validate_image(cls, v: str | Path | Image.Image | None) -> str | Path | Image.Image | None:
-        """Validate image is PIL Image or valid path format if provided."""
+        """Validate image is PIL Image or valid path format if provided.
+
+        Note: Only validates format/type, not file existence. File existence
+        is checked when the image is actually loaded (e.g., via Image.open()).
+        This allows paths to be constructed before files are downloaded or created.
+        """
         if v is None:
             return None
         if isinstance(v, (str, Path)):
             path = Path(v)
-            if path.suffix.lower() not in {
-                ".jpg",
-                ".jpeg",
-                ".png",
-                ".gif",
-                ".bmp",
-                ".webp",
-                ".tiff",
-                ".tif",
-                ".svg",
-            }:
+            if path.suffix.lower() not in IMAGE_FILE_EXTENSIONS:
                 raise ValueError(cls.INVALID_IMAGE_EXTENSION.format(path=path))
         elif not isinstance(v, Image.Image):
             raise TypeError(cls.INVALID_IMAGE_TYPE)

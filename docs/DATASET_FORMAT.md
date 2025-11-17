@@ -23,6 +23,9 @@ At least one of `text` or `image` must be provided. Each field may be `None` ind
 
 # Image-only
 {"text": None, "image": "path.jpg"}
+
+# With metadata
+{"text": "caption", "image": "path.jpg", "metadata": {"product_id": "12345", "category": "electronics"}}
 ```
 
 ## Validation

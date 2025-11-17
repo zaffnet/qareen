@@ -113,5 +113,6 @@ module = [
     "langchain.*",
     "langchain_chroma.*",
     "langchain_core.*",
+    "requests.*",
 ]
 ignore_missing_imports = true

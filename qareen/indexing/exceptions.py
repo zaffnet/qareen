@@ -133,3 +133,37 @@ class InvalidEmbeddingError(TypeError):
         self.embedding_type = embedding_type
         message = f"Embedding must have tolist() method, got {embedding_type}"
         super().__init__(message)
+
+
+class CollectionNotFoundError(Exception):
+    """Raised when attempting to access a collection that does not exist.
+
+    Attributes:
+        collection_name: Name of the missing collection
+        dataset_name: Dataset identifier
+        model_id: Model identifier
+        alpha: Alpha value
+        environment: Environment (dev/staging/prod)
+    """
+
+    def __init__(
+        self,
+        collection_name: str,
+        dataset_name: str,
+        model_id: str,
+        alpha: float,
+        environment: str,
+    ) -> None:
+        self.collection_name = collection_name
+        self.dataset_name = dataset_name
+        self.model_id = model_id
+        self.alpha = alpha
+        self.environment = environment
+
+        message = (
+            f"Collection '{collection_name}' does not exist for "
+            f"dataset '{dataset_name}', model '{model_id}', alpha {alpha:.2f}, "
+            f"environment '{environment}'. "
+            f"Please index the dataset with these parameters before creating a vectorstore."
+        )
+        super().__init__(message)

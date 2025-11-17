@@ -60,6 +60,12 @@ class Settings(BaseSettings):
         description="Environment (dev/staging/prod)",
     )
 
+    max_image_bytes: int = Field(
+        default=10 * 1024 * 1024,
+        description="Maximum image download size in bytes",
+        gt=0,
+    )
+
     @field_validator("alpha_values")
     @classmethod
     def validate_alpha_values(cls, v: list[float]) -> list[float]:
@@ -101,13 +107,14 @@ class Settings(BaseSettings):
         try:
             self.data_dir.mkdir(parents=True, exist_ok=True)
             self.chroma_db_dir.mkdir(parents=True, exist_ok=True)
-            self._dirs_ensured = True
-            return True
-        except (FileExistsError, OSError):
+        except OSError:
             if self.data_dir.exists() and self.chroma_db_dir.exists():
                 self._dirs_ensured = True
                 return True
             raise
+        else:
+            self._dirs_ensured = True
+            return True
 
     @field_validator("embedding_models")
     @classmethod

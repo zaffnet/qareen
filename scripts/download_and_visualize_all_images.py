@@ -4,18 +4,42 @@ from __future__ import annotations
 
 import argparse
 import logging
+import os
 import sys
 from pathlib import Path
 
-import requests  # type: ignore[import-untyped]
+import requests
 from datasets import load_from_disk
+from requests.adapters import HTTPAdapter
 from tqdm import tqdm
+from urllib3.util.retry import Retry
 
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
 )
 logger = logging.getLogger(__name__)
+
+
+def _positive_float(value: str) -> float:
+    """Parse and validate a positive float value.
+
+    Args:
+        value: String value to parse
+
+    Returns:
+        Parsed float value
+
+    Raises:
+        argparse.ArgumentTypeError: If value is not a positive float
+    """
+    try:
+        fvalue = float(value)
+    except ValueError as err:
+        raise argparse.ArgumentTypeError(f"'{value}' is not a valid float") from err
+    if fvalue <= 0:
+        raise argparse.ArgumentTypeError(f"timeout must be > 0, got {fvalue}")
+    return fvalue
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -64,6 +88,14 @@ def build_parser() -> argparse.ArgumentParser:
         help="Width of each image in pixels",
     )
 
+    parser.add_argument(
+        "--timeout",
+        type=_positive_float,
+        default=30.0,
+        help="Request timeout in seconds (allows float values, must be > 0). "
+        "Increase for slow connections.",
+    )
+
     return parser
 
 
@@ -83,6 +115,17 @@ def main() -> int:
 
         args.output_dir.mkdir(parents=True, exist_ok=True)
         logger.info(f"Images will be saved to: {args.output_dir}")
+
+        retry_strategy = Retry(
+            total=3,
+            backoff_factor=1,
+            status_forcelist=[429, 500, 502, 503, 504],
+            allowed_methods=["GET"],
+        )
+        adapter = HTTPAdapter(max_retries=retry_strategy, pool_connections=10, pool_maxsize=20)
+        session = requests.Session()
+        session.mount("http://", adapter)
+        session.mount("https://", adapter)
 
         logger.info("Downloading images...")
         downloaded_images = []
@@ -106,17 +149,25 @@ def main() -> int:
                 continue
 
             try:
-                response = requests.get(image_url, timeout=30)
+                response = session.get(image_url, timeout=args.timeout)
                 response.raise_for_status()
                 image_path.write_bytes(response.content)
                 downloaded_images.append((idx, image_url, product_id, image_filename))
-            except Exception as e:
+            except requests.RequestException as e:
                 logger.debug(f"Failed to download image for {product_id}: {e}")
+                failed_downloads += 1
+            except OSError as e:
+                logger.debug(f"Failed to write image file for {product_id}: {e}")
                 failed_downloads += 1
 
         logger.info(f"Downloaded {len(downloaded_images)} images, {failed_downloads} failed")
 
         logger.info(f"Generating gallery markdown at: {args.output_markdown}")
+
+        markdown_parent = args.output_markdown.parent.resolve()
+        images_dir = args.output_dir.resolve()
+        image_rel_path = Path(os.path.relpath(images_dir, markdown_parent))
+
         with open(args.output_markdown, "w") as f:
             f.write("# Image Gallery\n\n")
             f.write(f"**Total Images**: {len(downloaded_images)}\n")
@@ -127,9 +178,10 @@ def main() -> int:
             for i in range(0, len(downloaded_images), args.images_per_row):
                 row_images = downloaded_images[i : i + args.images_per_row]
 
-                for _idx, image_url, product_id, _image_filename in row_images:
+                for _idx, _image_url, product_id, image_filename in row_images:
+                    local_image_path = image_rel_path / image_filename
                     f.write(
-                        f'<img src="{image_url}" width="{args.image_width}" '
+                        f'<img src="{local_image_path}" width="{args.image_width}" '
                         f'alt="{product_id}" style="margin: 5px;"> '
                     )
                 f.write("\n\n")
@@ -144,8 +196,11 @@ def main() -> int:
         logger.info(f"✓ Images saved to: {args.output_dir}")
         logger.info(f"View the gallery with: open {args.output_markdown}")
 
-    except Exception as e:
+    except (OSError, requests.RequestException) as e:
         logger.error(f"Error generating image gallery: {e}", exc_info=True)
+        return 1
+    except Exception as e:
+        logger.error(f"Unexpected error generating image gallery: {e}", exc_info=True)
         return 1
     else:
         return 0

@@ -5,6 +5,9 @@ from __future__ import annotations
 import argparse
 import logging
 import sys
+from pathlib import Path
+
+from pydantic import ValidationError
 
 from qareen.config.settings import Settings
 from qareen.dataset.base import DatasetLoader
@@ -89,14 +92,14 @@ def main() -> int:
     args = parser.parse_args()
 
     try:
-        settings = Settings(environment=args.environment.lower())
+        settings = Settings(environment=args.environment)
         settings.ensure_directories()
 
         models = args.models or settings.embedding_models
-        models = list(dict.fromkeys(models))
+        models = list(set(models))
 
         alpha_values = args.alpha_values or settings.alpha_values
-        alpha_values = sorted(list(set(alpha_values)))
+        alpha_values = sorted(set(alpha_values))
 
         for alpha in alpha_values:
             if not (0.0 <= alpha <= 1.0):
@@ -115,7 +118,13 @@ def main() -> int:
             logger.info(f"Dev sample size: {sample_size}")
 
         dataset_loader: DatasetLoader
-        if args.dataset_name.startswith("data/") or args.dataset_name.startswith("/"):
+        dataset_path = Path(args.dataset_name)
+        if dataset_path.exists():
+            if not dataset_path.is_dir():
+                raise ValueError(
+                    f"Dataset path exists but is not a directory: {args.dataset_name}. "
+                    "Please provide a directory path or remove the file to use HuggingFace Hub."
+                )
             logger.info(f"Loading dataset from local path: {args.dataset_name}")
             dataset_loader = LocalDatasetLoader(dataset_path=args.dataset_name)
         else:
@@ -158,8 +167,17 @@ def main() -> int:
                 )
                 logger.info(f"✓ Completed collection: {collection_name} (alpha={alpha:.2f})")
 
+    except FileNotFoundError as e:
+        logger.error(f"File or directory not found: {e}")
+        return 1
+    except ValueError as e:
+        logger.error(f"Invalid value or configuration: {e}")
+        return 1
+    except ValidationError as e:
+        logger.error(f"Validation error: {e}")
+        return 1
     except Exception as e:
-        logger.error(f"Error building index: {e}", exc_info=True)
+        logger.error(f"Unexpected error building index: {e}", exc_info=True)
         return 1
     else:
         logger.info("✓ All indexes built successfully")

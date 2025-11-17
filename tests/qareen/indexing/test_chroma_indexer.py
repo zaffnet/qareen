@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import tempfile
-from contextlib import suppress
 from pathlib import Path
 from unittest.mock import MagicMock
 
@@ -14,6 +13,15 @@ from qareen.config.settings import Settings
 from qareen.dataset.base import DatasetLoader
 from qareen.indexing.chroma_indexer import ChromaIndexer
 from qareen.indexing.models import EmbeddingModel
+
+
+class MissingModalityError(ValueError):
+    """Raised when no modalities are present for embedding."""
+
+    pass
+
+
+MISSING_MODALITY_MSG = "At least one modality must be present"
 
 
 class MockEmbeddingModel(EmbeddingModel):
@@ -91,7 +99,7 @@ class MockEmbeddingModel(EmbeddingModel):
         image_emb = self.embed_image(image)
         text_emb = self.embed_text(text)
         if image_emb is None and text_emb is None:
-            raise ValueError("At least one modality must be present")
+            raise MissingModalityError(MISSING_MODALITY_MSG)
         if image_emb is None:
             assert text_emb is not None
             return text_emb
@@ -131,14 +139,14 @@ class MockDatasetLoader(DatasetLoader):
         """
         if self.track_select:
             dataset = MagicMock()
-            dataset.__len__ = lambda *args: self.dataset_size
+            dataset.__len__ = lambda *_: self.dataset_size
             dataset.column_names = ["text", "image"]
 
             def select(indices: range) -> MagicMock:
                 self.select_calls.append(indices)
                 indices_list = list(indices)
                 selected = MagicMock()
-                selected.__len__ = lambda *args: len(indices_list)
+                selected.__len__ = lambda *_: len(indices_list)
                 selected.column_names = ["text", "image"]
 
                 def getitem_slice(*args: object) -> dict:
@@ -265,8 +273,7 @@ def test_sample_size_honored_in_non_dev_environment() -> None:
             settings=settings,
         )
 
-        with suppress(Exception):
-            indexer.index(alpha_values=[0.5], batch_size=10, sample_size=5)
+        indexer.index(alpha_values=[0.5], batch_size=10, sample_size=5)
 
         assert len(dataset_loader.select_calls) == 1
         select_call = dataset_loader.select_calls[0]
@@ -286,8 +293,7 @@ def test_sample_size_honored_in_staging_environment() -> None:
             settings=settings,
         )
 
-        with suppress(Exception):
-            indexer.index(alpha_values=[0.5], batch_size=10, sample_size=7)
+        indexer.index(alpha_values=[0.5], batch_size=10, sample_size=7)
 
         assert len(dataset_loader.select_calls) == 1
         select_call = dataset_loader.select_calls[0]
@@ -307,8 +313,7 @@ def test_dev_sample_size_fallback_in_dev_environment() -> None:
             settings=settings,
         )
 
-        with suppress(Exception):
-            indexer.index(alpha_values=[0.5], batch_size=10, sample_size=None)
+        indexer.index(alpha_values=[0.5], batch_size=10, sample_size=None)
 
         assert len(dataset_loader.select_calls) == 1
         select_call = dataset_loader.select_calls[0]
@@ -328,8 +333,7 @@ def test_explicit_sample_size_overrides_dev_sample_size() -> None:
             settings=settings,
         )
 
-        with suppress(Exception):
-            indexer.index(alpha_values=[0.5], batch_size=10, sample_size=15)
+        indexer.index(alpha_values=[0.5], batch_size=10, sample_size=15)
 
         assert len(dataset_loader.select_calls) == 1
         select_call = dataset_loader.select_calls[0]
@@ -349,7 +353,6 @@ def test_no_limit_in_non_dev_when_sample_size_none() -> None:
             settings=settings,
         )
 
-        with suppress(Exception):
-            indexer.index(alpha_values=[0.5], batch_size=10, sample_size=None)
+        indexer.index(alpha_values=[0.5], batch_size=10, sample_size=None)
 
         assert len(dataset_loader.select_calls) == 0

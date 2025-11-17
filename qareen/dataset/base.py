@@ -5,6 +5,58 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import Any
 
+from datasets import Dataset as HFDataset
+from datasets import DatasetDict
+
+from qareen.dataset.schema import DatasetSchema
+
+
+def validate_dataset_schema(
+    dataset: HFDataset | DatasetDict,
+    error_template: str,
+) -> None:
+    """Validate dataset has required text and image fields.
+
+    Args:
+        dataset: HuggingFace dataset or dataset dict to validate
+        error_template: Error message template with {missing_fields} and {available_fields}
+
+    Raises:
+        ValueError: If required fields are missing or dataset is empty
+    """
+    if isinstance(dataset, dict):
+        features = next(iter(dataset.values())).features
+    else:
+        features = dataset.features
+
+    required_fields = {"text", "image"}
+    missing_fields = required_fields - set(features.keys())
+
+    if missing_fields:
+        raise ValueError(
+            error_template.format(
+                missing_fields=missing_fields,
+                available_fields=set(features.keys()),
+            )
+        )
+
+    if isinstance(dataset, dict):
+        non_empty_split = None
+        for split in dataset.values():
+            if len(split) > 0:
+                non_empty_split = split
+                break
+        if non_empty_split is None:
+            raise ValueError("Dataset contains no non-empty splits")
+        sample = non_empty_split[0]
+    else:
+        if len(dataset) > 0:
+            sample = dataset[0]
+        else:
+            raise ValueError("Dataset is empty")
+
+    DatasetSchema(**sample)
+
 
 class DatasetLoader(ABC):
     """Abstract base class for loading datasets in standardized format.

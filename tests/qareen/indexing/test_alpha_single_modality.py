@@ -132,7 +132,7 @@ class SimpleDatasetLoader(DatasetLoader):
             Mock dataset
         """
         dataset = MagicMock()
-        dataset.__len__ = lambda *args: len(self.samples)
+        dataset.__len__ = lambda *_: len(self.samples)
         dataset.column_names = ["text", "image"]
 
         def getitem(*args: object) -> dict[str, object]:
@@ -151,7 +151,7 @@ class SimpleDatasetLoader(DatasetLoader):
         def select(indices: range) -> MagicMock:
             indices_list = list(indices)
             selected = MagicMock()
-            selected.__len__ = lambda *args: len(indices_list)
+            selected.__len__ = lambda *_: len(indices_list)
             selected.column_names = ["text", "image"]
 
             def getitem_selected(*args: object) -> dict[str, object]:

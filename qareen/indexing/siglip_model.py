@@ -162,11 +162,15 @@ class SIGLIPEmbeddingModel(EmbeddingModel):
             raise ValueError("At least one modality must be present")
 
         if image_embedding is None:
+            assert text_embedding is not None
             return text_embedding
 
         if text_embedding is None:
+            assert image_embedding is not None
             return image_embedding
 
+        assert image_embedding is not None
+        assert text_embedding is not None
         combined = alpha * image_embedding + (1 - alpha) * text_embedding
         return self.normalize_l2(combined)
 

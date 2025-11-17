@@ -4,13 +4,14 @@ from __future__ import annotations
 
 import argparse
 import logging
+import os
 import re
 import sys
 from pathlib import Path
 from typing import Any
 
 import pandas as pd
-import requests  # type: ignore[import-untyped]
+import requests
 from datasets import DatasetDict
 
 from qareen.config.settings import Settings
@@ -22,6 +23,62 @@ logging.basicConfig(
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
 )
 logger = logging.getLogger(__name__)
+
+
+def validate_parquet_file(file_path: Path) -> None:
+    """Validate a parquet file by attempting to read it.
+
+    Args:
+        file_path: Path to the parquet file to validate
+
+    Raises:
+        Exception: If the file cannot be read as a valid parquet file
+    """
+    try:
+        pd.read_parquet(file_path)
+    except Exception:
+        logger.exception(f"Parquet validation failed for {file_path}")
+        if file_path.exists():
+            file_path.unlink()
+            logger.info(f"Deleted invalid file: {file_path}")
+        raise
+
+
+def download_and_validate_parquet(
+    url: str, file_path: Path, timeout: int, max_retries: int
+) -> None:
+    """Download and validate a parquet file with retry logic.
+
+    Args:
+        url: URL to download the parquet file from
+        file_path: Path where the file should be saved
+        timeout: Timeout in seconds for the download request
+        max_retries: Maximum number of retry attempts
+
+    Raises:
+        Exception: If download and validation fails after all retries
+    """
+    for attempt in range(max_retries):
+        try:
+            if file_path.exists():
+                validate_parquet_file(file_path)
+                logger.info(f"Successfully validated existing {file_path}")
+                break
+            else:
+                logger.info(f"Downloading {url} (attempt {attempt + 1}/{max_retries})")
+                response = requests.get(url, timeout=timeout)
+                response.raise_for_status()
+                file_path.write_bytes(response.content)
+                validate_parquet_file(file_path)
+                logger.info(f"Successfully validated {file_path}")
+                break
+        except Exception:
+            if attempt == max_retries - 1:
+                logger.exception(
+                    f"Failed to download and validate {file_path} after {max_retries} attempts"
+                )
+                raise
+            logger.warning(f"Download/validation failed for {file_path}, retrying...")
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -84,6 +141,7 @@ def load_and_combine_sqid_esci(
     esci_examples_url: str,
     esci_products_url: str,
     cache_dir: Path,
+    esci_download_timeout: int | None = None,
 ) -> Any:
     """Load and combine SQID and ESCI datasets.
 
@@ -92,10 +150,14 @@ def load_and_combine_sqid_esci(
         esci_examples_url: URL to ESCI examples parquet
         esci_products_url: URL to ESCI products parquet
         cache_dir: Cache directory for ESCI files
+        esci_download_timeout: Timeout in seconds for downloading ESCI parquet files.
+            Defaults to 600, or ESCI_DOWNLOAD_TIMEOUT environment variable if set.
 
     Returns:
         Combined HuggingFace Dataset
     """
+    if esci_download_timeout is None:
+        esci_download_timeout = int(os.getenv("ESCI_DOWNLOAD_TIMEOUT", "600"))
     from datasets import Dataset as HFDataset
 
     cache_dir.mkdir(parents=True, exist_ok=True)
@@ -118,17 +180,13 @@ def load_and_combine_sqid_esci(
     examples_file = cache_dir / "shopping_queries_dataset_examples.parquet"
     products_file = cache_dir / "shopping_queries_dataset_products.parquet"
 
-    if not examples_file.exists():
-        logger.info(f"Downloading {esci_examples_url}")
-        response = requests.get(esci_examples_url, timeout=120)
-        response.raise_for_status()
-        examples_file.write_bytes(response.content)
-
-    if not products_file.exists():
-        logger.info(f"Downloading {esci_products_url}")
-        response = requests.get(esci_products_url, timeout=120)
-        response.raise_for_status()
-        products_file.write_bytes(response.content)
+    max_retries = 3
+    download_and_validate_parquet(
+        esci_examples_url, examples_file, esci_download_timeout, max_retries
+    )
+    download_and_validate_parquet(
+        esci_products_url, products_file, esci_download_timeout, max_retries
+    )
 
     df_examples = pd.read_parquet(examples_file)
     df_products = pd.read_parquet(products_file)
