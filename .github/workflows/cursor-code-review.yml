@@ -11,6 +11,9 @@ permissions:
 
 jobs:
   code-review:
+    concurrency:
+      group: code-review-pr-${{ github.event.pull_request.number }}
+      cancel-in-progress: true
     env:
       BLOCKING_REVIEW: ${{ vars.BLOCKING_REVIEW || 'false' }}
     runs-on: ubuntu-latest # Skip automated code review for draft PRs
@@ -22,6 +25,16 @@ jobs:
           fetch-depth: 0
           ref: ${{ github.event.pull_request.head.sha }}
 
+      - name: Validate BLOCKING_REVIEW variable
+        run: |
+          if [ "$BLOCKING_REVIEW" != "true" ] && [ "$BLOCKING_REVIEW" != "false" ]; then
+            echo "❌ Error: BLOCKING_REVIEW must be either 'true' or 'false'"
+            echo "   Current value: '$BLOCKING_REVIEW'"
+            echo "   Please set the BLOCKING_REVIEW repository variable to 'true' or 'false'"
+            exit 1
+          fi
+          echo "✅ BLOCKING_REVIEW validated: $BLOCKING_REVIEW"
+
       - name: Cache Cursor CLI
         id: cache-cursor
         uses: actions/cache@v4
@@ -29,8 +42,27 @@ jobs:
           path: ~/.cursor
           key: cursor-cli-${{ runner.os }}-v1
 
+      - name: Verify cached Cursor CLI
+        id: verify-cache
+        if: steps.cache-cursor.outputs.cache-hit == 'true'
+        continue-on-error: true
+        run: |
+          export PATH="$HOME/.cursor/bin:$PATH"
+          if [ ! -x "$HOME/.cursor/bin/cursor" ]; then
+            echo "Warning: Cached Cursor CLI binary not found or not executable"
+            echo "cache-valid=false" >> $GITHUB_OUTPUT
+            exit 1
+          fi
+          if ! cursor --version > /dev/null 2>&1 && ! cursor --help > /dev/null 2>&1; then
+            echo "Warning: Cached Cursor CLI failed to run"
+            echo "cache-valid=false" >> $GITHUB_OUTPUT
+            exit 1
+          fi
+          echo "✅ Cached Cursor CLI verified successfully"
+          echo "cache-valid=true" >> $GITHUB_OUTPUT
+
       - name: Install Cursor CLI
-        if: steps.cache-cursor.outputs.cache-hit != 'true'
+        if: steps.cache-cursor.outputs.cache-hit != 'true' || (steps.verify-cache.outcome == 'failure')
         run: |
           set -e
           curl --fail --show-error -fsS https://cursor.com/install -o /tmp/cursor-install.sh
@@ -56,6 +88,12 @@ jobs:
           chmod +x /tmp/cursor-install.sh
           bash /tmp/cursor-install.sh
           rm -f /tmp/cursor-install.sh /tmp/cursor-install.sh.sha256
+          if [ ! -x "$HOME/.cursor/bin/cursor" ]; then
+            echo "Error: Cursor CLI binary not found after installation"
+            echo "Checking installation directory:"
+            ls -la "$HOME/.cursor/bin" || echo "Directory does not exist"
+            exit 1
+          fi
 
       - name: Add Cursor to PATH
         run: |
@@ -64,17 +102,42 @@ jobs:
       - name: Verify Cursor CLI installation
         run: |
           export PATH="$HOME/.cursor/bin:$PATH"
-          if [ -d "$HOME/.cursor/bin" ]; then
-            echo "Cursor bin directory exists"
-            ls -la "$HOME/.cursor/bin" || true
+          if [ ! -d "$HOME/.cursor/bin" ]; then
+            echo "Error: Cursor bin directory does not exist"
+            exit 1
           fi
-          which cursor || echo "cursor command not found in PATH"
-          cursor --version || cursor --help || echo "cursor command not working"
+          if [ ! -x "$HOME/.cursor/bin/cursor" ]; then
+            echo "Error: Cursor CLI binary not found or not executable"
+            ls -la "$HOME/.cursor/bin" || true
+            exit 1
+          fi
+          if ! which cursor > /dev/null 2>&1; then
+            echo "Error: cursor command not found in PATH"
+            echo "PATH: $PATH"
+            exit 1
+          fi
+          if ! cursor --version > /dev/null 2>&1 && ! cursor --help > /dev/null 2>&1; then
+            echo "Error: Cursor CLI failed to run"
+            exit 1
+          fi
+          echo "✅ Cursor CLI verified successfully"
+          cursor --version || cursor --help
 
       - name: Configure git identity
         run: |
           git config user.name "Cursor Agent"
           git config user.email "cursoragent@cursor.com"
+
+      - name: Validate CURSOR_API_KEY
+        env:
+          CURSOR_API_KEY: ${{ secrets.CURSOR_API_KEY }}
+        run: |
+          if [ -z "$CURSOR_API_KEY" ]; then
+            echo "❌ Error: CURSOR_API_KEY secret is not configured"
+            echo "   Please set the CURSOR_API_KEY repository secret in GitHub Settings > Secrets and variables > Actions"
+            exit 1
+          fi
+          echo "✅ CURSOR_API_KEY validated successfully"
 
       - name: Perform automated code review
         env:
@@ -83,6 +146,13 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           export PATH="$HOME/.cursor/bin:$PATH"
+          if ! command -v cursor > /dev/null 2>&1; then
+            echo "Error: cursor command not found in PATH"
+            echo "PATH: $PATH"
+            echo "Checking installation:"
+            ls -la "$HOME/.cursor/bin" || true
+            exit 1
+          fi
           cursor agent --force --model "$MODEL" --output-format=text --print <<PROMPT_END
           You are operating in a GitHub Actions runner performing automated code review. The gh CLI is available and authenticated via GH_TOKEN. You may comment on pull requests.
 
@@ -106,8 +176,8 @@ jobs:
           - Detect prior top-level "no issues" style comments authored by this bot (match bodies like: "✅ no issues", "No issues found", "LGTM").
           - If CURRENT run finds issues and any prior "no issues" comments exist:
             - Prefer to remove them to avoid confusion:
-              - Try deleting top-level issue comments via: gh api -X DELETE repos/${{ github.repository }}/issues/comments/<comment_id>
-              - If deletion isn't possible, minimize them via GraphQL (minimizeComment) or edit to prefix "[Superseded by new findings]".
+              - Delete top-level issue comments via: gh api -X DELETE repos/${{ github.repository }}/issues/comments/<comment_id> (do not mask failures with || true; handle errors explicitly)
+              - If deletion fails (e.g., comment already deleted or insufficient permissions), minimize them via GraphQL (minimizeComment) or edit to prefix "[Superseded by new findings]".
             - If neither delete nor minimize is possible, reply to that comment: "⚠️ Superseded: issues were found in newer commits".
           - If a previously reported issue appears fixed by nearby changes, reply: ✅ This issue appears to be resolved by the recent changes
           - Analyze ONLY for:

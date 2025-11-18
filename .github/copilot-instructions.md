@@ -1,4 +1,6 @@
-# Copilot Instructions
+---
+applyTo: "**"
+---
 
 - Review all pull requests.
 - Start reviewing the changes as soon as new commits are added to a pull request.

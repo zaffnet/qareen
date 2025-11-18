@@ -1,7 +1,7 @@
 name: Pre-commit
 
 # Versioning policy: Use major version tags for GitHub Actions (v5, v4) and exact patch versions for tools (uv@0.9.7)
-# This ensures reproducibility while allowing security updates within major versions.
+# Exact patch pinning ensures reproducibility but prevents automatic security updates. Security updates must be managed manually by updating the pinned versions.
 
 on:
   pull_request:
@@ -21,7 +21,7 @@ jobs:
           version: "0.9.7"
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: "3.11"
 

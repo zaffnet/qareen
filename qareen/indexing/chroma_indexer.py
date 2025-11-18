@@ -85,6 +85,8 @@ class EmbeddingModelWrapper(Embeddings):
                         f"got {len(embedding_list)}"
                     )
                 embeddings.append(embedding_list)
+            except ValueError:
+                raise
             except Exception as e:
                 logger.exception(f"Failed to embed text: {text[:100] if text else 'None'}...")
                 raise RuntimeError("Embedding failed for text") from e
@@ -222,33 +224,33 @@ class ChromaIndexer(VectorStoreIndexer):
                             response.close()
                             return None
                         content.extend(chunk)
-                    else:
-                        if len(content) > 0:
-                            try:
-                                image_buffer = BytesIO(content)
-                                img = Image.open(image_buffer)
-                                img.verify()
-                                image_buffer.seek(0)
-                                image = Image.open(image_buffer)
-                                return image
-                            except (
-                                UnidentifiedImageError,
-                                OSError,
-                                ValueError,
-                            ) as e:
-                                logger.warning(
-                                    f"Invalid image data for URL: "
-                                    f"{image_url} "
-                                    f"(attempt {attempt + 1}/{max_retries}): {e}"
-                                )
-                                return None
-                        else:
+
+                    if len(content) > 0:
+                        try:
+                            image_buffer = BytesIO(content)
+                            img = Image.open(image_buffer)
+                            img.verify()
+                            image_buffer.seek(0)
+                            image = Image.open(image_buffer)
+                            return image
+                        except (
+                            UnidentifiedImageError,
+                            OSError,
+                            ValueError,
+                        ) as e:
                             logger.warning(
-                                f"Empty response body for image URL: "
+                                f"Invalid image data for URL: "
                                 f"{image_url} "
-                                f"(attempt {attempt + 1}/{max_retries})"
+                                f"(attempt {attempt + 1}/{max_retries}): {e}"
                             )
                             return None
+                    else:
+                        logger.warning(
+                            f"Empty response body for image URL: "
+                            f"{image_url} "
+                            f"(attempt {attempt + 1}/{max_retries})"
+                        )
+                        return None
                 finally:
                     response.close()
             except (
@@ -274,6 +276,54 @@ class ChromaIndexer(VectorStoreIndexer):
                     time.sleep(delay)
 
         return None
+
+    def _load_image(self, image: Image.Image | dict | str | None) -> Image.Image | None:
+        """Load image from various input types.
+
+        Args:
+            image: Image input - can be Image.Image, dict with "bytes" key,
+                URL string, local file path, or None
+
+        Returns:
+            PIL Image in RGB mode if successful, None otherwise
+
+        Raises:
+            UnsupportedImageTypeError: If image type is not supported
+        """
+        if image is None:
+            return None
+
+        if isinstance(image, Image.Image):
+            pass
+        elif isinstance(image, dict) and "bytes" in image:
+            image = Image.open(BytesIO(image["bytes"]))
+        elif isinstance(image, str):
+            if image.startswith(("http://", "https://")):
+                image = self._download_image_with_retry(
+                    image_url=image,
+                    max_retries=3,
+                    base_delay=1.0,
+                    max_size_bytes=self.settings.max_image_bytes,
+                )
+            else:
+                try:
+                    image = Image.open(image)
+                except FileNotFoundError:
+                    logger.exception(f"Image file not found: {image}")
+                    image = None
+                except UnidentifiedImageError:
+                    logger.exception(f"Cannot identify image file: {image}")
+                    image = None
+                except Exception:
+                    logger.exception(f"Failed to open image file: {image}")
+                    image = None
+        else:
+            raise UnsupportedImageTypeError(type(image))
+
+        if image is not None and image.mode != "RGB":
+            image = image.convert("RGB")
+
+        return image
 
     def index(
         self,
@@ -371,36 +421,7 @@ class ChromaIndexer(VectorStoreIndexer):
                     image = batch["image"][i]
 
                     try:
-                        if image is not None:
-                            if isinstance(image, Image.Image):
-                                pass
-                            elif isinstance(image, dict) and "bytes" in image:
-                                image = Image.open(BytesIO(image["bytes"]))
-                            elif isinstance(image, str):
-                                if image.startswith(("http://", "https://")):
-                                    image = self._download_image_with_retry(
-                                        image_url=image,
-                                        max_retries=3,
-                                        base_delay=1.0,
-                                        max_size_bytes=self.settings.max_image_bytes,
-                                    )
-                                else:
-                                    try:
-                                        image = Image.open(image)
-                                    except FileNotFoundError:
-                                        logger.exception(f"Image file not found: {image}")
-                                        image = None
-                                    except UnidentifiedImageError:
-                                        logger.exception(f"Cannot identify image file: {image}")
-                                        image = None
-                                    except Exception:
-                                        logger.exception(f"Failed to open image file: {image}")
-                                        image = None
-                            else:
-                                raise UnsupportedImageTypeError(type(image))
-
-                            if image is not None and image.mode != "RGB":
-                                image = image.convert("RGB")
+                        image = self._load_image(image)
 
                         embedding = self.embedding_model.embed_multimodal(
                             image=image,

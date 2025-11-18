@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 import re
 from pathlib import Path
+from typing import cast
 
 import numpy as np
 import torch
@@ -111,7 +112,7 @@ class SIGLIPEmbeddingModel(EmbeddingModel):
             try:
                 image = Image.open(image)
             except (FileNotFoundError, UnidentifiedImageError) as e:
-                raise TypeError(f"{self.IMAGE_TYPE_ERROR}: {e}") from e
+                raise ValueError(f"{self.IMAGE_TYPE_ERROR}: {e}") from e
 
         if not isinstance(image, Image.Image):
             raise TypeError(self.IMAGE_TYPE_ERROR)
@@ -165,15 +166,11 @@ class SIGLIPEmbeddingModel(EmbeddingModel):
             raise ValueError("At least one modality must be present")
 
         if image_embedding is None:
-            assert text_embedding is not None
-            return text_embedding
+            return cast(np.ndarray, text_embedding)
 
         if text_embedding is None:
-            assert image_embedding is not None
-            return image_embedding
+            return cast(np.ndarray, image_embedding)
 
-        assert image_embedding is not None
-        assert text_embedding is not None
         combined = alpha * image_embedding + (1 - alpha) * text_embedding
         return self.normalize_l2(combined)
 
@@ -209,9 +206,11 @@ class SIGLIPEmbeddingModel(EmbeddingModel):
                 f"has_config={hasattr(self.model, 'config')}"
             )
             logger.warning(
-                f"Failed to infer embedding_dim from config for model '{self.model_id}'. "
-                f"{config_state}. AttributeError: {e}. "
-                f"Falling back to sampling with embed_text('dummy')."
+                "Failed to infer embedding_dim from config for model '%s'. %s. "
+                "AttributeError: %s. Falling back to sampling with embed_text('dummy').",
+                self.model_id,
+                config_state,
+                e,
             )
 
         try:

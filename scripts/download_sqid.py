@@ -26,6 +26,15 @@ logger = logging.getLogger(__name__)
 
 SQID_SUBSET_ERROR = "Expected 'product_image_urls' subset in SQID dataset"
 
+DEFAULT_ESCI_EXAMPLES_URL = (
+    "https://github.com/amazon-science/esci-data/raw/main/shopping_queries_dataset/"
+    "shopping_queries_dataset_examples.parquet"
+)
+DEFAULT_ESCI_PRODUCTS_URL = (
+    "https://github.com/amazon-science/esci-data/raw/main/shopping_queries_dataset/"
+    "shopping_queries_dataset_products.parquet"
+)
+
 
 def validate_parquet_file(file_path: Path) -> None:
     """Validate a parquet file by attempting to read it.
@@ -39,10 +48,10 @@ def validate_parquet_file(file_path: Path) -> None:
     try:
         pd.read_parquet(file_path)
     except Exception:
-        logger.exception(f"Parquet validation failed for {file_path}")
+        logger.exception("Parquet validation failed for %s", file_path)
         if file_path.exists():
             file_path.unlink()
-            logger.info(f"Deleted invalid file: {file_path}")
+            logger.info("Deleted invalid file: %s", file_path)
         raise
 
 
@@ -64,23 +73,25 @@ def download_and_validate_parquet(
         try:
             if file_path.exists():
                 validate_parquet_file(file_path)
-                logger.info(f"Successfully validated existing {file_path}")
+                logger.info("Successfully validated existing %s", file_path)
                 break
             else:
-                logger.info(f"Downloading {url} (attempt {attempt + 1}/{max_retries})")
+                logger.info("Downloading %s (attempt %d/%d)", url, attempt + 1, max_retries)
                 response = requests.get(url, timeout=timeout)
                 response.raise_for_status()
                 file_path.write_bytes(response.content)
                 validate_parquet_file(file_path)
-                logger.info(f"Successfully validated {file_path}")
+                logger.info("Successfully validated %s", file_path)
                 break
         except (requests.exceptions.RequestException, OSError, ValueError, TypeError):
             if attempt == max_retries - 1:
                 logger.exception(
-                    f"Failed to download and validate {file_path} after {max_retries} attempts"
+                    "Failed to download and validate %s after %d attempts",
+                    file_path,
+                    max_retries,
                 )
                 raise
-            logger.warning(f"Download/validation failed for {file_path}, retrying...")
+            logger.warning("Download/validation failed for %s, retrying...", file_path)
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -124,14 +135,14 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--esci-examples-url",
         type=str,
-        default="https://github.com/amazon-science/esci-data/raw/main/shopping_queries_dataset/shopping_queries_dataset_examples.parquet",
+        default=DEFAULT_ESCI_EXAMPLES_URL,
         help="URL to ESCI examples parquet file",
     )
 
     parser.add_argument(
         "--esci-products-url",
         type=str,
-        default="https://github.com/amazon-science/esci-data/raw/main/shopping_queries_dataset/shopping_queries_dataset_products.parquet",
+        default=DEFAULT_ESCI_PRODUCTS_URL,
         help="URL to ESCI products parquet file",
     )
 
@@ -257,10 +268,10 @@ def load_and_combine_sqid_esci(
 
     both_none = ((df_final["text"] == "") | df_final["text"].isna()) & df_final["image"].isna()
     if both_none.sum() > 0:
-        logger.warning(f"Dropping {both_none.sum()} records with both text and image as None")
+        logger.warning("Dropping %d records with both text and image as None", both_none.sum())
         df_final = df_final[~both_none]
 
-    logger.info(f"Final combined dataset: {len(df_final)} records")
+    logger.info("Final combined dataset: %d records", len(df_final))
     return HFDataset.from_pandas(df_final, preserve_index=False)
 
 
@@ -279,9 +290,9 @@ def main() -> int:
         output_dir = args.output_dir or settings.data_dir
         output_dir.mkdir(parents=True, exist_ok=True)
 
-        logger.info(f"Downloading dataset: {args.dataset_name}")
-        logger.info(f"Output directory: {output_dir}")
-        logger.info(f"Combined mode: {args.combined}")
+        logger.info("Downloading dataset: %s", args.dataset_name)
+        logger.info("Output directory: %s", output_dir)
+        logger.info("Combined mode: %s", args.combined)
 
         if args.combined:
             logger.info("Loading and combining SQID+ESCI datasets...")
@@ -299,7 +310,7 @@ def main() -> int:
             dataset = loader.load()
 
         if args.sample_size:
-            logger.info(f"Sampling {args.sample_size} items")
+            logger.info("Sampling %d items", args.sample_size)
             if isinstance(dataset, DatasetDict):
                 sampled_splits = {}
                 for split_name, split in dataset.items():
@@ -328,7 +339,7 @@ def main() -> int:
             safe_name = re.sub(r"[^a-zA-Z0-9_\-]", "_", args.dataset_name)
         save_path = str(output_dir / safe_name)
         dataset.save_to_disk(save_path)
-        logger.info(f"Dataset saved to {save_path}")
+        logger.info("Dataset saved to %s", save_path)
 
     except Exception:
         logger.exception("Error downloading dataset")

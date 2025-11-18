@@ -270,8 +270,8 @@ def main() -> int:
         logger.info(f"✓ Visualization saved to: {args.output}")
         logger.info(f"View the file with: open {args.output}")
 
-    except Exception as e:
-        logger.exception(f"Error generating visualization: {e}")
+    except Exception:
+        logger.exception("Error generating visualization")
         return 1
     else:
         return 0

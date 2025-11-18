@@ -131,7 +131,8 @@ class SingleModalityDatasetLoader(DatasetLoader):
             Mock dataset
         """
         dataset = MagicMock()
-        dataset.__len__ = lambda *args: len(self.samples)
+        samples_len = len(self.samples)
+        dataset.__len__ = lambda self: samples_len
         dataset.column_names = ["text", "image"]
 
         def getitem(*args: object) -> dict[str, object]:
@@ -150,7 +151,8 @@ class SingleModalityDatasetLoader(DatasetLoader):
         def select(indices: range) -> MagicMock:
             indices_list = list(indices)
             selected = MagicMock()
-            selected.__len__ = lambda *args: len(indices_list)
+            indices_len = len(indices_list)
+            selected.__len__ = lambda self: indices_len
             selected.column_names = ["text", "image"]
 
             def getitem_selected(*args: object) -> dict[str, object]:
@@ -183,7 +185,7 @@ class SingleModalityDatasetLoader(DatasetLoader):
 
     def validate_schema(self) -> None:
         """Validate schema."""
-        pass
+        ...
 
     def get_dataset_info(self) -> dict[str, object]:
         """Return dataset info."""
@@ -226,7 +228,7 @@ def test_embedding_model_returns_image_only_embedding() -> None:
 def test_embedding_model_rejects_both_none() -> None:
     """Embedding model must reject when both modalities are None."""
     model = SingleModalityEmbeddingModel(embedding_dim=128)
-    with pytest.raises(ValueError, match="(?i)at least one modality"):
+    with pytest.raises(ValueError, match=r"(?i)at least one modality"):
         model.embed_multimodal(image=None, text=None, alpha=0.5)
 
 
