@@ -2,10 +2,14 @@
 
 from __future__ import annotations
 
+import contextlib
 import logging
+import os
 import random
 import re
 import time
+
+os.environ["ANONYMIZED_TELEMETRY"] = "False"
 from io import BytesIO
 from typing import TYPE_CHECKING, Any, cast
 
@@ -23,6 +27,7 @@ from tqdm import tqdm
 from qareen.config.settings import Settings
 from qareen.indexing.base import VectorStoreIndexer
 from qareen.indexing.exceptions import (
+    AlphaMismatchError,
     CollectionNotFoundError,
     InvalidEmbeddingError,
     UnsupportedImageTypeError,
@@ -36,6 +41,7 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 logging.getLogger("chromadb.telemetry.posthog").setLevel(logging.CRITICAL)
+logging.getLogger("chromadb.telemetry.product.posthog").setLevel(logging.CRITICAL)
 
 
 def setup_logging(rich: bool = True, level: int = logging.INFO) -> None:
@@ -180,6 +186,41 @@ class ChromaIndexer(VectorStoreIndexer):
         self.settings.ensure_directories()
         self.dataset_loader = dataset_loader
         self.embedding_model = embedding_model
+        self._chroma_client: chromadb.PersistentClient | None = None
+
+    def _get_chroma_client(self) -> chromadb.PersistentClient:
+        """Get or create ChromaDB client.
+
+        Returns:
+            ChromaDB client instance
+
+        """
+        if self._chroma_client is None:
+            self._chroma_client = chromadb.PersistentClient(
+                path=str(self.settings.chroma_db_dir),
+                settings=ChromaSettings(anonymized_telemetry=False),
+            )
+        return self._chroma_client
+
+    def close(self) -> None:
+        """Close ChromaDB client and release resources."""
+        if hasattr(self, "_chroma_client") and self._chroma_client is not None:
+            with contextlib.suppress(Exception):
+                self._chroma_client.clear_system_cache()
+            self._chroma_client = None
+
+    def __del__(self) -> None:
+        """Cleanup on deletion."""
+        with contextlib.suppress(Exception):
+            self.close()
+
+    def __enter__(self) -> ChromaIndexer:
+        """Enter context manager."""
+        return self
+
+    def __exit__(self, *args: object) -> None:
+        """Exit context manager and cleanup resources."""
+        self.close()
 
     def _download_image_with_retry(
         self,
@@ -422,10 +463,7 @@ class ChromaIndexer(VectorStoreIndexer):
         self.embedding_model.load_model()
 
         vectorstores: dict[float, VectorStore] = {}
-        chroma_client = chromadb.PersistentClient(
-            path=str(self.settings.chroma_db_dir),
-            settings=ChromaSettings(anonymized_telemetry=False),
-        )
+        chroma_client = self._get_chroma_client()
 
         for alpha in alpha_values:
             collection_name = self.get_collection_name(
@@ -445,10 +483,12 @@ class ChromaIndexer(VectorStoreIndexer):
                         f"Collection {collection_name} did not exist or deletion failed: {e}",
                     )
 
+            collection_metadata = {"hnsw:space": "cosine"}
             vectorstore = Chroma(
                 client=chroma_client,
                 collection_name=collection_name,
                 embedding_function=EmbeddingModelWrapper(self.embedding_model),
+                collection_metadata=collection_metadata,
             )
 
             for idx in tqdm(
@@ -538,10 +578,7 @@ class ChromaIndexer(VectorStoreIndexer):
             environment=environment,
         )
 
-        chroma_client = chromadb.PersistentClient(
-            path=str(self.settings.chroma_db_dir),
-            settings=ChromaSettings(anonymized_telemetry=False),
-        )
+        chroma_client = self._get_chroma_client()
 
         try:
             chroma_client.get_collection(name=collection_name)
@@ -554,10 +591,12 @@ class ChromaIndexer(VectorStoreIndexer):
                 environment=environment,
             ) from None
 
+        collection_metadata = {"hnsw:space": "cosine"}
         return Chroma(
             client=chroma_client,
             collection_name=collection_name,
             embedding_function=EmbeddingModelWrapper(self.embedding_model),
+            collection_metadata=collection_metadata,
         )
 
     def get_embeddings(self) -> Embeddings:
@@ -585,13 +624,17 @@ class ChromaIndexer(VectorStoreIndexer):
         This is essential for proper multimodal retrieval - using the standard
         similarity_search() method would only use text, ignoring the image component.
 
+        Uses cosine distance metric. Similarity scores are computed as:
+        similarity = 1.0 - (cosine_distance / 2.0), giving range [0.0, 1.0]
+        where 1.0 = identical, 0.5 = orthogonal, 0.0 = opposite vectors.
+
         Args:
             vectorstore: VectorStore instance to query (must be a Chroma instance)
             image: Query image (PIL Image, URL string, local path, or None)
             text: Query text string or None
             alpha: Alpha value for weighting (0.0 = text-only, 1.0 = image-only)
             k: Number of similar results to return
-            score_threshold: Optional minimum similarity score threshold
+            score_threshold: Optional minimum similarity score threshold (0.0-1.0)
 
         Returns:
             List of (Document, score) tuples sorted by similarity (higher is better)
@@ -599,6 +642,7 @@ class ChromaIndexer(VectorStoreIndexer):
         Raises:
             ValueError: If both image and text are None, or if alpha is invalid
             TypeError: If vectorstore is not a Chroma instance
+            AlphaMismatchError: If query alpha does not match collection's indexed alpha
 
         Example:
             >>> indexer = ChromaIndexer(dataset_loader, embedding_model, settings)
@@ -616,11 +660,21 @@ class ChromaIndexer(VectorStoreIndexer):
         """
         if not isinstance(vectorstore, Chroma):
             raise TypeError(
-                f"vectorstore must be a Chroma instance, got {type(vectorstore).__name__}"
+                f"vectorstore must be a Chroma instance, got {type(vectorstore).__name__}",
             )
 
         if not (0.0 <= alpha <= 1.0):
             raise ValueError(f"alpha must be in range [0.0, 1.0], got {alpha}")
+
+        chroma_collection = vectorstore._collection
+        sample_result = chroma_collection.get(limit=1, include=["metadatas"])
+
+        if sample_result and sample_result["ids"] and len(sample_result["ids"]) > 0:
+            sample_metadata = sample_result["metadatas"][0] if sample_result["metadatas"] else None
+            if sample_metadata and "alpha" in sample_metadata:
+                collection_alpha = float(sample_metadata["alpha"])
+                if not abs(alpha - collection_alpha) < 1e-6:
+                    raise AlphaMismatchError(query_alpha=alpha, collection_alpha=collection_alpha)
 
         loaded_image = self._load_image(image)
 
@@ -631,8 +685,6 @@ class ChromaIndexer(VectorStoreIndexer):
         )
 
         query_embedding_list = query_embedding.tolist()
-
-        chroma_collection = vectorstore._collection
 
         results = chroma_collection.query(
             query_embeddings=[query_embedding_list],
@@ -654,7 +706,7 @@ class ChromaIndexer(VectorStoreIndexer):
                 distances,
                 strict=True,
             ):
-                similarity_score = max(0.0, 1.0 - (distance**2 / 2.0))
+                similarity_score = max(0.0, min(1.0, 1.0 - (distance / 2.0)))
 
                 if score_threshold is not None and similarity_score < score_threshold:
                     continue
@@ -683,10 +735,7 @@ class ChromaIndexer(VectorStoreIndexer):
             Sorted list of available alpha values
 
         """
-        chroma_client = chromadb.PersistentClient(
-            path=str(self.settings.chroma_db_dir),
-            settings=ChromaSettings(anonymized_telemetry=False),
-        )
+        chroma_client = self._get_chroma_client()
 
         collections = chroma_client.list_collections()
 

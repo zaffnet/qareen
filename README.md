@@ -47,6 +47,8 @@ See [docs/QUICKSTART.md](docs/QUICKSTART.md) for full steps; e.g., `./scripts/bu
 
 See [docs/CONFIGURATION.md](docs/CONFIGURATION.md) for environment variables, logging setup, and telemetry settings.
 
+See [docs/DISTANCE_METRIC.md](docs/DISTANCE_METRIC.md) for details on the cosine distance metric used for similarity search.
+
 ## References
 
 1. <a id="ref1"></a>**Zheng, L., et al.** (2024). Judging the Judges: A Systematic Study of Position Bias in LLM-as-a-Judge. *arXiv preprint arXiv:2406.07791*. [https://arxiv.org/abs/2406.07791](https://arxiv.org/abs/2406.07791)

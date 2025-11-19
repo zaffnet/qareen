@@ -167,3 +167,24 @@ class CollectionNotFoundError(Exception):
             f"Please index the dataset with these parameters before creating a vectorstore."
         )
         super().__init__(message)
+
+
+class AlphaMismatchError(ValueError):
+    """Raised when query alpha does not match collection's indexed alpha.
+
+    Attributes:
+        query_alpha: Alpha value used for query
+        collection_alpha: Alpha value used to index the collection
+    """
+
+    def __init__(self, query_alpha: float, collection_alpha: float) -> None:
+        self.query_alpha = query_alpha
+        self.collection_alpha = collection_alpha
+
+        message = (
+            f"Query alpha {query_alpha:.3f} does not match collection's indexed alpha "
+            f"{collection_alpha:.3f}. Query and collection must use the same alpha value "
+            f"for semantically correct results. Please use alpha={collection_alpha:.3f} "
+            f"in your query or create a vectorstore with alpha={query_alpha:.3f}."
+        )
+        super().__init__(message)

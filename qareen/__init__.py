@@ -12,6 +12,7 @@ from qareen.dataset import (
     LocalDatasetLoader,
 )
 from qareen.indexing import (
+    AlphaMismatchError,
     AlphaNotAvailableError,
     ChromaIndexer,
     CollectionNameTooLongError,
@@ -25,6 +26,7 @@ from qareen.indexing import (
 __version__ = "0.1.0"
 
 __all__ = [
+    "AlphaMismatchError",
     "AlphaNotAvailableError",
     "ChromaIndexer",
     "CollectionNameTooLongError",

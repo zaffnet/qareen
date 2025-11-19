@@ -37,5 +37,8 @@ At least one of `text` or `image` must be provided. Each field may be `None` ind
 
 ## Embedding
 
-- Dual-modality: alpha-weighted combination
+- Dual-modality: alpha-weighted combination using cosine distance
 - Single-modality (text or image): alpha ignored
+- All embeddings are L2-normalized before storage
+
+For details on similarity scoring, see [DISTANCE_METRIC.md](DISTANCE_METRIC.md).

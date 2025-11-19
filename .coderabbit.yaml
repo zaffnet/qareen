@@ -1,0 +1,6 @@
+reviews:
+  path_filters:
+    - "!pyproject.toml"
+    - "!.cursor/**"
+    - "!.github/**"
+    - "!.pre-commit-config.yaml"

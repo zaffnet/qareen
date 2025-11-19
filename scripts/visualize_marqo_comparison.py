@@ -3,7 +3,10 @@
 from __future__ import annotations
 
 import logging
+import os
 import random
+
+os.environ["ANONYMIZED_TELEMETRY"] = "False"
 from datetime import UTC, datetime
 from io import BytesIO
 from pathlib import Path

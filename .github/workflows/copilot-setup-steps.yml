@@ -10,11 +10,13 @@ on:
       - .github/workflows/copilot-setup-steps.yml
       - pyproject.toml
       - uv.lock
+      - .pre-commit-config.yaml
   pull_request:
     paths:
       - .github/workflows/copilot-setup-steps.yml
       - pyproject.toml
       - uv.lock
+      - .pre-commit-config.yaml
 
 jobs:
   copilot-setup-steps:

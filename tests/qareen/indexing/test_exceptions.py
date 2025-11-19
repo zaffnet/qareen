@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from qareen.indexing.exceptions import (
+    AlphaMismatchError,
     AlphaNotAvailableError,
     CollectionNameTooLongError,
     CollectionNotFoundError,
@@ -111,3 +112,13 @@ def test_collection_not_found_error():
     assert "test_collection" in str(error)
     assert "test_dataset" in str(error)
     assert "0.50" in str(error)
+
+
+def test_alpha_mismatch_error():
+    error = AlphaMismatchError(query_alpha=0.3, collection_alpha=0.5)
+
+    assert error.query_alpha == 0.3
+    assert error.collection_alpha == 0.5
+    assert "0.300" in str(error)
+    assert "0.500" in str(error)
+    assert "does not match" in str(error)

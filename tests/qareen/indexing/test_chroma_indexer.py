@@ -354,3 +354,88 @@ def test_no_limit_in_non_dev_when_sample_size_none() -> None:
         indexer.index(alpha_values=[0.5], rebuild=True, batch_size=10, sample_size=None)
 
         assert len(dataset_loader.select_calls) == 0
+
+
+def test_query_multimodal_alpha_mismatch() -> None:
+    """Test that query_multimodal raises error when alpha doesn't match collection alpha."""
+    import pytest
+
+    from qareen.indexing.exceptions import AlphaMismatchError
+
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        settings = Settings(
+            chroma_db_dir=Path(tmp_dir) / "chroma_db",
+            data_dir=Path(tmp_dir) / "data",
+        )
+
+        dataset_loader = MockDatasetLoader(dataset_size=5, track_select=True)
+        embedding_model = MockEmbeddingModel()
+        indexer = ChromaIndexer(
+            dataset_loader=dataset_loader,
+            embedding_model=embedding_model,
+            settings=settings,
+        )
+
+        indexer.index(alpha_values=[0.5], rebuild=True, batch_size=10, sample_size=None)
+
+        vectorstore = indexer.create_vectorstore(
+            dataset_name=dataset_loader.get_dataset_name(),
+            model_id=embedding_model.get_model_id(),
+            alpha=0.5,
+            environment="dev",
+        )
+
+        test_image = Image.new("RGB", (100, 100), color="red")
+
+        with pytest.raises(AlphaMismatchError) as exc_info:
+            indexer.query_multimodal(
+                vectorstore=vectorstore,
+                image=test_image,
+                text="test query",
+                alpha=0.3,
+                k=5,
+            )
+
+        assert exc_info.value.query_alpha == 0.3
+        assert exc_info.value.collection_alpha == 0.5
+        assert "0.300" in str(exc_info.value)
+        assert "0.500" in str(exc_info.value)
+
+
+def test_query_multimodal_alpha_match() -> None:
+    """Test that query_multimodal works when alpha matches collection alpha."""
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        settings = Settings(
+            chroma_db_dir=Path(tmp_dir) / "chroma_db",
+            data_dir=Path(tmp_dir) / "data",
+        )
+
+        dataset_loader = MockDatasetLoader(dataset_size=5, track_select=True)
+        embedding_model = MockEmbeddingModel()
+        indexer = ChromaIndexer(
+            dataset_loader=dataset_loader,
+            embedding_model=embedding_model,
+            settings=settings,
+        )
+
+        indexer.index(alpha_values=[0.5], rebuild=True, batch_size=10, sample_size=None)
+
+        vectorstore = indexer.create_vectorstore(
+            dataset_name=dataset_loader.get_dataset_name(),
+            model_id=embedding_model.get_model_id(),
+            alpha=0.5,
+            environment="dev",
+        )
+
+        test_image = Image.new("RGB", (100, 100), color="red")
+
+        results = indexer.query_multimodal(
+            vectorstore=vectorstore,
+            image=test_image,
+            text="test query",
+            alpha=0.5,
+            k=5,
+        )
+
+        assert isinstance(results, list)
+        assert len(results) <= 5

@@ -95,3 +95,9 @@ settings = Settings(
 - **dev_sample_size**: Number of samples to use in dev mode (default: 300)
 - **batch_size**: Batch size for indexing operations (default: 100)
 - **max_image_bytes**: Maximum image size in bytes (default: 10MB)
+
+## Distance Metric
+
+`qareen` uses **cosine distance** for vector similarity search. This is optimal for comparing normalized embedding vectors from vision-language models.
+
+For detailed information about the distance metric, scoring formula, and rationale, see [DISTANCE_METRIC.md](DISTANCE_METRIC.md).
