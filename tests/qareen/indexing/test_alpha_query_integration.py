@@ -303,7 +303,7 @@ def test_alpha_affects_score_distribution() -> None:
 
         score_means = {alpha: np.mean(scores) for alpha, scores in scores_by_alpha.items()}
 
-        unique_means = len(set(round(m, 4) for m in score_means.values()))
+        unique_means = len({round(m, 4) for m in score_means.values()})
         assert unique_means >= 3, (
             f"Expected diverse score distributions across alphas, "
             f"but got similar means: {score_means}"

@@ -31,8 +31,8 @@ def main(
         logger.info("Loading Marqo/marqo-gs-woman-fashion dataset from HuggingFace...")
         dataset = load_dataset("Marqo/marqo-gs-woman-fashion", split="zero_shot")
 
-        logger.info(f"Original dataset size: {len(dataset)}")
-        logger.info(f"Original columns: {dataset.column_names}")
+        logger.info("Original dataset size: %s", len(dataset))
+        logger.info("Original columns: %s", dataset.column_names)
 
         if "query" not in dataset.column_names:
             msg = "Dataset missing 'query' column"
@@ -45,21 +45,23 @@ def main(
         logger.info("Renaming 'query' column to 'text'...")
         dataset = dataset.rename_column("query", "text")
 
-        logger.info(f"Shuffling dataset with seed={seed}...")
+        logger.info("Shuffling dataset with seed=%s...", seed)
         dataset = dataset.shuffle(seed=seed)
 
-        logger.info(f"Selecting {sample_size} samples...")
+        logger.info("Selecting %s samples...", sample_size)
         if len(dataset) < sample_size:
             logger.warning(
-                f"Dataset has only {len(dataset)} samples, which is less than "
-                f"requested {sample_size}. Using all available samples."
+                "Dataset has only %s samples, which is less than requested %s. "
+                "Using all available samples.",
+                len(dataset),
+                sample_size,
             )
             sample_size = len(dataset)
 
         dataset = dataset.select(range(sample_size))
 
-        logger.info(f"Final dataset size: {len(dataset)}")
-        logger.info(f"Final columns: {dataset.column_names}")
+        logger.info("Final dataset size: %s", len(dataset))
+        logger.info("Final columns: %s", dataset.column_names)
 
     except Exception:
         logger.exception("Error preparing Marqo dataset")
@@ -69,17 +71,17 @@ def main(
         output_path.mkdir(parents=True, exist_ok=True)
         save_path = str(output_path)
 
-        logger.info(f"Saving dataset to {save_path}...")
+        logger.info("Saving dataset to %s...", save_path)
         try:
             dataset.save_to_disk(save_path)
         except Exception:
             logger.exception("Failed to save dataset to disk: %s", save_path)
             raise typer.Exit(code=1) from None
 
-        logger.info(f"✓ Dataset successfully prepared and saved to {save_path}")
-        logger.info(f"  - Size: {len(dataset)} samples")
-        logger.info(f"  - Columns: {dataset.column_names}")
-        logger.info(f"  - Seed: {seed}")
+        logger.info("✓ Dataset successfully prepared and saved to %s", save_path)
+        logger.info("  - Size: %s samples", len(dataset))
+        logger.info("  - Columns: %s", dataset.column_names)
+        logger.info("  - Seed: %s", seed)
 
 
 if __name__ == "__main__":

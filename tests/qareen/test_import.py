@@ -33,3 +33,27 @@ def test_gpu_warning_stacklevel() -> None:
         warning = w[0]
         assert warning.category is UserWarning
         assert "CUDA is not available" in str(warning.message)
+        assert warning.filename.endswith("test_import.py")
+        assert warning.lineno == 30
+
+
+def test_gpu_warning_suppression() -> None:
+    """Test that GPU warning can be suppressed via environment variable."""
+    import os
+
+    with (
+        patch("torch.cuda.is_available", return_value=False),
+        patch.dict(os.environ, {"QAREEN_SUPPRESS_GPU_WARNING": "true"}),
+        warnings.catch_warnings(record=True) as w,
+    ):
+        warnings.simplefilter("always")
+        import qareen
+
+        qareen.check_gpu_available()
+
+        cuda_warnings = [
+            warning for warning in w if "CUDA is not available" in str(warning.message)
+        ]
+        assert len(cuda_warnings) == 0, (
+            "Warning should be suppressed when environment variable is set"
+        )

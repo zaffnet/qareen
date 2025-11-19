@@ -15,6 +15,8 @@ from qareen.dataset.base import DatasetLoader
 from qareen.indexing.chroma_indexer import ChromaIndexer
 from qareen.indexing.models import EmbeddingModel
 
+MISSING_MODALITY_ERROR = "At least one modality must be present"
+
 
 class AlphaAwareEmbeddingModel(EmbeddingModel):
     """Mock embedding model that tracks alpha usage with single-modality inputs."""
@@ -104,7 +106,7 @@ class AlphaAwareEmbeddingModel(EmbeddingModel):
         text_emb = self.embed_text(text)
 
         if image_emb is None and text_emb is None:
-            raise ValueError("At least one modality must be present")
+            raise ValueError(MISSING_MODALITY_ERROR)
 
         if image_emb is None:
             assert text_emb is not None

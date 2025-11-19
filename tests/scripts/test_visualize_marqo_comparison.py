@@ -36,6 +36,8 @@ def test_truncate_text_long():
 def test_download_image_success(mock_image_open, mock_requests_get, tmp_path):
     mock_response = Mock()
     mock_response.content = b"fake_image_data"
+    mock_response.__enter__ = Mock(return_value=mock_response)
+    mock_response.__exit__ = Mock(return_value=False)
     mock_requests_get.return_value = mock_response
 
     mock_img = Mock()
@@ -46,7 +48,9 @@ def test_download_image_success(mock_image_open, mock_requests_get, tmp_path):
     result = download_image("http://example.com/image.jpg", output_path)
 
     assert result is True
-    mock_requests_get.assert_called_once_with("http://example.com/image.jpg", timeout=30)
+    mock_requests_get.assert_called_once_with(
+        "http://example.com/image.jpg", timeout=30, stream=True
+    )
     mock_img.save.assert_called_once_with(output_path)
 
 
@@ -55,6 +59,8 @@ def test_download_image_success(mock_image_open, mock_requests_get, tmp_path):
 def test_download_image_convert_to_rgb(mock_image_open, mock_requests_get, tmp_path):
     mock_response = Mock()
     mock_response.content = b"fake_image_data"
+    mock_response.__enter__ = Mock(return_value=mock_response)
+    mock_response.__exit__ = Mock(return_value=False)
     mock_requests_get.return_value = mock_response
 
     mock_img = Mock()
@@ -179,7 +185,7 @@ def test_main_success(
 
 @patch("scripts.visualize_marqo_comparison.load_from_disk")
 @patch("scripts.visualize_marqo_comparison.Settings")
-def test_main_exception_during_processing(_mock_settings, mock_load_from_disk):
+def test_main_exception_during_processing(mock_settings, mock_load_from_disk):
     mock_load_from_disk.side_effect = Exception("Processing error")
 
     result = runner.invoke(

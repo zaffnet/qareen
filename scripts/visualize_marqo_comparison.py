@@ -56,15 +56,15 @@ def download_image(image_url: str, output_path: Path) -> bool:
         True if successful, False otherwise
     """
     try:
-        response = requests.get(image_url, timeout=30)
-        response.raise_for_status()
-        img = Image.open(BytesIO(response.content))
-        if img.mode != "RGB":
-            img = img.convert("RGB")
-        output_path.parent.mkdir(parents=True, exist_ok=True)
-        img.save(output_path)
-        logger.info(f"Downloaded query image to: {output_path}")
-        return True
+        with requests.get(image_url, timeout=30, stream=True) as response:
+            response.raise_for_status()
+            img = Image.open(BytesIO(response.content))
+            if img.mode != "RGB":
+                img = img.convert("RGB")
+            output_path.parent.mkdir(parents=True, exist_ok=True)
+            img.save(output_path)
+            logger.info(f"Downloaded query image to: {output_path}")
+            return True
     except Exception:
         logger.exception(f"Failed to download image from {image_url}")
         return False

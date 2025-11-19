@@ -41,7 +41,7 @@ pip install qareen
 
 See [docs/QUICKSTART.md](docs/QUICKSTART.md) for full steps; e.g., `./scripts/build_index.sh <data> && ./scripts/run_gradio.sh`
 
-**Marqo Fashion Experiment:** Run `./scripts/build_marqo_fashion_index.sh` to compare 4 embedding models across 9 alpha values on fashion dataset.
+**Marqo Fashion Experiment:** Run `./experiments/marqo_fashion/run_experiment.sh` to compare 4 embedding models across 9 alpha values on fashion dataset.
 
 ## Configuration
 

@@ -20,7 +20,7 @@ from qareen.indexing.models import EmbeddingModel
 class MockEmbeddingModel(EmbeddingModel):
     """Mock embedding model for testing multimodal queries."""
 
-    def __init__(self, embedding_dim: int = 128, deterministic: bool = True) -> None:
+    def __init__(self, embedding_dim: int = 128, *, deterministic: bool = True) -> None:
         """Initialize mock model.
 
         Args:
