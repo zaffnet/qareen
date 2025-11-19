@@ -40,20 +40,20 @@ jobs:
         id: cache-cursor
         uses: actions/cache@v4
         with:
-          path: ~/.cursor
-          key: cursor-cli-${{ runner.os }}-v1
+          path: ~/.local
+          key: cursor-cli-${{ runner.os }}-v2
 
       - name: Verify cached Cursor CLI
         id: verify-cache
         continue-on-error: true
         run: |
-          export PATH="$HOME/.cursor/bin:$PATH"
-          if [ ! -x "$HOME/.cursor/bin/cursor" ]; then
+          export PATH="$HOME/.local/bin:$PATH"
+          if [ ! -x "$HOME/.local/bin/cursor-agent" ]; then
             echo "Warning: Cached Cursor CLI binary not found or not executable"
             echo "cache-valid=false" >> "$GITHUB_OUTPUT"
             exit 1
           fi
-          if ! cursor --version > /dev/null 2>&1 && ! cursor --help > /dev/null 2>&1; then
+          if ! cursor-agent --version > /dev/null 2>&1 && ! cursor-agent --help > /dev/null 2>&1; then
             echo "Warning: Cached Cursor CLI failed to run"
             echo "cache-valid=false" >> "$GITHUB_OUTPUT"
             exit 1
@@ -106,40 +106,40 @@ jobs:
           bash /tmp/cursor-install.sh
           rm -f /tmp/cursor-install.sh
           
-          if [ ! -x "${HOME}/.cursor/bin/cursor" ]; then
+          if [ ! -x "${HOME}/.local/bin/cursor-agent" ]; then
             echo "Error: Cursor CLI binary not found after installation"
             echo "Checking installation directory:"
-            ls -la "${HOME}/.cursor/bin" || echo "Directory does not exist"
+            ls -la "${HOME}/.local/bin" || echo "Directory does not exist"
             exit 1
           fi
           echo "✅ Cursor CLI installed successfully"
       - name: Add Cursor to PATH
         run: |
-          echo "$HOME/.cursor/bin" >> "$GITHUB_PATH"
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
 
       - name: Verify Cursor CLI installation
         run: |
-          export PATH="$HOME/.cursor/bin:$PATH"
-          if [ ! -d "$HOME/.cursor/bin" ]; then
+          export PATH="$HOME/.local/bin:$PATH"
+          if [ ! -d "$HOME/.local/bin" ]; then
             echo "Error: Cursor bin directory does not exist"
             exit 1
           fi
-          if [ ! -x "$HOME/.cursor/bin/cursor" ]; then
+          if [ ! -x "$HOME/.local/bin/cursor-agent" ]; then
             echo "Error: Cursor CLI binary not found or not executable"
-            ls -la "$HOME/.cursor/bin" || true
+            ls -la "$HOME/.local/bin" || true
             exit 1
           fi
-          if ! which cursor > /dev/null 2>&1; then
-            echo "Error: cursor command not found in PATH"
+          if ! which cursor-agent > /dev/null 2>&1; then
+            echo "Error: cursor-agent command not found in PATH"
             echo "PATH: $PATH"
             exit 1
           fi
-          if ! cursor --version > /dev/null 2>&1 && ! cursor --help > /dev/null 2>&1; then
+          if ! cursor-agent --version > /dev/null 2>&1 && ! cursor-agent --help > /dev/null 2>&1; then
             echo "Error: Cursor CLI failed to run"
             exit 1
           fi
           echo "✅ Cursor CLI verified successfully"
-          cursor --version || cursor --help
+          cursor-agent --version || cursor-agent --help
 
       - name: Configure git identity
         run: |
@@ -168,12 +168,12 @@ jobs:
           GH_PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
           GH_BLOCKING_REVIEW: ${{ env.BLOCKING_REVIEW }}
         run: |
-          export PATH="$HOME/.cursor/bin:$PATH"
-          if ! command -v cursor > /dev/null 2>&1; then
-            echo "Error: cursor command not found in PATH"
+          export PATH="$HOME/.local/bin:$PATH"
+          if ! command -v cursor-agent > /dev/null 2>&1; then
+            echo "Error: cursor-agent command not found in PATH"
             echo "PATH: $PATH"
             echo "Checking installation:"
-            ls -la "$HOME/.cursor/bin" || true
+            ls -la "$HOME/.local/bin" || true
             exit 1
           fi
           if [ ! -f ".github/prompts/code-review.md" ]; then
@@ -181,7 +181,7 @@ jobs:
             exit 1
           fi
           PROMPT=$(envsubst < .github/prompts/code-review.md)
-          cursor agent --force --model "$MODEL" --output-format=text --print <<PROMPT_END 2>&1 | tee /tmp/review-output.txt
+          cursor-agent agent --force --model "$MODEL" --output-format=text --print <<PROMPT_END 2>&1 | tee /tmp/review-output.txt
           $PROMPT
           PROMPT_END
 
