@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock, Mock, patch
 
+from qareen.dataset.base import MISSING_FIELDS_ERROR
 from qareen.dataset.hf_dataset import HuggingFaceDatasetLoader
 
 
@@ -52,7 +53,7 @@ def test_validate_schema(mock_validate, mock_load_dataset):
     loader = HuggingFaceDatasetLoader(dataset_name="test/dataset")
     loader.validate_schema()
 
-    mock_validate.assert_called_once_with(mock_dataset, loader.MISSING_FIELDS_ERROR)
+    mock_validate.assert_called_once_with(mock_dataset, MISSING_FIELDS_ERROR)
 
 
 def test_get_dataset_name():

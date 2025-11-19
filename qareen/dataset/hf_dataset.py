@@ -7,7 +7,12 @@ from typing import Any
 from datasets import Dataset as HFDataset
 from datasets import DatasetDict, load_dataset
 
-from qareen.dataset.base import DatasetLoader, validate_dataset_schema
+from qareen.dataset.base import (
+    MISSING_FIELDS_ERROR,
+    DatasetLoader,
+    extract_dataset_info,
+    validate_dataset_schema,
+)
 
 
 class HuggingFaceDatasetLoader(DatasetLoader):
@@ -20,10 +25,6 @@ class HuggingFaceDatasetLoader(DatasetLoader):
         split: Dataset split to load (train/validation/test)
         dataset: Loaded dataset instance
     """
-
-    MISSING_FIELDS_ERROR = (
-        "Dataset missing required fields: {missing_fields}. Available fields: {available_fields}"
-    )
 
     def __init__(
         self,
@@ -64,7 +65,7 @@ class HuggingFaceDatasetLoader(DatasetLoader):
             ValueError: If required fields are missing
         """
         dataset = self.load()
-        validate_dataset_schema(dataset, self.MISSING_FIELDS_ERROR)
+        validate_dataset_schema(dataset, MISSING_FIELDS_ERROR)
 
     def get_dataset_name(self) -> str:
         """Return dataset identifier.
@@ -81,22 +82,4 @@ class HuggingFaceDatasetLoader(DatasetLoader):
             Dictionary with dataset size, features, and splits
         """
         dataset = self.load()
-
-        if isinstance(dataset, dict):
-            if len(dataset) == 0:
-                features = []
-            else:
-                features = list(next(iter(dataset.values())).features.keys())
-            return {
-                "dataset_name": self.dataset_name,
-                "splits": list(dataset.keys()),
-                "num_rows": {k: len(v) for k, v in dataset.items()},
-                "features": features,
-            }
-        else:
-            return {
-                "dataset_name": self.dataset_name,
-                "split": self.split,
-                "num_rows": len(dataset),
-                "features": list(dataset.features.keys()),
-            }
+        return extract_dataset_info(dataset, self.dataset_name, self.split)

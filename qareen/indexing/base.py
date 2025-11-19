@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import re
 from abc import ABC, abstractmethod
 from typing import Any
@@ -108,10 +109,16 @@ class VectorStoreIndexer(ABC):
         if len(dataset_part) + len(model_part) <= available_length:
             base_name = f"{env_part}_{dataset_part}_{model_part}"
         else:
-            half_available = available_length // 2
+            hash_suffix_len = 10
+            hash_input = f"{dataset_part}_{model_part}"
+            hash_hex = hashlib.sha256(hash_input.encode()).hexdigest()[:8]
+            hash_suffix = f"_h{hash_hex}"
+
+            available_for_parts = available_length - hash_suffix_len
+            half_available = available_for_parts // 2
             dataset_truncated = dataset_part[:half_available]
-            model_truncated = model_part[: available_length - len(dataset_truncated)]
-            base_name = f"{env_part}_{dataset_truncated}_{model_truncated}"
+            model_truncated = model_part[: available_for_parts - len(dataset_truncated)]
+            base_name = f"{env_part}_{dataset_truncated}_{model_truncated}{hash_suffix}"
 
         name = f"{base_name}{alpha_suffix}"
 
@@ -161,8 +168,8 @@ class VectorStoreIndexer(ABC):
         """
         available = self.list_available_alphas(dataset_name, model_id, environment)
 
-        normalized_alpha = round(alpha, 2)
-        normalized_available = [round(a, 2) for a in available]
+        normalized_alpha = round(alpha, 3)
+        normalized_available = [round(a, 3) for a in available]
 
         if normalized_alpha not in normalized_available:
             raise AlphaNotAvailableError(

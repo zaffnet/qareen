@@ -23,8 +23,6 @@ if TYPE_CHECKING:
     from qareen.dataset.base import DatasetLoader
     from qareen.indexing.models import EmbeddingModel
 
-warnings.filterwarnings("ignore", message=".*Importing from timm.models.layers is deprecated.*")
-
 
 class Environment(str, Enum):
     """Environment options for indexing."""
@@ -44,6 +42,25 @@ logging.getLogger("chromadb.telemetry.product.posthog").setLevel(logging.CRITICA
 logger = logging.getLogger(__name__)
 
 app = typer.Typer()
+
+
+def create_embedding_model(model_id: str) -> EmbeddingModel:
+    """Create embedding model from model ID.
+
+    Args:
+        model_id: Model identifier
+            (e.g., "Marqo/marqo-fashionSigLIP", "google/siglip...")
+
+    Returns:
+        Instantiated embedding model
+
+    """
+    with warnings.catch_warnings():
+        timm_msg = ".*Importing from timm.models.layers is deprecated.*"
+        warnings.filterwarnings("ignore", message=timm_msg)
+        if model_id.lower().startswith("marqo/"):
+            return MarqoFashionSigLIPModel(model_id=model_id)
+        return SIGLIPEmbeddingModel(model_id=model_id)
 
 
 @app.command()
@@ -121,11 +138,7 @@ def main(
         for model_id in model_list:
             logger.info("Processing model: %s", model_id)
 
-            embedding_model: EmbeddingModel
-            if model_id.lower().startswith("marqo/"):
-                embedding_model = MarqoFashionSigLIPModel(model_id=model_id)
-            else:
-                embedding_model = SIGLIPEmbeddingModel(model_id=model_id)
+            embedding_model = create_embedding_model(model_id)
 
             indexer = ChromaIndexer(
                 dataset_loader=dataset_loader,

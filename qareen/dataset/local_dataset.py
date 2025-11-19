@@ -8,7 +8,12 @@ from typing import Any
 from datasets import Dataset as HFDataset
 from datasets import DatasetDict, load_from_disk
 
-from qareen.dataset.base import DatasetLoader, validate_dataset_schema
+from qareen.dataset.base import (
+    MISSING_FIELDS_ERROR,
+    DatasetLoader,
+    extract_dataset_info,
+    validate_dataset_schema,
+)
 
 
 class LocalDatasetLoader(DatasetLoader):
@@ -22,10 +27,6 @@ class LocalDatasetLoader(DatasetLoader):
 
     """
 
-    MISSING_FIELDS_ERROR = (
-        "Dataset missing required fields: {missing_fields}. Available fields: {available_fields}"
-    )
-
     def __init__(self, dataset_path: str | Path) -> None:
         """Initialize local dataset loader.
 
@@ -36,6 +37,9 @@ class LocalDatasetLoader(DatasetLoader):
             ValueError: If path does not exist or is not a directory
 
         """
+        if not dataset_path or str(dataset_path).strip() == "":
+            msg = "Dataset path is empty"
+            raise ValueError(msg)
         path = Path(dataset_path)
         if not path.exists():
             msg = f"Dataset path does not exist: {dataset_path}"
@@ -65,7 +69,7 @@ class LocalDatasetLoader(DatasetLoader):
 
         """
         dataset = self.load()
-        validate_dataset_schema(dataset, self.MISSING_FIELDS_ERROR)
+        validate_dataset_schema(dataset, MISSING_FIELDS_ERROR)
 
     def get_dataset_name(self) -> str:
         """Return dataset identifier.
@@ -84,21 +88,4 @@ class LocalDatasetLoader(DatasetLoader):
 
         """
         dataset = self.load()
-
-        if isinstance(dataset, dict):
-            if not dataset:
-                features: list[str] = []
-            else:
-                # All splits share the same schema, extract features from any split
-                features = list(next(iter(dataset.values())).features.keys())
-            return {
-                "dataset_name": self.get_dataset_name(),
-                "splits": list(dataset.keys()),
-                "num_rows": {k: len(v) for k, v in dataset.items()},
-                "features": features,
-            }
-        return {
-            "dataset_name": self.get_dataset_name(),
-            "num_rows": len(dataset),
-            "features": list(dataset.features.keys()),
-        }
+        return extract_dataset_info(dataset, self.get_dataset_name())

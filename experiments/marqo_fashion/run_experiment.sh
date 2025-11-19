@@ -7,7 +7,9 @@ PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 
 cd "$PROJECT_ROOT"
 
-if [ -f ".venv/bin/activate" ] && [ -r ".venv/bin/activate" ]; then
+if [ -n "$VIRTUAL_ENV" ]; then
+    echo "Virtual environment already active: $VIRTUAL_ENV"
+elif [ -f ".venv/bin/activate" ] && [ -r ".venv/bin/activate" ]; then
     source .venv/bin/activate
 else
     echo "ERROR: Virtual environment activation script not found or not readable at .venv/bin/activate" >&2

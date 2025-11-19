@@ -13,6 +13,9 @@ from qareen.dataset.schema import DatasetSchema
 DATASETDICT_NO_SPLITS_ERROR = "DatasetDict has no splits"
 NO_NON_EMPTY_SPLITS_ERROR = "Dataset contains no non-empty splits"
 EMPTY_DATASET_ERROR = "Dataset is empty"
+MISSING_FIELDS_ERROR = (
+    "Dataset missing required fields: {missing_fields}. Available fields: {available_fields}"
+)
 
 
 def validate_dataset_schema(
@@ -62,6 +65,44 @@ def validate_dataset_schema(
             raise ValueError(EMPTY_DATASET_ERROR)
 
     DatasetSchema(**sample)
+
+
+def extract_dataset_info(
+    dataset: HFDataset | DatasetDict,
+    dataset_name: str,
+    split: str | None = None,
+) -> dict[str, Any]:
+    """Extract dataset information from a HuggingFace dataset.
+
+    Args:
+        dataset: HuggingFace dataset or dataset dict
+        dataset_name: Name of the dataset
+        split: Split name (optional, included in output if provided)
+
+    Returns:
+        Dictionary with dataset metadata (name, splits, num_rows, features)
+    """
+    if isinstance(dataset, dict):
+        if not dataset:
+            features: list[str] = []
+        else:
+            features = list(next(iter(dataset.values())).features.keys())
+        info: dict[str, Any] = {
+            "dataset_name": dataset_name,
+            "splits": list(dataset.keys()),
+            "num_rows": {k: len(v) for k, v in dataset.items()},
+            "features": features,
+        }
+        return info
+    else:
+        info = {
+            "dataset_name": dataset_name,
+            "num_rows": len(dataset),
+            "features": list(dataset.features.keys()),
+        }
+        if split is not None:
+            info["split"] = split
+        return info
 
 
 class DatasetLoader(ABC):

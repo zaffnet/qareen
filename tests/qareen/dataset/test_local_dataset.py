@@ -6,6 +6,7 @@ from unittest.mock import MagicMock, Mock, patch
 
 import pytest
 
+from qareen.dataset.base import MISSING_FIELDS_ERROR
 from qareen.dataset.local_dataset import LocalDatasetLoader
 
 
@@ -76,7 +77,7 @@ def test_validate_schema(mock_validate, mock_load_from_disk, tmp_path):
     loader = LocalDatasetLoader(dataset_path=test_dir)
     loader.validate_schema()
 
-    mock_validate.assert_called_once_with(mock_dataset, loader.MISSING_FIELDS_ERROR)
+    mock_validate.assert_called_once_with(mock_dataset, MISSING_FIELDS_ERROR)
 
 
 def test_get_dataset_name(tmp_path):
