@@ -176,19 +176,19 @@ jobs:
             ls -la "$HOME/.local/bin" || true
             exit 1
           fi
-          
+
           echo "✅ cursor-agent found, checking version and help..."
           cursor-agent --version || echo "No --version flag"
           cursor-agent --help || echo "No --help flag"
-          
+
           if [ ! -f ".github/prompts/code-review.md" ]; then
             echo "Error: Prompt file not found at .github/prompts/code-review.md"
             exit 1
           fi
-          
+
           echo "✅ Preparing prompt..."
           PROMPT=$(envsubst < .github/prompts/code-review.md)
-          
+
           echo "✅ Running cursor-agent agent command..."
           set +e  # Don't exit on error
           cursor-agent agent --force --model "$MODEL" --output-format=text --print <<PROMPT_END 2>&1 | tee /tmp/review-output.txt
@@ -196,14 +196,14 @@ jobs:
           PROMPT_END
           AGENT_EXIT_CODE=$?
           set -e
-          
+
           echo "Agent exit code: $AGENT_EXIT_CODE"
           echo "Agent output length: $(wc -l < /tmp/review-output.txt) lines"
           echo "First 50 lines of output:"
           head -50 /tmp/review-output.txt || true
           echo "Last 50 lines of output:"
           tail -50 /tmp/review-output.txt || true
-          
+
           if [ $AGENT_EXIT_CODE -ne 0 ]; then
             echo "⚠️ Warning: cursor-agent exited with code $AGENT_EXIT_CODE"
           fi
