@@ -108,7 +108,6 @@ show_error_codes = true
 
 [[tool.mypy.overrides]]
 module = [
-    "gradio.*",
     "transformers.*",
     "sentence_transformers.*",
     "datasets.*",
