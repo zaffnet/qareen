@@ -1,5 +1,12 @@
 # qareen
 
+[![Python](https://img.shields.io/badge/Python-3.11%2B-3776AB?logo=python&logoColor=white&style=flat-square)](https://www.python.org/)
+[![Hugging Face](https://img.shields.io/badge/Hugging%20Face-Transformers-FFD21E?logo=huggingface&logoColor=black&style=flat-square)](https://huggingface.co/)
+[![LangChain](https://img.shields.io/badge/LangChain-Integration-1C3C3C?logo=langchain&logoColor=white&style=flat-square)](https://www.langchain.com/)
+[![ChromaDB](https://img.shields.io/badge/ChromaDB-Vector%20Store-orange?style=flat-square)](https://www.trychroma.com/)
+[![Pydantic](https://img.shields.io/badge/Pydantic-Validation-E92063?logo=pydantic&logoColor=white&style=flat-square)](https://docs.pydantic.dev/)
+[![CodeRabbit](https://img.shields.io/badge/CodeRabbit-AI%20Review-blue?style=flat-square)](https://coderabbit.ai/)
+
 **`qareen`** (قرين) is Arabic for "constant companion"—an ever-present guide that influences decisions. In Islamic tradition, a qareen is a spiritual companion assigned to each person, accompanying them throughout life and shaping their choices through subtle guidance.
 
 This project is named `qareen` because it serves the same role for Large Language Models: a constant companion that provides the right few-shot examples at the right time, guiding the LLM's judgments and enhancing its decision-making. Just as a qareen influences a person's path, `qareen` influences an LLM's performance by selecting the most relevant multimodal examples from your dataset.
