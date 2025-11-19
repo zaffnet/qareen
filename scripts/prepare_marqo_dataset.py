@@ -40,12 +40,12 @@ def main(
         logger.info(f"Original columns: {dataset.column_names}")
 
         if "query" not in dataset.column_names:
-            logger.error("Dataset missing 'query' column")
-            return 1
+            msg = "Dataset missing 'query' column"
+            raise ValueError(msg)
 
         if "image" not in dataset.column_names:
-            logger.error("Dataset missing 'image' column")
-            return 1
+            msg = "Dataset missing 'image' column"
+            raise ValueError(msg)
 
         logger.info("Renaming 'query' column to 'text'...")
         dataset = dataset.rename_column("query", "text")
@@ -66,6 +66,10 @@ def main(
         logger.info(f"Final dataset size: {len(dataset)}")
         logger.info(f"Final columns: {dataset.column_names}")
 
+    except Exception:
+        logger.exception("Error preparing Marqo dataset")
+        return 1
+    else:
         output_path = Path(output_dir)
         output_path.mkdir(parents=True, exist_ok=True)
         save_path = str(output_path)
@@ -79,10 +83,6 @@ def main(
         logger.info(f"  - Seed: {seed}")
 
         return 0
-
-    except Exception:
-        logger.exception("Error preparing Marqo dataset")
-        return 1
 
 
 if __name__ == "__main__":

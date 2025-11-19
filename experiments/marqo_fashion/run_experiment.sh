@@ -75,9 +75,7 @@ if [[ "$STEP" == "all" ]] || [[ "$STEP" == "prepare" ]]; then
     if [ -d "$DATASET_PATH" ]; then
         echo "Dataset already exists at $DATASET_PATH, skipping preparation..."
     else
-        python scripts/prepare_marqo_dataset.py
-
-        if [ $? -ne 0 ]; then
+        if ! python scripts/prepare_marqo_dataset.py; then
             echo "ERROR: Dataset preparation failed"
             exit 1
         fi
@@ -105,15 +103,13 @@ if [[ "$STEP" == "all" ]] || [[ "$STEP" == "index" ]]; then
             ALPHA_FLAGS="$ALPHA_FLAGS --alpha-values $ALPHA"
         done
 
-        python scripts/build_index.py \
+        if ! python scripts/build_index.py \
             --dataset-name "$DATASET_PATH" \
             --models "$MODEL" \
-            $ALPHA_FLAGS \
+            "$ALPHA_FLAGS" \
             --environment "$ENVIRONMENT" \
             --sample-size $SAMPLE_SIZE \
-            --batch-size $BATCH_SIZE
-
-        if [ $? -ne 0 ]; then
+            --batch-size $BATCH_SIZE; then
             echo "ERROR: Index building failed for model $MODEL"
             exit 1
         fi
@@ -135,16 +131,14 @@ if [[ "$STEP" == "all" ]] || [[ "$STEP" == "visualize" ]]; then
         ALPHA_FLAGS="$ALPHA_FLAGS --alpha-values $ALPHA"
     done
 
-    python scripts/visualize_marqo_comparison.py \
+    if ! python scripts/visualize_marqo_comparison.py \
         --dataset-path "$DATASET_PATH" \
-        $MODEL_FLAGS \
-        $ALPHA_FLAGS \
+        "$MODEL_FLAGS" \
+        "$ALPHA_FLAGS" \
         --environment "$ENVIRONMENT" \
         --k 5 \
         --output "data/marqo_comparison.md" \
-        --seed $SEED
-
-    if [ $? -ne 0 ]; then
+        --seed $SEED; then
         echo "ERROR: Visualization generation failed"
         exit 1
     fi

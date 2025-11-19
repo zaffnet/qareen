@@ -317,12 +317,6 @@ class ChromaIndexer(VectorStoreIndexer):
             else:
                 try:
                     image = Image.open(image)
-                except FileNotFoundError:
-                    logger.exception(f"Image file not found: {image}")
-                    image = None
-                except UnidentifiedImageError:
-                    logger.exception(f"Cannot identify image file: {image}")
-                    image = None
                 except Exception:
                     logger.exception(f"Failed to open image file: {image}")
                     image = None

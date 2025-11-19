@@ -26,8 +26,6 @@ IMAGE_FILE_EXTENSIONS: frozenset[str] = frozenset(
     }
 )
 
-SVG_EXTENSION = ".svg"
-
 
 class DatasetItem(BaseModel):
     """Schema for a single dataset item with text and/or image.

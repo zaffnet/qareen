@@ -9,6 +9,7 @@ from qareen.dataset import (
     DatasetLoader,
     DatasetSchema,
     HuggingFaceDatasetLoader,
+    LocalDatasetLoader,
 )
 from qareen.indexing import (
     AlphaNotAvailableError,
@@ -34,6 +35,7 @@ __all__ = [
     "HuggingFaceDatasetLoader",
     "InvalidAlphaError",
     "InvalidCollectionNameError",
+    "LocalDatasetLoader",
     "SIGLIPEmbeddingModel",
     "Settings",
     "VectorStoreIndexer",

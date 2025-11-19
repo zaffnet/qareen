@@ -41,6 +41,7 @@ class MarqoFashionSigLIPModel(EmbeddingModel):
         self.model: Any | None = None
         self.preprocess_val: Any | None = None
         self.tokenizer: Any | None = None
+        self._cached_embedding_dim: int | None = None
 
     def load_model(self) -> None:
         """Load Marqo Fashion SIGLIP model using OpenCLIP."""
@@ -53,6 +54,9 @@ class MarqoFashionSigLIPModel(EmbeddingModel):
                 self.model.eval()
                 if self.device == "cuda":
                     self.model = self.model.to(self.device)
+                logger.info(
+                    f"Successfully loaded model: model_id={self.model_id}, device={self.device}"
+                )
             except Exception as e:
                 error_msg = f"Failed to load Marqo Fashion SIGLIP model '{self.model_id}': {e}"
                 logger.exception(error_msg)
@@ -62,6 +66,7 @@ class MarqoFashionSigLIPModel(EmbeddingModel):
             try:
                 model_name = f"hf-hub:{self.model_id}"
                 self.tokenizer = open_clip.get_tokenizer(model_name)
+                logger.info(f"Successfully loaded tokenizer: model_id={self.model_id}")
             except Exception as e:
                 error_msg = f"Failed to load tokenizer for model '{self.model_id}': {e}"
                 logger.exception(error_msg)
@@ -189,6 +194,9 @@ class MarqoFashionSigLIPModel(EmbeddingModel):
         Returns:
             Embedding dimension as integer
         """
+        if self._cached_embedding_dim is not None:
+            return self._cached_embedding_dim
+
         if self.model is None:
             self.load_model()
 
@@ -198,7 +206,8 @@ class MarqoFashionSigLIPModel(EmbeddingModel):
                 raise RuntimeError(
                     f"Failed to determine embedding dimension for model '{self.model_id}'"
                 )
-            return len(embedding)
+            self._cached_embedding_dim = len(embedding)
+            return self._cached_embedding_dim
         except Exception as err:
             raise RuntimeError(
                 f"Failed to determine embedding dimension for model '{self.model_id}'"

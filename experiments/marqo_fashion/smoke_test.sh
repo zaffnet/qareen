@@ -15,21 +15,19 @@ echo "==================================================================="
 echo ""
 
 echo "Preparing dataset..."
-python scripts/prepare_marqo_dataset.py
-if [ $? -ne 0 ]; then
+if ! python scripts/prepare_marqo_dataset.py; then
     echo "ERROR: Dataset preparation failed"
     exit 1
 fi
 
 echo "Creating 10-sample test subset..."
-python -c "
+if ! python -c "
 from datasets import load_from_disk
 dataset = load_from_disk('data/marqo_fashion_3000')
 small = dataset.select(range(10))
 small.save_to_disk('data/marqo_test')
 print(f'✓ Created data/marqo_test with {len(small)} samples')
-"
-if [ $? -ne 0 ]; then
+"; then
     echo "ERROR: Test subset creation failed"
     exit 1
 fi
@@ -51,15 +49,13 @@ for i in "${!MODELS[@]}"; do
     echo "[$((i+1))/4] Testing model: $MODEL"
     echo "-------------------------------------------------------------------"
 
-    python scripts/build_index.py \
+    if ! python scripts/build_index.py \
         --dataset-name "$DATASET_PATH" \
         --models "$MODEL" \
         --alpha-values $ALPHA \
         --environment dev \
         --sample-size 10 \
-        --batch-size 10
-
-    if [ $? -ne 0 ]; then
+        --batch-size 10; then
         echo "ERROR: Smoke test failed for model $MODEL"
         exit 1
     fi
@@ -76,16 +72,14 @@ for MODEL in "${MODELS[@]}"; do
     MODEL_FLAGS="$MODEL_FLAGS --models $MODEL"
 done
 
-python scripts/visualize_marqo_comparison.py \
+if ! python scripts/visualize_marqo_comparison.py \
     --dataset-path "$DATASET_PATH" \
-    $MODEL_FLAGS \
+    "$MODEL_FLAGS" \
     --alpha-values $ALPHA \
     --environment dev \
     --k 5 \
     --output "data/marqo_smoke_test.md" \
-    --seed 42
-
-if [ $? -ne 0 ]; then
+    --seed 42; then
     echo "ERROR: Visualization generation failed"
     exit 1
 fi
