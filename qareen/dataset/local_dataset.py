@@ -19,6 +19,7 @@ class LocalDatasetLoader(DatasetLoader):
     Attributes:
         dataset_path: Path to saved dataset directory
         dataset: Loaded dataset instance
+
     """
 
     MISSING_FIELDS_ERROR = (
@@ -30,8 +31,19 @@ class LocalDatasetLoader(DatasetLoader):
 
         Args:
             dataset_path: Path to saved dataset directory
+
+        Raises:
+            ValueError: If path does not exist or is not a directory
+
         """
-        self.dataset_path = Path(dataset_path)
+        path = Path(dataset_path)
+        if not path.exists():
+            msg = f"Dataset path does not exist: {dataset_path}"
+            raise ValueError(msg)
+        if not path.is_dir():
+            msg = f"Dataset path is not a directory: {dataset_path}"
+            raise ValueError(msg)
+        self.dataset_path = path
         self._dataset: HFDataset | DatasetDict | None = None
 
     def load(self) -> HFDataset | DatasetDict:
@@ -39,6 +51,7 @@ class LocalDatasetLoader(DatasetLoader):
 
         Returns:
             Loaded HuggingFace dataset
+
         """
         if self._dataset is None:
             self._dataset = load_from_disk(str(self.dataset_path))
@@ -49,6 +62,7 @@ class LocalDatasetLoader(DatasetLoader):
 
         Raises:
             ValueError: If required fields are missing
+
         """
         dataset = self.load()
         validate_dataset_schema(dataset, self.MISSING_FIELDS_ERROR)
@@ -58,6 +72,7 @@ class LocalDatasetLoader(DatasetLoader):
 
         Returns:
             Dataset name (directory name)
+
         """
         return self.dataset_path.name
 
@@ -66,6 +81,7 @@ class LocalDatasetLoader(DatasetLoader):
 
         Returns:
             Dictionary with dataset size, features, and splits
+
         """
         dataset = self.load()
 
@@ -73,6 +89,7 @@ class LocalDatasetLoader(DatasetLoader):
             if not dataset:
                 features: list[str] = []
             else:
+                # All splits share the same schema, extract features from any split
                 features = list(next(iter(dataset.values())).features.keys())
             return {
                 "dataset_name": self.get_dataset_name(),
@@ -80,9 +97,8 @@ class LocalDatasetLoader(DatasetLoader):
                 "num_rows": {k: len(v) for k, v in dataset.items()},
                 "features": features,
             }
-        else:
-            return {
-                "dataset_name": self.get_dataset_name(),
-                "num_rows": len(dataset),
-                "features": list(dataset.features.keys()),
-            }
+        return {
+            "dataset_name": self.get_dataset_name(),
+            "num_rows": len(dataset),
+            "features": list(dataset.features.keys()),
+        }

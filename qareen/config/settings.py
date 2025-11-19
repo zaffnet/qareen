@@ -3,9 +3,9 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, Literal
+from typing import Literal
 
-from pydantic import Field, field_validator
+from pydantic import Field, PrivateAttr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 ALPHA_REQUIRED_ERR = "At least one alpha value is required"
@@ -66,6 +66,8 @@ class Settings(BaseSettings):
         gt=0,
     )
 
+    _dirs_ensured: bool = PrivateAttr(False)
+
     @field_validator("alpha_values")
     @classmethod
     def validate_alpha_values(cls, v: list[float]) -> list[float]:
@@ -86,11 +88,6 @@ class Settings(BaseSettings):
         if isinstance(v, str):
             return v.lower()
         return v
-
-    def __init__(self, **kwargs: Any) -> None:
-        """Initialize Settings with internal state."""
-        super().__init__(**kwargs)
-        self._dirs_ensured: bool = False
 
     def ensure_directories(self) -> None:
         """Create filesystem directories if they do not exist.

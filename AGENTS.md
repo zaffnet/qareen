@@ -15,7 +15,7 @@ Pydantic-first: use Pydantic models for all data structures, configs, schemas. U
 
 ## Code Style
 
-- Type hints required on all functions and methods.
+- Type hints required on all functions and methods you modify or add.
 - Docstrings required on all classes and public methods.
 - Line length: 100 characters.
 - Must pass ruff and mypy.

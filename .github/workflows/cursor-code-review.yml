@@ -88,13 +88,12 @@ jobs:
           chmod +x /tmp/cursor-install.sh
           bash /tmp/cursor-install.sh
           rm -f /tmp/cursor-install.sh /tmp/cursor-install.sh.sha256
-          if [ ! -x "$HOME/.cursor/bin/cursor" ]; then
+          if [ ! -x "${HOME}/.cursor/bin/cursor" ]; then
             echo "Error: Cursor CLI binary not found after installation"
             echo "Checking installation directory:"
-            ls -la "$HOME/.cursor/bin" || echo "Directory does not exist"
+            ls -la "${HOME}/.cursor/bin" || echo "Directory does not exist"
             exit 1
           fi
-
       - name: Add Cursor to PATH
         run: |
           echo "$HOME/.cursor/bin" >> "$GITHUB_PATH"

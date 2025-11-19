@@ -65,7 +65,7 @@ def test_get_dataset_info_single_split(mock_load_dataset):
     mock_dataset = Mock()
     mock_dataset.features = {"text": Mock(), "image": Mock()}
     mock_load_dataset.return_value = mock_dataset
-    type(mock_dataset).__len__ = lambda self: 100
+    type(mock_dataset).__len__ = lambda _: 100
 
     loader = HuggingFaceDatasetLoader(dataset_name="test/dataset", split="train")
     info = loader.get_dataset_info()
@@ -82,11 +82,11 @@ def test_get_dataset_info_single_split(mock_load_dataset):
 def test_get_dataset_info_multiple_splits(mock_load_dataset):
     mock_train = MagicMock()
     mock_train.features = {"text": Mock(), "image": Mock()}
-    type(mock_train).__len__ = lambda self: 100
+    type(mock_train).__len__ = lambda _: 100
 
     mock_test = MagicMock()
     mock_test.features = {"text": Mock(), "image": Mock()}
-    type(mock_test).__len__ = lambda self: 50
+    type(mock_test).__len__ = lambda _: 50
 
     mock_dataset_dict = {"train": mock_train, "test": mock_test}
     mock_load_dataset.return_value = mock_dataset_dict

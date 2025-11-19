@@ -10,8 +10,7 @@ repos:
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.14.5
     hooks:
-      - id: ruff-check
-        args: [--fix]
+      - id: ruff
       - id: ruff-format
   - repo: https://github.com/pre-commit/mirrors-mypy
     rev: v1.8.0
@@ -21,7 +20,7 @@ repos:
     hooks:
       - id: pytest
         name: pytest
-        entry: pytest -p no:cacheprovider
+        entry: pytest -p no:cacheprovider  # Disable cache to avoid stale cache issues in pre-commit hooks
         language: system
         pass_filenames: false
         always_run: true

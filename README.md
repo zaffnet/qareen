@@ -35,7 +35,7 @@ pip install qareen
 
 **Note on GPU support:** The `gpu` extra is currently a placeholder and does not install any GPU-specific packages. For GPU support, you must install a CUDA-enabled PyTorch build from the [official PyTorch installation guide](https://pytorch.org/get-started/locally/) **before** installing `qareen`. The package will automatically check at runtime and warn if CUDA is not available. The base package will work with CPU-only PyTorch (installed automatically via dependencies).
 
-**Python 3.13+ Compatibility:** While the package metadata permits Python 3.13 and 3.14, some dependencies (notably `sentencepiece` and PyTorch ecosystem packages) may not have prebuilt wheels for these versions yet. If installation fails, either: (1) use Python 3.11 or 3.12 for guaranteed compatibility, or (2) install system build tools (e.g., `build-essential` on Linux, Xcode Command Line Tools on macOS) to compile from source. CI testing currently targets Python 3.11 and 3.12.
+**Python 3.13+ Compatibility:** The package supports Python 3.13 and 3.14. Both `sentencepiece` and PyTorch now provide prebuilt cp313 wheels on PyPI. If you encounter rare environment-specific build issues, Python 3.11 or 3.12 remain stable fallback options. CI testing currently targets Python 3.11 and 3.12.
 
 ## Usage
 

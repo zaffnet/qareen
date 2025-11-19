@@ -93,7 +93,7 @@ def test_main_load_dataset_exception(mock_load_dataset):
     assert result.exit_code == 0
 
 
-def test_main_default_arguments(tmp_path):
+def test_main_default_arguments():
     with patch("scripts.prepare_marqo_dataset.load_dataset") as mock_load_dataset:
         mock_dataset = MagicMock()
         mock_dataset.column_names = ["query", "image"]

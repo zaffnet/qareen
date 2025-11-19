@@ -115,8 +115,8 @@ if [[ "$STEP" == "all" ]] || [[ "$STEP" == "index" ]]; then
             --models "$MODEL" \
             "${ALPHA_FLAGS[@]}" \
             --environment "$ENVIRONMENT" \
-            --sample-size $SAMPLE_SIZE \
-            --batch-size $BATCH_SIZE; then
+            --sample-size "$SAMPLE_SIZE" \
+            --batch-size "$BATCH_SIZE"; then
             echo "ERROR: Index building failed for model $MODEL"
             exit 1
         fi
@@ -147,7 +147,7 @@ if [[ "$STEP" == "all" ]] || [[ "$STEP" == "visualize" ]]; then
         --environment "$ENVIRONMENT" \
         --k 5 \
         --output "data/marqo_comparison.md" \
-        --seed $SEED; then
+        --seed "$SEED"; then
         echo "ERROR: Visualization generation failed"
         exit 1
     fi

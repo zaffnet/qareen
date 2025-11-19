@@ -7,6 +7,14 @@ PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 
 cd "$PROJECT_ROOT"
 
+cd "$PROJECT_ROOT"
+
+if [ ! -f .venv/bin/activate ]; then
+    echo "ERROR: Virtual environment not found at .venv"
+    echo "Please run: python -m venv .venv && source .venv/bin/activate && pip install -e ."
+    exit 1
+fi
+
 source .venv/bin/activate
 
 echo "==================================================================="
@@ -52,7 +60,7 @@ for i in "${!MODELS[@]}"; do
     if ! python scripts/build_index.py \
         --dataset-name "$DATASET_PATH" \
         --models "$MODEL" \
-        --alpha-values $ALPHA \
+        --alpha-values "$ALPHA" \
         --environment dev \
         --sample-size 10 \
         --batch-size 10; then
