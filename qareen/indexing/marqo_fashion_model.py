@@ -29,7 +29,8 @@ class MarqoFashionSigLIPModel(EmbeddingModel):
         model_id: HuggingFace model identifier
         device: Device to run model on (cuda/cpu)
         model: Loaded model instance
-        processor: Loaded processor instance
+        preprocess_val: Preprocessing function for validation transforms
+        tokenizer: Tokenizer instance for text encoding
 
     """
 

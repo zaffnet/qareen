@@ -31,11 +31,6 @@ class SimpleDatasetLoader(DatasetLoader):
     def validate_schema(self) -> None:
         pass
 
-    def get_dataset(self) -> Dataset:
-        if self._dataset is None:
-            self._dataset = Dataset.from_list(self.samples)
-        return self._dataset
-
     def get_dataset_name(self) -> str:
         return "test_dataset"
 
@@ -60,16 +55,16 @@ class TestEmbeddingModel(EmbeddingModel):
     def embed_text(self, text: str | None) -> np.ndarray | None:
         if text is None:
             return None
-        np.random.seed(hash(text) % 2**32)
-        embedding = np.random.randn(self.embedding_dim).astype(np.float32)
+        rng = np.random.default_rng(hash(text) % 2**32)
+        embedding = rng.standard_normal(self.embedding_dim).astype(np.float32)
         return self.normalize_l2(embedding)
 
     def embed_image(self, image: Image.Image | str | Path | None) -> np.ndarray | None:
         if image is None:
             return None
         image_hash = hash(image.tobytes()) if isinstance(image, Image.Image) else hash(str(image))
-        np.random.seed(image_hash % 2**32)
-        embedding = np.random.randn(self.embedding_dim).astype(np.float32)
+        rng = np.random.default_rng(image_hash % 2**32)
+        embedding = rng.standard_normal(self.embedding_dim).astype(np.float32)
         return self.normalize_l2(embedding)
 
     def embed_multimodal(
