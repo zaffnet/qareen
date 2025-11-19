@@ -12,6 +12,7 @@ from typing import cast
 import chromadb
 import requests
 from chromadb.errors import NotFoundError
+from datasets import DatasetDict
 from langchain_chroma import Chroma
 from langchain_core.embeddings import Embeddings
 from langchain_core.vectorstores import VectorStore
@@ -101,6 +102,9 @@ class EmbeddingModelWrapper(Embeddings):
 
         Returns:
             Text embedding vector as list of floats
+
+        Raises:
+            ValueError: If embedding is None or cannot be converted to list
         """
         embedding = self.embedding_model.embed_text(text)
         if embedding is None:
@@ -109,7 +113,17 @@ class EmbeddingModelWrapper(Embeddings):
                 f"Embedding returned None for provided text. "
                 f"Model: {model_id}, Text: {text[:100] if text else 'None'}..."
             )
-        return cast(list[float], embedding.tolist())
+        model_id = self.embedding_model.get_model_id()
+        if hasattr(embedding, "tolist"):
+            return cast(list[float], embedding.tolist())
+        elif hasattr(embedding, "__iter__") and not isinstance(embedding, (str, bytes)):
+            return cast(list[float], list(embedding))
+        else:
+            raise ValueError(
+                f"Unsupported embedding format for model {model_id}. "
+                f"Expected array-like object with tolist() method or iterable, "
+                f"got {type(embedding).__name__}. Text snippet: {text[:50] if text else 'None'}..."
+            )
 
 
 class ChromaIndexer(VectorStoreIndexer):
@@ -162,57 +176,55 @@ class ChromaIndexer(VectorStoreIndexer):
         """
         for attempt in range(max_retries):
             try:
-                response = requests.get(image_url, timeout=30, stream=True)
-                response.raise_for_status()
+                with requests.get(image_url, timeout=30, stream=True) as response:
+                    response.raise_for_status()
 
-                content_type = response.headers.get("Content-Type", "").lower()
-                if not content_type.startswith("image/"):
-                    logger.warning(
-                        f"Invalid Content-Type '{content_type}' "
-                        f"for image URL: {image_url} "
-                        f"(attempt {attempt + 1}/{max_retries})"
-                    )
-                    response.close()
-                    if attempt == max_retries - 1:
-                        return None
-                    delay = base_delay * (2**attempt) + random.uniform(0, 0.1 * base_delay)
-                    time.sleep(delay)
-                    continue
-
-                content_length = response.headers.get("Content-Length")
-                if content_length:
-                    try:
-                        size = int(content_length)
-                        if size > max_size_bytes:
-                            logger.warning(
-                                f"Content-Length {size} exceeds max "
-                                f"{max_size_bytes} bytes for image "
-                                f"URL: {image_url} "
-                                f"(attempt {attempt + 1}/{max_retries})"
-                            )
-                            response.close()
-                            if attempt == max_retries - 1:
-                                return None
-                            delay = base_delay * (2**attempt) + random.uniform(0, 0.1 * base_delay)
-                            time.sleep(delay)
-                            continue
-                    except (ValueError, TypeError) as e:
+                    content_type = response.headers.get("Content-Type", "").lower()
+                    if not content_type.startswith("image/"):
                         logger.warning(
-                            f"Invalid Content-Length header "
-                            f"'{content_length}' for image URL: "
-                            f"{image_url} "
-                            f"(attempt {attempt + 1}/{max_retries}): "
-                            f"{e}"
+                            f"Invalid Content-Type '{content_type}' "
+                            f"for image URL: {image_url} "
+                            f"(attempt {attempt + 1}/{max_retries})"
                         )
-                        response.close()
                         if attempt == max_retries - 1:
                             return None
                         delay = base_delay * (2**attempt) + random.uniform(0, 0.1 * base_delay)
                         time.sleep(delay)
                         continue
 
-                content = bytearray()
-                try:
+                    content_length = response.headers.get("Content-Length")
+                    if content_length:
+                        try:
+                            size = int(content_length)
+                            if size > max_size_bytes:
+                                logger.warning(
+                                    f"Content-Length {size} exceeds max "
+                                    f"{max_size_bytes} bytes for image "
+                                    f"URL: {image_url} "
+                                    f"(attempt {attempt + 1}/{max_retries})"
+                                )
+                                if attempt == max_retries - 1:
+                                    return None
+                                delay = base_delay * (2**attempt) + random.uniform(
+                                    0, 0.1 * base_delay
+                                )
+                                time.sleep(delay)
+                                continue
+                        except (ValueError, TypeError) as e:
+                            logger.warning(
+                                f"Invalid Content-Length header "
+                                f"'{content_length}' for image URL: "
+                                f"{image_url} "
+                                f"(attempt {attempt + 1}/{max_retries}): "
+                                f"{e}"
+                            )
+                            if attempt == max_retries - 1:
+                                return None
+                            delay = base_delay * (2**attempt) + random.uniform(0, 0.1 * base_delay)
+                            time.sleep(delay)
+                            continue
+
+                    content = bytearray()
                     for chunk in response.iter_content(chunk_size=8192):
                         if len(content) + len(chunk) > max_size_bytes:
                             logger.warning(
@@ -221,7 +233,6 @@ class ChromaIndexer(VectorStoreIndexer):
                                 f"download for image URL: {image_url} "
                                 f"(attempt {attempt + 1}/{max_retries})"
                             )
-                            response.close()
                             return None
                         content.extend(chunk)
 
@@ -251,8 +262,6 @@ class ChromaIndexer(VectorStoreIndexer):
                             f"(attempt {attempt + 1}/{max_retries})"
                         )
                         return None
-                finally:
-                    response.close()
             except (
                 requests.exceptions.RequestException,
                 UnidentifiedImageError,
@@ -348,6 +357,17 @@ class ChromaIndexer(VectorStoreIndexer):
         dataset_name = self.dataset_loader.get_dataset_name()
         model_id = self.embedding_model.get_model_id()
         environment = self.settings.environment
+
+        if isinstance(dataset, DatasetDict):
+            if "train" in dataset:
+                dataset = dataset["train"]
+                logger.info("Selected 'train' split from DatasetDict")
+            else:
+                first_split = next(iter(dataset.keys()))
+                dataset = dataset[first_split]
+                logger.info(
+                    f"Selected '{first_split}' split from DatasetDict (no 'train' split available)"
+                )
 
         if sample_size is not None:
             limit = sample_size

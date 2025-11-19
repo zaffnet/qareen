@@ -30,7 +30,7 @@ At least one of `text` or `image` must be provided. Each field may be `None` ind
 
 ## Validation
 
-- Both `None` rejected
+- Both image and text `None`: rejected
 - Text must be non-empty when provided
 - Image: PIL Image, valid path, or `None`
 - Valid extensions: .jpg, .jpeg, .png, .gif, .bmp, .webp, .tiff, .tif, .svg
@@ -38,4 +38,4 @@ At least one of `text` or `image` must be provided. Each field may be `None` ind
 ## Embedding
 
 - Dual-modality: alpha-weighted combination
-- Single-modality: alpha ignored
+- Single-modality (text or image): alpha ignored

@@ -60,6 +60,8 @@ class DatasetItem(BaseModel):
         """Validate text is non-empty if provided."""
         if v is not None and (not v or not v.strip()):
             raise ValueError(cls.TEXT_EMPTY_ERROR)
+        if v is not None:
+            return v.strip()
         return v
 
     @field_validator("image")

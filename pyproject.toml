@@ -33,6 +33,9 @@ dependencies = [
     "tqdm~=4.65",
     "sentencepiece~=0.2.0",
     "requests~=2.31.0",
+    "typer~=0.20.0",
+    "ftfy~=6.2.0",
+    "open-clip-torch~=2.26.0",
 ]
 
 [project.optional-dependencies]

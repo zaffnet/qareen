@@ -39,6 +39,8 @@ pip install qareen
 
 See [docs/QUICKSTART.md](docs/QUICKSTART.md) for full steps; e.g., `./scripts/build_index.sh <data> && ./scripts/run_gradio.sh`
 
+**Marqo Fashion Experiment:** Run `./scripts/build_marqo_fashion_index.sh` to compare 4 embedding models across 9 alpha values on fashion dataset.
+
 ## References
 
 1. <a id="ref1"></a>**Zheng, L., et al.** (2024). Judging the Judges: A Systematic Study of Position Bias in LLM-as-a-Judge. *arXiv preprint arXiv:2406.07791*. [https://arxiv.org/abs/2406.07791](https://arxiv.org/abs/2406.07791)

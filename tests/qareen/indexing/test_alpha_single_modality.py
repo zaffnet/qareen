@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import tempfile
 from pathlib import Path
 from unittest.mock import MagicMock
@@ -67,7 +68,17 @@ class AlphaAwareEmbeddingModel(EmbeddingModel):
         """
         if image is None:
             return None
-        np.random.seed(42)
+
+        if isinstance(image, Image.Image):
+            image_bytes = image.tobytes()
+        elif isinstance(image, (str, Path)):
+            image_bytes = str(image).encode("utf-8")
+        else:
+            image_bytes = str(image).encode("utf-8")
+
+        image_hash = hashlib.sha256(image_bytes).digest()
+        seed = int.from_bytes(image_hash[:4], byteorder="big")
+        np.random.seed(seed)
         embedding = np.random.randn(self.embedding_dim).astype(np.float32)
         return self.normalize_l2(embedding)
 

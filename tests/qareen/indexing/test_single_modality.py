@@ -185,7 +185,7 @@ class SingleModalityDatasetLoader(DatasetLoader):
 
     def validate_schema(self) -> None:
         """Validate schema."""
-        ...
+        pass
 
     def get_dataset_info(self) -> dict[str, object]:
         """Return dataset info."""

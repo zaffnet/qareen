@@ -29,7 +29,7 @@ class HuggingFaceDatasetLoader(DatasetLoader):
         self,
         dataset_name: str,
         split: str = "train",
-        **load_kwargs: Any,
+        **load_kwargs: object,
     ) -> None:
         """Initialize HuggingFace dataset loader.
 
@@ -83,11 +83,15 @@ class HuggingFaceDatasetLoader(DatasetLoader):
         dataset = self.load()
 
         if isinstance(dataset, dict):
+            if len(dataset) == 0:
+                features = []
+            else:
+                features = list(next(iter(dataset.values())).features.keys())
             return {
                 "dataset_name": self.dataset_name,
                 "splits": list(dataset.keys()),
                 "num_rows": {k: len(v) for k, v in dataset.items()},
-                "features": list(next(iter(dataset.values())).features.keys()),
+                "features": features,
             }
         else:
             return {

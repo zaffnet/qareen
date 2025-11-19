@@ -104,17 +104,10 @@ class Settings(BaseSettings):
         if self._dirs_ensured:
             return True
 
-        try:
-            self.data_dir.mkdir(parents=True, exist_ok=True)
-            self.chroma_db_dir.mkdir(parents=True, exist_ok=True)
-        except OSError:
-            if self.data_dir.exists() and self.chroma_db_dir.exists():
-                self._dirs_ensured = True
-                return True
-            raise
-        else:
-            self._dirs_ensured = True
-            return True
+        self.data_dir.mkdir(parents=True, exist_ok=True)
+        self.chroma_db_dir.mkdir(parents=True, exist_ok=True)
+        self._dirs_ensured = True
+        return True
 
     @field_validator("embedding_models")
     @classmethod

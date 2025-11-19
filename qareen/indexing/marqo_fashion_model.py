@@ -1,16 +1,16 @@
-"""SIGLIP embedding model implementation."""
+"""Marqo Fashion SIGLIP model implementation using OpenCLIP."""
 
 from __future__ import annotations
 
 import logging
 import re
 from pathlib import Path
-from typing import cast
+from typing import Any, cast
 
 import numpy as np
+import open_clip
 import torch
 from PIL import Image, UnidentifiedImageError
-from transformers import AutoModel, AutoProcessor
 
 from qareen.indexing.exceptions import InvalidAlphaError
 from qareen.indexing.models import EmbeddingModel
@@ -18,10 +18,8 @@ from qareen.indexing.models import EmbeddingModel
 logger = logging.getLogger(__name__)
 
 
-class SIGLIPEmbeddingModel(EmbeddingModel):
-    """SIGLIP model for multimodal embeddings.
-
-    Uses HuggingFace transformers to load and run SIGLIP models.
+class MarqoFashionSigLIPModel(EmbeddingModel):
+    """Marqo Fashion SIGLIP model with special handling for meta tensor issues.
 
     Attributes:
         model_id: HuggingFace model identifier
@@ -32,38 +30,40 @@ class SIGLIPEmbeddingModel(EmbeddingModel):
 
     IMAGE_TYPE_ERROR: str = "Image must be PIL Image or path string"
 
-    def __init__(self, model_id: str = "google/siglip2-base-patch16-512") -> None:
-        """Initialize SIGLIP model.
+    def __init__(self, model_id: str = "Marqo/marqo-fashionSigLIP") -> None:
+        """Initialize Marqo Fashion SIGLIP model.
 
         Args:
             model_id: HuggingFace model identifier
         """
         self.model_id = model_id
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
-        self.model: AutoModel | None = None
-        self.processor: AutoProcessor | None = None
+        self.model: Any | None = None
+        self.preprocess_val: Any | None = None
+        self.tokenizer: Any | None = None
 
     def load_model(self) -> None:
-        """Load HuggingFace SIGLIP model and processor."""
+        """Load Marqo Fashion SIGLIP model using OpenCLIP."""
         if self.model is None:
             try:
-                self.model = AutoModel.from_pretrained(self.model_id, trust_remote_code=True)
-                self.model.to(self.device)
-                self.model.eval()
-            except Exception as e:
-                error_msg = (
-                    f"Failed to load SIGLIP model '{self.model_id}' on device '{self.device}': {e}"
+                model_name = f"hf-hub:{self.model_id}"
+                self.model, _, self.preprocess_val = open_clip.create_model_and_transforms(
+                    model_name
                 )
+                self.model.eval()
+                if self.device == "cuda":
+                    self.model = self.model.to(self.device)
+            except Exception as e:
+                error_msg = f"Failed to load Marqo Fashion SIGLIP model '{self.model_id}': {e}"
                 logger.exception(error_msg)
                 raise RuntimeError(error_msg) from e
 
-        if self.processor is None:
+        if self.tokenizer is None:
             try:
-                self.processor = AutoProcessor.from_pretrained(
-                    self.model_id, trust_remote_code=True
-                )
+                model_name = f"hf-hub:{self.model_id}"
+                self.tokenizer = open_clip.get_tokenizer(model_name)
             except Exception as e:
-                error_msg = f"Failed to load SIGLIP processor for model '{self.model_id}': {e}"
+                error_msg = f"Failed to load tokenizer for model '{self.model_id}': {e}"
                 logger.exception(error_msg)
                 raise RuntimeError(error_msg) from e
 
@@ -79,21 +79,23 @@ class SIGLIPEmbeddingModel(EmbeddingModel):
         if text is None:
             return None
 
-        if self.model is None or self.processor is None:
+        if self.model is None or self.tokenizer is None:
             self.load_model()
 
-        inputs = self.processor(  # type: ignore[misc]
-            text=[text],
-            return_tensors="pt",
-            padding=True,
-            truncation=True,
-        ).to(self.device)
+        assert self.tokenizer is not None
+        assert self.model is not None
+
+        text_tokens = self.tokenizer([text]).to(self.device)
 
         with torch.no_grad():
-            outputs = self.model.get_text_features(**inputs)  # type: ignore[union-attr]
+            if self.device == "cuda":
+                with torch.cuda.amp.autocast():
+                    text_features = self.model.encode_text(text_tokens, normalize=True)
+            else:
+                text_features = self.model.encode_text(text_tokens, normalize=True)
 
-        embedding = outputs[0].cpu().numpy()
-        return self.normalize_l2(embedding)
+        embedding = text_features[0].cpu().numpy()
+        return embedding
 
     def embed_image(self, image: Image.Image | str | Path | None) -> np.ndarray | None:
         """Generate L2-normalized image embedding.
@@ -107,7 +109,7 @@ class SIGLIPEmbeddingModel(EmbeddingModel):
         if image is None:
             return None
 
-        if self.model is None or self.processor is None:
+        if self.model is None or self.preprocess_val is None:
             self.load_model()
 
         if isinstance(image, (str, Path)):
@@ -121,16 +123,20 @@ class SIGLIPEmbeddingModel(EmbeddingModel):
         if not isinstance(image, Image.Image):
             raise TypeError(self.IMAGE_TYPE_ERROR)
 
-        inputs = self.processor(  # type: ignore[misc]
-            images=image,
-            return_tensors="pt",
-        ).to(self.device)
+        assert self.preprocess_val is not None
+        assert self.model is not None
+
+        image_input = self.preprocess_val(image).unsqueeze(0).to(self.device)
 
         with torch.no_grad():
-            outputs = self.model.get_image_features(**inputs)  # type: ignore[union-attr]
+            if self.device == "cuda":
+                with torch.cuda.amp.autocast():
+                    image_features = self.model.encode_image(image_input, normalize=True)
+            else:
+                image_features = self.model.encode_image(image_input, normalize=True)
 
-        embedding = outputs[0].cpu().numpy()
-        return self.normalize_l2(embedding)
+        embedding = image_features[0].cpu().numpy()
+        return embedding
 
     def embed_multimodal(
         self,
@@ -140,14 +146,6 @@ class SIGLIPEmbeddingModel(EmbeddingModel):
     ) -> np.ndarray:
         """Generate combined multimodal embedding with alpha weighting.
 
-        Formula: V_combined = Normalize(alpha * V_image + (1 - alpha) * V_text)
-        Both V_image and V_text are L2-normalized before combination.
-
-        Handles missing modalities:
-        - If image is None: returns text embedding
-        - If text is None: returns image embedding
-        - If both are None: raises ValueError
-
         Args:
             image: PIL Image object, path to image file, or None
             text: Input text string or None
@@ -155,10 +153,6 @@ class SIGLIPEmbeddingModel(EmbeddingModel):
 
         Returns:
             L2-normalized combined embedding vector
-
-        Raises:
-            ValueError: If both image and text are None
-            InvalidAlphaError: If alpha is not in range [0.0, 1.0]
         """
         if not (0.0 <= alpha <= 1.0):
             raise InvalidAlphaError(alpha)
@@ -197,25 +191,6 @@ class SIGLIPEmbeddingModel(EmbeddingModel):
         """
         if self.model is None:
             self.load_model()
-
-        try:
-            config = self.model.config  # type: ignore[union-attr]
-            if hasattr(config, "projection_dim") and config.projection_dim is not None:
-                return int(config.projection_dim)
-            if hasattr(config, "text_config") and hasattr(config.text_config, "hidden_size"):
-                return int(config.text_config.hidden_size)
-        except AttributeError as e:
-            config_state = (
-                f"config={getattr(self.model, 'config', None)}, "
-                f"has_config={hasattr(self.model, 'config')}"
-            )
-            logger.warning(
-                "Failed to infer embedding_dim from config for model '%s'. %s. "
-                "AttributeError: %s. Falling back to sampling with embed_text('dummy').",
-                self.model_id,
-                config_state,
-                e,
-            )
 
         try:
             embedding = self.embed_text("dummy")

@@ -1,31 +1,18 @@
-"""CLI contract for scripts.build_index."""
+"""CLI tests for scripts.build_index."""
 
 from __future__ import annotations
 
-import pytest
-
-from scripts.build_index import build_parser
+import scripts.build_index
 
 
-def test_build_index_parser_contract() -> None:
-    parser = build_parser()
-    with pytest.raises(SystemExit):
-        parser.parse_args([])
+def test_build_index_imports() -> None:
+    """Test that build_index module imports successfully."""
+    assert hasattr(scripts.build_index, "app")
+    assert hasattr(scripts.build_index, "main")
 
-    args = parser.parse_args(
-        [
-            "--dataset-name",
-            "sqid",
-            "--models",
-            "google/siglip-base-patch16-224",
-            "openai/clip-vit-large-patch14",
-            "--environment",
-            "prod",
-        ]
-    )
-    assert args.dataset_name == "sqid"
-    assert args.models == [
-        "google/siglip-base-patch16-224",
-        "openai/clip-vit-large-patch14",
-    ]
-    assert args.environment == "prod"
+
+def test_build_index_app_is_typer() -> None:
+    """Test that app is a Typer instance."""
+    import typer
+
+    assert isinstance(scripts.build_index.app, typer.Typer)

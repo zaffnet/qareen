@@ -199,7 +199,6 @@ class MockDatasetLoader(DatasetLoader):
 
     def validate_schema(self) -> None:
         """Validate schema."""
-        ...
 
     def get_dataset_info(self) -> dict[str, object]:
         """Return dataset info."""

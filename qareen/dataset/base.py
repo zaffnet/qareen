@@ -25,6 +25,8 @@ def validate_dataset_schema(
         ValueError: If required fields are missing or dataset is empty
     """
     if isinstance(dataset, dict):
+        if not dataset:
+            raise ValueError("DatasetDict has no splits")
         features = next(iter(dataset.values())).features
     else:
         features = dataset.features

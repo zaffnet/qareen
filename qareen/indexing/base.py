@@ -85,21 +85,21 @@ class VectorStoreIndexer(ABC):
                 f"environment must be one of 'dev', 'staging', or 'prod', got '{environment}'"
             )
 
-        parts = [
-            env,
-            dataset_name,
-            model_id,
-        ]
+        sanitized_parts = []
+        for part in [env, dataset_name, model_id]:
+            sanitized = part.lower()
+            sanitized = re.sub(r"[^a-z0-9_]+", "_", sanitized)
+            sanitized = re.sub(r"_+", "_", sanitized)
+            sanitized = sanitized.strip("_")
+            sanitized_parts.append(sanitized)
+
+        base_name = "_".join(sanitized_parts)
 
         if alpha is not None:
-            parts.append(f"alpha{alpha:.2f}")
-
-        name = "_".join(parts)
-
-        name = name.lower()
-        name = re.sub(r"[^a-z0-9_]+", "_", name)
-        name = re.sub(r"_+", "_", name)
-        name = name.strip("_")
+            alpha_suffix = f"alpha{alpha:.2f}".lower()
+            name = f"{base_name}_{alpha_suffix}"
+        else:
+            name = base_name
 
         if len(name) > 63:
             raise CollectionNameTooLongError(
@@ -109,6 +109,7 @@ class VectorStoreIndexer(ABC):
 
         return name
 
+    @abstractmethod
     def list_available_alphas(
         self,
         dataset_name: str,
@@ -125,7 +126,6 @@ class VectorStoreIndexer(ABC):
         Returns:
             Sorted list of available alpha values
         """
-        return []
 
     def validate_alpha_available(
         self,
