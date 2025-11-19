@@ -2536,12 +2536,6 @@ dev = [
     { name = "types-requests" },
 ]
 
-[package.dev-dependencies]
-dev = [
-    { name = "pytest" },
-    { name = "ruff" },
-]
-
 [package.metadata]
 requires-dist = [
     { name = "datasets", specifier = "~=2.18.0" },
@@ -2568,12 +2562,6 @@ requires-dist = [
     { name = "types-requests", marker = "extra == 'dev'", specifier = "~=2.31.0" },
 ]
 provides-extras = ["gpu", "dev"]
-
-[package.metadata.requires-dev]
-dev = [
-    { name = "pytest", specifier = ">=8.0.2" },
-    { name = "ruff", specifier = ">=0.14.5" },
-]
 
 [[package]]
 name = "regex"

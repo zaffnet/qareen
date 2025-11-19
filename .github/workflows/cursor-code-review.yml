@@ -73,16 +73,16 @@ jobs:
             INSTALL_URL="https://cursor.com/install/${CURSOR_VERSION}"
             CHECKSUM_URL="https://cursor.com/install/${CURSOR_VERSION}.sha256"
           fi
-          
+
           echo "Downloading Cursor CLI installer from $INSTALL_URL"
           curl --fail --show-error -fsS "$INSTALL_URL" -o /tmp/cursor-install.sh
-          
+
           if [ ! -s /tmp/cursor-install.sh ]; then
             echo "Error: Downloaded installer is empty"
             rm -f /tmp/cursor-install.sh
             exit 1
           fi
-          
+
           # Try to download and verify checksum if available
           if curl --fail --show-error -fsS "$CHECKSUM_URL" -o /tmp/cursor-install.sh.sha256 2>/dev/null; then
             echo "Verifying installer checksum..."
@@ -100,12 +100,12 @@ jobs:
           else
             echo "⚠️ Warning: Checksum file not available at $CHECKSUM_URL, skipping verification"
           fi
-          
+
           echo "Running Cursor CLI installer..."
           chmod +x /tmp/cursor-install.sh
           bash /tmp/cursor-install.sh
           rm -f /tmp/cursor-install.sh
-          
+
           if [ ! -x "${HOME}/.local/bin/cursor-agent" ]; then
             echo "Error: Cursor CLI binary not found after installation"
             echo "Checking installation directory:"
