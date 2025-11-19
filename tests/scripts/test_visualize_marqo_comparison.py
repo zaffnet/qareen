@@ -88,7 +88,7 @@ def test_main_invalid_environment(mock_load_from_disk):
         ["--dataset-path", "data/test", "--environment", "invalid"],
     )
 
-    assert result.exit_code == 0
+    assert result.exit_code == 1
     mock_load_from_disk.assert_not_called()
 
 
@@ -102,7 +102,7 @@ def test_main_empty_dataset(mock_load_from_disk):
         ["--dataset-path", "data/test", "--environment", "dev"],
     )
 
-    assert result.exit_code == 0
+    assert result.exit_code == 1
 
 
 @patch("scripts.visualize_marqo_comparison.load_from_disk")
@@ -116,7 +116,7 @@ def test_main_sample_index_out_of_bounds(mock_load_from_disk):
         ["--dataset-path", "data/test", "--sample-index", "20"],
     )
 
-    assert result.exit_code == 0
+    assert result.exit_code == 1
 
 
 @patch("scripts.visualize_marqo_comparison.load_from_disk")
@@ -145,10 +145,10 @@ def test_main_success(
     mock_model_cls.return_value = mock_model
 
     mock_vectorstore = Mock()
-    mock_vectorstore.similarity_search_with_score.return_value = []
 
     mock_indexer = Mock()
     mock_indexer.create_vectorstore.return_value = mock_vectorstore
+    mock_indexer.query_multimodal.return_value = []
     mock_indexer_cls.return_value = mock_indexer
 
     mock_settings.return_value = Mock()
@@ -187,4 +187,4 @@ def test_main_exception_during_processing(mock_settings, mock_load_from_disk):
         ["--dataset-path", "data/test"],
     )
 
-    assert result.exit_code == 0
+    assert result.exit_code == 1

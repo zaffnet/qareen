@@ -10,11 +10,17 @@ from typing import cast
 import numpy as np
 import torch
 from PIL import Image, UnidentifiedImageError
+from rich.logging import RichHandler
 from transformers import AutoModel, AutoProcessor
 
 from qareen.indexing.exceptions import InvalidAlphaError
 from qareen.indexing.models import EmbeddingModel
 
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(message)s",
+    handlers=[RichHandler(rich_tracebacks=True, show_path=False)],
+)
 logger = logging.getLogger(__name__)
 
 
@@ -60,7 +66,7 @@ class SIGLIPEmbeddingModel(EmbeddingModel):
         if self.processor is None:
             try:
                 self.processor = AutoProcessor.from_pretrained(
-                    self.model_id, trust_remote_code=True
+                    self.model_id, trust_remote_code=True, use_fast=True
                 )
             except Exception as e:
                 error_msg = f"Failed to load SIGLIP processor for model '{self.model_id}': {e}"
@@ -79,8 +85,7 @@ class SIGLIPEmbeddingModel(EmbeddingModel):
         if text is None:
             return None
 
-        if self.model is None or self.processor is None:
-            self.load_model()
+        self.load_model()
 
         inputs = self.processor(  # type: ignore[misc]
             text=[text],
@@ -107,8 +112,7 @@ class SIGLIPEmbeddingModel(EmbeddingModel):
         if image is None:
             return None
 
-        if self.model is None or self.processor is None:
-            self.load_model()
+        self.load_model()
 
         if isinstance(image, (str, Path)):
             try:
@@ -191,6 +195,11 @@ class SIGLIPEmbeddingModel(EmbeddingModel):
     @property
     def embedding_dim(self) -> int:
         """Return the embedding dimension.
+
+        Note: Accessing this property may trigger model loading (download and initialization)
+        if the model is not already loaded, which can cause significant delays on first access.
+        To avoid blocking behavior, call load_model() explicitly before accessing this property,
+        or ensure the model has already been loaded through other operations.
 
         Returns:
             Embedding dimension as integer

@@ -46,7 +46,7 @@ def test_main_missing_query_column(mock_load_dataset):
 
     result = runner.invoke(app, ["--output-dir", "test_output"])
 
-    assert result.exit_code == 0
+    assert result.exit_code == 1
 
 
 @patch("scripts.prepare_marqo_dataset.load_dataset")
@@ -58,7 +58,7 @@ def test_main_missing_image_column(mock_load_dataset):
 
     result = runner.invoke(app, ["--output-dir", "test_output"])
 
-    assert result.exit_code == 0
+    assert result.exit_code == 1
 
 
 @patch("scripts.prepare_marqo_dataset.load_dataset")
@@ -90,10 +90,10 @@ def test_main_load_dataset_exception(mock_load_dataset):
 
     result = runner.invoke(app, ["--output-dir", "test_output"])
 
-    assert result.exit_code == 0
+    assert result.exit_code == 1
 
 
-def test_main_default_arguments():
+def test_main_default_arguments(tmp_path):
     with patch("scripts.prepare_marqo_dataset.load_dataset") as mock_load_dataset:
         mock_dataset = MagicMock()
         mock_dataset.column_names = ["query", "image"]
@@ -105,7 +105,9 @@ def test_main_default_arguments():
 
         mock_load_dataset.return_value = mock_dataset
 
-        result = runner.invoke(app, [])
+        output_dir = str(tmp_path / "test_output")
+
+        result = runner.invoke(app, ["--output-dir", output_dir])
 
         assert result.exit_code == 0
         mock_dataset.shuffle.assert_called_once_with(seed=42)

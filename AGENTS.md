@@ -25,7 +25,7 @@ Pydantic-first: use Pydantic models for all data structures, configs, schemas. U
 ## Communication & Code: Minimalism Required
 
 **Rules:**
-1. **Shut up and code** - No preambles, explanations, or narration
+1. **Code First — Minimal Explanations** - No preambles, explanations, or narration
 2. **Edit, don't create** - Always prefer editing existing files over creating new ones
 3. **One task = one change** - Don't add features that weren't requested
 4. **No obvious comments** - Code should be self-documenting
@@ -34,7 +34,7 @@ Pydantic-first: use Pydantic models for all data structures, configs, schemas. U
 **Anti-patterns:**
 - ❌ Creating new files when editing would work
 - ❌ Adding logging/error handling that wasn't requested
-- ❌ Creating documentation files (README, CONTRIBUTING, etc.) proactively
+- ❌ Creating unrelated documentation files proactively (documentation within PR scope or requested maintenance is allowed; e.g., updating README for a new feature is fine, creating CONTRIBUTING.md unsolicited is not)
 - ❌ Writing test helpers or fixtures that weren't needed
 - ❌ Refactoring code that works and wasn't mentioned
 - ❌ Adding type hints to files you didn't touch
@@ -55,3 +55,12 @@ Pydantic-first: use Pydantic models for all data structures, configs, schemas. U
 4. Explicitly state: "✅ Ran `uv run pre-commit run --all-files` - ALL HOOKS PASSED"
 
 **Note:** Never assume checks pass. Always run and confirm. CI/CD will reject PRs if this fails.
+
+**Troubleshooting non-code hook failures:**
+If hooks fail due to environment/tooling (not code issues), check:
+- pre-commit version: `pre-commit --version`
+- Python/node versions match requirements
+- Virtual environment is active: `which python` should show `.venv/bin/python`
+- PATH includes required tools
+- Run `uv sync --all-extras` to ensure all dependencies installed
+For detailed setup help, see CONTRIBUTING.md or project setup docs.

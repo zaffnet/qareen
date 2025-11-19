@@ -50,16 +50,16 @@ jobs:
           export PATH="$HOME/.cursor/bin:$PATH"
           if [ ! -x "$HOME/.cursor/bin/cursor" ]; then
             echo "Warning: Cached Cursor CLI binary not found or not executable"
-            echo "cache-valid=false" >> $GITHUB_OUTPUT
+            echo "cache-valid=false" >> "$GITHUB_OUTPUT"
             exit 1
           fi
           if ! cursor --version > /dev/null 2>&1 && ! cursor --help > /dev/null 2>&1; then
             echo "Warning: Cached Cursor CLI failed to run"
-            echo "cache-valid=false" >> $GITHUB_OUTPUT
+            echo "cache-valid=false" >> "$GITHUB_OUTPUT"
             exit 1
           fi
           echo "✅ Cached Cursor CLI verified successfully"
-          echo "cache-valid=true" >> $GITHUB_OUTPUT
+          echo "cache-valid=true" >> "$GITHUB_OUTPUT"
 
       - name: Install Cursor CLI
         if: steps.cache-cursor.outputs.cache-hit != 'true' || (steps.verify-cache.outcome == 'failure')
@@ -141,8 +141,13 @@ jobs:
       - name: Perform automated code review
         env:
           CURSOR_API_KEY: ${{ secrets.CURSOR_API_KEY }}
-          MODEL: gpt-5
+          MODEL: gpt-4o
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          GH_PR_NUMBER: ${{ github.event.pull_request.number }}
+          GH_PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          GH_PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          GH_BLOCKING_REVIEW: ${{ env.BLOCKING_REVIEW }}
         run: |
           export PATH="$HOME/.cursor/bin:$PATH"
           if ! command -v cursor > /dev/null 2>&1; then
@@ -152,65 +157,26 @@ jobs:
             ls -la "$HOME/.cursor/bin" || true
             exit 1
           fi
-          cursor agent --force --model "$MODEL" --output-format=text --print <<PROMPT_END
-          You are operating in a GitHub Actions runner performing automated code review. The gh CLI is available and authenticated via GH_TOKEN. You may comment on pull requests.
-
-          Context:
-          - Repo: ${{ github.repository }}
-          - PR Number: ${{ github.event.pull_request.number }}
-          - PR Head SHA: ${{ github.event.pull_request.head.sha }}
-          - PR Base SHA: ${{ github.event.pull_request.base.sha }}
-          - Blocking Review: ${{ env.BLOCKING_REVIEW }}
-
-          Objectives:
-          1) Re-check existing review comments and reply resolved when addressed.
-          2) Review the current PR diff and flag only clear, high-severity issues.
-          3) Leave very short inline comments (1-2 sentences) on changed lines only and a brief summary at the end.
-
-          Procedure:
-          - Get existing comments: gh pr view --json comments
-          - Get diff: gh pr diff
-          - Get changed files with patches to compute inline positions: gh api repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/files --paginate --jq '.[] | {filename,patch}'
-          - Compute exact inline anchors for each issue (file path + diff position). Comments MUST be placed inline on the changed line in the diff, not as top-level comments.
-          - Detect prior top-level "no issues" style comments authored by this bot (match bodies like: "✅ no issues", "No issues found", "LGTM").
-          - If CURRENT run finds issues and any prior "no issues" comments exist:
-            - Prefer to remove them to avoid confusion:
-              - Delete top-level issue comments via: gh api -X DELETE repos/${{ github.repository }}/issues/comments/<comment_id> (do not mask failures with || true; handle errors explicitly)
-              - If deletion fails (e.g., comment already deleted or insufficient permissions), minimize them via GraphQL (minimizeComment) or edit to prefix "[Superseded by new findings]".
-            - If neither delete nor minimize is possible, reply to that comment: "⚠️ Superseded: issues were found in newer commits".
-          - If a previously reported issue appears fixed by nearby changes, reply: ✅ This issue appears to be resolved by the recent changes
-          - Analyze ONLY for:
-            - Null/undefined dereferences
-            - Resource leaks (unclosed files or connections)
-            - Injection (SQL/XSS)
-            - Concurrency/race conditions
-            - Missing error handling for critical operations
-            - Obvious logic errors with incorrect behavior
-            - Clear performance anti-patterns with measurable impact
-            - Definitive security vulnerabilities
-          - Avoid duplicates: skip if similar feedback already exists on or near the same lines.
-
-          Commenting rules:
-          - Max 10 inline comments total; prioritize the most critical issues
-          - One issue per comment; place on the exact changed line
-          - All issue comments MUST be inline (anchored to a file and line/position in the PR diff)
-          - Natural tone, specific and actionable; do not mention automated or high-confidence
-          - Use emojis: 🚨 Critical 🔒 Security ⚡ Performance ⚠️ Logic ✅ Resolved ✨ Improvement
-
-          Submission:
-          - If there are NO issues to report and an existing top-level comment indicating "no issues" already exists (e.g., "✅ no issues", "No issues found", "LGTM"), do NOT submit another comment. Skip submission to avoid redundancy.
-          - If there are NO issues to report and NO prior "no issues" comment exists, submit one brief summary comment noting no issues.
-          - If there ARE issues to report and a prior "no issues" comment exists, ensure that prior comment is deleted/minimized/marked as superseded before submitting the new review.
-          - If there ARE issues to report, submit ONE review containing ONLY inline comments plus an optional concise summary body. Use the GitHub Reviews API to ensure comments are inline:
-            - Build a JSON array of comments like: [{ "path": "<file>", "position": <diff_position>, "body": "..." }]
-            - Submit via: gh api repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/reviews -f event=COMMENT -f body="$SUMMARY" -f comments='[$COMMENTS_JSON]'
-          - Do NOT use: gh pr review --approve or --request-changes
-
-          Blocking behavior:
-          - If BLOCKING_REVIEW is true and any 🚨 or 🔒 issues were posted: echo "CRITICAL_ISSUES_FOUND=true" >> $GITHUB_ENV
-          - Otherwise: echo "CRITICAL_ISSUES_FOUND=false" >> $GITHUB_ENV
-          - Always set CRITICAL_ISSUES_FOUND at the end
+          if [ ! -f ".github/prompts/code-review.md" ]; then
+            echo "Error: Prompt file not found at .github/prompts/code-review.md"
+            exit 1
+          fi
+          PROMPT=$(envsubst < .github/prompts/code-review.md)
+          cursor agent --force --model "$MODEL" --output-format=text --print <<PROMPT_END 2>&1 | tee /tmp/review-output.txt
+          $PROMPT
           PROMPT_END
+
+          # Parse agent output for CRITICAL_ISSUES_FOUND marker
+          if grep -q "CRITICAL_ISSUES_FOUND: true" /tmp/review-output.txt; then
+            echo "CRITICAL_ISSUES_FOUND=true" >> "$GITHUB_ENV"
+            echo "✅ Parsed: CRITICAL_ISSUES_FOUND=true"
+          elif grep -q "CRITICAL_ISSUES_FOUND: false" /tmp/review-output.txt; then
+            echo "CRITICAL_ISSUES_FOUND=false" >> "$GITHUB_ENV"
+            echo "✅ Parsed: CRITICAL_ISSUES_FOUND=false"
+          else
+            echo "⚠️ Warning: CRITICAL_ISSUES_FOUND marker not found in agent output, defaulting to false"
+            echo "CRITICAL_ISSUES_FOUND=false" >> "$GITHUB_ENV"
+          fi
 
       - name: Check blocking review results
         if: env.BLOCKING_REVIEW == 'true'

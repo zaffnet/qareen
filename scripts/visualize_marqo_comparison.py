@@ -13,6 +13,7 @@ import requests
 import typer
 from datasets import load_from_disk
 from PIL import Image
+from rich.logging import RichHandler
 
 from qareen.config.settings import Settings
 from qareen.dataset.local_dataset import LocalDatasetLoader
@@ -23,7 +24,8 @@ from qareen.indexing.siglip_model import SIGLIPEmbeddingModel
 
 logging.basicConfig(
     level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+    format="%(message)s",
+    handlers=[RichHandler(rich_tracebacks=True, show_path=False)],
 )
 logger = logging.getLogger(__name__)
 
@@ -70,9 +72,7 @@ def download_image(image_url: str, output_path: Path) -> bool:
 
 @app.command()
 def main(
-    dataset_path: Annotated[
-        str, typer.Option(help="Path to local dataset directory")
-    ] = "data/marqo_fashion_3000",
+    dataset_path: Annotated[str, typer.Option(help="Path to local dataset directory")],
     models: Annotated[list[str] | None, typer.Option(help="Model IDs to compare")] = None,
     alpha_values: Annotated[
         list[float] | None, typer.Option(help="Alpha values to compare")
@@ -86,34 +86,34 @@ def main(
     sample_index: Annotated[
         int | None, typer.Option(help="Specific sample index to use (overrides random selection)")
     ] = None,
-) -> int:
+) -> None:
     """Visualize comparison of models and alpha values for Marqo dataset.
 
-    Returns:
-        Exit code (0 for success, 1 for failure)
+    Raises:
+        typer.Exit: With code 0 for success, 1 for failure
     """
     if environment not in ["dev", "staging", "prod"]:
         logger.error(f"Invalid environment: {environment}. Must be dev, staging, or prod")
-        return 1
+        raise typer.Exit(code=1)
 
     if not isinstance(k, int) or k <= 0:
         logger.error(f"Invalid k value: {k}. Must be an integer > 0")
-        return 1
+        raise typer.Exit(code=1)
 
     if models is not None and not models:
         logger.error("models parameter is an empty list. Must provide at least one model")
-        return 1
+        raise typer.Exit(code=1)
 
     if alpha_values is not None:
         if not alpha_values:
             logger.error(
                 "alpha_values parameter is an empty list. Must provide at least one alpha value"
             )
-            return 1
+            raise typer.Exit(code=1)
         for alpha in alpha_values:
             if not isinstance(alpha, float) or not (0.0 <= alpha <= 1.0):
                 logger.error(f"Invalid alpha value: {alpha}. Must be a float in range [0.0, 1.0]")
-                return 1
+                raise typer.Exit(code=1)
 
     try:
         settings = Settings(environment=environment)
@@ -134,7 +134,7 @@ def main(
 
         if dataset_len == 0:
             logger.error("Dataset is empty. Cannot proceed with visualization.")
-            return 1
+            raise typer.Exit(code=1)
 
         random.seed(seed)
         logger.info(f"Random seed set to: {seed}")
@@ -146,7 +146,7 @@ def main(
                     f"Sample index {sample_idx} is out of bounds. "
                     f"Dataset size: {dataset_len}, valid range: [0, {dataset_len - 1}]"
                 )
-                return 1
+                raise typer.Exit(code=1)
             logger.info(f"Using specified sample index: {sample_idx}")
         else:
             sample_idx = random.randint(0, dataset_len - 1)
@@ -200,7 +200,13 @@ def main(
                         alpha=alpha,
                         environment=environment,
                     )
-                    results = vectorstore.similarity_search_with_score(query_text, k=k)
+                    results = indexer.query_multimodal(
+                        vectorstore=vectorstore,
+                        image=query_image,
+                        text=query_text,
+                        alpha=alpha,
+                        k=k,
+                    )
                     all_results[model_id][alpha] = results
                 except Exception:
                     logger.exception(f"Failed to query model {model_id} with alpha {alpha}")
@@ -300,11 +306,11 @@ def main(
         logger.info(f"✓ Visualization saved to: {output}")
         logger.info(f"View the file with: open {output}")
 
-        return 0
-
-    except Exception:
+    except typer.Exit:
+        raise
+    except Exception as e:
         logger.exception("Error generating visualization")
-        return 1
+        raise typer.Exit(code=1) from e
 
 
 if __name__ == "__main__":

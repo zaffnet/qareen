@@ -219,7 +219,7 @@ def test_similarity_search_works_with_embedding_wrapper() -> None:
             settings=settings,
         )
 
-        vectorstores = indexer.index(alpha_values=[0.5], batch_size=10)
+        vectorstores = indexer.index(alpha_values=[0.5], rebuild=True, batch_size=10)
 
         assert len(vectorstores) == 1
         vectorstore = vectorstores[0.5]
@@ -243,7 +243,7 @@ def test_create_vectorstore_similarity_search_works() -> None:
             settings=settings,
         )
 
-        indexer.index(alpha_values=[0.5], batch_size=10)
+        indexer.index(alpha_values=[0.5], rebuild=True, batch_size=10)
 
         vectorstore = indexer.create_vectorstore(
             dataset_name="test_dataset",
@@ -271,7 +271,7 @@ def test_sample_size_honored_in_non_dev_environment() -> None:
             settings=settings,
         )
 
-        indexer.index(alpha_values=[0.5], batch_size=10, sample_size=5)
+        indexer.index(alpha_values=[0.5], rebuild=True, batch_size=10, sample_size=5)
 
         assert len(dataset_loader.select_calls) == 1
         select_call = dataset_loader.select_calls[0]
@@ -291,7 +291,7 @@ def test_sample_size_honored_in_staging_environment() -> None:
             settings=settings,
         )
 
-        indexer.index(alpha_values=[0.5], batch_size=10, sample_size=7)
+        indexer.index(alpha_values=[0.5], rebuild=True, batch_size=10, sample_size=7)
 
         assert len(dataset_loader.select_calls) == 1
         select_call = dataset_loader.select_calls[0]
@@ -311,7 +311,7 @@ def test_dev_sample_size_fallback_in_dev_environment() -> None:
             settings=settings,
         )
 
-        indexer.index(alpha_values=[0.5], batch_size=10, sample_size=None)
+        indexer.index(alpha_values=[0.5], rebuild=True, batch_size=10, sample_size=None)
 
         assert len(dataset_loader.select_calls) == 1
         select_call = dataset_loader.select_calls[0]
@@ -331,7 +331,7 @@ def test_explicit_sample_size_overrides_dev_sample_size() -> None:
             settings=settings,
         )
 
-        indexer.index(alpha_values=[0.5], batch_size=10, sample_size=15)
+        indexer.index(alpha_values=[0.5], rebuild=True, batch_size=10, sample_size=15)
 
         assert len(dataset_loader.select_calls) == 1
         select_call = dataset_loader.select_calls[0]
@@ -351,6 +351,6 @@ def test_no_limit_in_non_dev_when_sample_size_none() -> None:
             settings=settings,
         )
 
-        indexer.index(alpha_values=[0.5], batch_size=10, sample_size=None)
+        indexer.index(alpha_values=[0.5], rebuild=True, batch_size=10, sample_size=None)
 
         assert len(dataset_loader.select_calls) == 0

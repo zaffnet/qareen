@@ -39,6 +39,9 @@ def test_load_model(mock_processor_cls, mock_model_cls):
     assert model.processor == mock_processor
     mock_model.to.assert_called_once()
     mock_model.eval.assert_called_once()
+    mock_processor_cls.from_pretrained.assert_called_once_with(
+        "test/model", trust_remote_code=True, use_fast=True
+    )
 
 
 @patch("qareen.indexing.siglip_model.AutoModel")

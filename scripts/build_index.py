@@ -3,11 +3,13 @@
 from __future__ import annotations
 
 import logging
+from enum import Enum
 from pathlib import Path
 from typing import Annotated
 
 import typer
 from pydantic import ValidationError
+from rich.logging import RichHandler
 
 from qareen.config.settings import Settings
 from qareen.dataset.base import DatasetLoader
@@ -18,9 +20,19 @@ from qareen.indexing.marqo_fashion_model import MarqoFashionSigLIPModel
 from qareen.indexing.models import EmbeddingModel
 from qareen.indexing.siglip_model import SIGLIPEmbeddingModel
 
+
+class Environment(str, Enum):
+    """Environment options for indexing."""
+
+    DEV = "dev"
+    STAGING = "staging"
+    PROD = "prod"
+
+
 logging.basicConfig(
     level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+    format="%(message)s",
+    handlers=[RichHandler(rich_tracebacks=True, show_path=False)],
 )
 logger = logging.getLogger(__name__)
 
@@ -29,9 +41,7 @@ app = typer.Typer()
 
 @app.command()
 def main(
-    dataset_name: Annotated[
-        str, typer.Option(help="Dataset identifier")
-    ] = "data/marqo_fashion_3000",
+    dataset_name: Annotated[str, typer.Option(help="Dataset identifier")],
     models: Annotated[
         list[str] | None, typer.Option(help="Model IDs (default: from config)")
     ] = None,
@@ -39,21 +49,22 @@ def main(
         list[float] | None,
         typer.Option(help="Alpha values for embedding combination (default: from config)"),
     ] = None,
-    environment: Annotated[str, typer.Option(help="Environment (dev/staging/prod)")] = "dev",
+    environment: Annotated[
+        Environment, typer.Option(help="Environment (dev/staging/prod)")
+    ] = Environment.DEV,
     sample_size: Annotated[int | None, typer.Option(help="Override dev sample size")] = None,
     batch_size: Annotated[int, typer.Option(help="Batch size for processing")] = 100,
+    rebuild: Annotated[
+        bool, typer.Option(help="Delete existing collections before indexing")
+    ] = False,
 ) -> int:
     """Build vector store indexes for multimodal datasets.
 
     Returns:
         Exit code (0 for success, 1 for failure)
     """
-    if environment not in ["dev", "staging", "prod"]:
-        logger.error("Invalid environment: %s. Must be dev, staging, or prod", environment)
-        return 1
-
     try:
-        settings = Settings(environment=environment)
+        settings = Settings(environment=environment.value)
         settings.ensure_directories()
 
         model_list = models or settings.embedding_models
@@ -68,7 +79,7 @@ def main(
                 return 1
 
         logger.info("Building indexes for dataset: %s", dataset_name)
-        logger.info("Environment: %s", settings.environment)
+        logger.info("Environment: %s", environment.value)
         logger.info("Models: %s", model_list)
         logger.info("Alpha values: %s", alpha_list)
         logger.info("Batch size: %s", batch_size)
@@ -118,6 +129,7 @@ def main(
             logger.info("Building indexes for alpha values: %s", alpha_list)
             vectorstores = indexer.index(
                 alpha_values=alpha_list,
+                rebuild=rebuild,
                 batch_size=batch_size,
                 sample_size=dev_sample_size,
             )
@@ -130,7 +142,7 @@ def main(
                     alpha=alpha,
                     environment=settings.environment,
                 )
-                logger.info("✓ Completed collection: %s (alpha=%.2f)", collection_name, alpha)
+                logger.info("✓ Completed collection: %s (alpha=%.3f)", collection_name, alpha)
 
     except FileNotFoundError:
         logger.exception("File or directory not found")

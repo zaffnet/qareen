@@ -14,6 +14,10 @@ from qareen.indexing.exceptions import (
     CollectionNameTooLongError,
 )
 
+DATASET_NAME_EMPTY = "dataset_name must be a non-empty string"
+MODEL_ID_EMPTY = "model_id must be a non-empty string"
+ENVIRONMENT_INVALID = "environment must be one of 'dev', 'staging', or 'prod', got '{environment}'"
+
 
 class VectorStoreIndexer(ABC):
     """Abstract base class for vector store indexing.
@@ -25,6 +29,9 @@ class VectorStoreIndexer(ABC):
     @abstractmethod
     def index(self, *args: Any, **kwargs: Any) -> VectorStore | dict[float, VectorStore]:
         """Create vector store index.
+
+        Implementations should support a rebuild parameter to control whether
+        existing collections are deleted before indexing.
 
         Returns:
             LangChain VectorStore instance or dict of VectorStore instances
@@ -68,22 +75,20 @@ class VectorStoreIndexer(ABC):
 
         Raises:
             ValueError: If dataset_name, model_id, or environment validation fails
-            CollectionNameTooLongError: If name exceeds 63 characters
+            CollectionNameTooLongError: If name exceeds 512 characters
         """
         dataset_name = dataset_name.strip()
         if not dataset_name:
-            raise ValueError("dataset_name must be a non-empty string")  # noqa: TRY003
+            raise ValueError(DATASET_NAME_EMPTY)
 
         model_id = model_id.strip()
         if not model_id:
-            raise ValueError("model_id must be a non-empty string")  # noqa: TRY003
+            raise ValueError(MODEL_ID_EMPTY)
 
         environment = environment.strip()
         env = environment.lower()
         if env not in ("dev", "staging", "prod"):
-            raise ValueError(  # noqa: TRY003
-                f"environment must be one of 'dev', 'staging', or 'prod', got '{environment}'"
-            )
+            raise ValueError(ENVIRONMENT_INVALID.format(environment=environment))
 
         sanitized_parts = []
         for part in [env, dataset_name, model_id]:
@@ -93,18 +98,27 @@ class VectorStoreIndexer(ABC):
             sanitized = sanitized.strip("_")
             sanitized_parts.append(sanitized)
 
-        base_name = "_".join(sanitized_parts)
+        env_part, dataset_part, model_part = sanitized_parts
 
-        if alpha is not None:
-            alpha_suffix = f"alpha{alpha:.2f}".lower()
-            name = f"{base_name}_{alpha_suffix}"
+        alpha_suffix = f"_a{alpha:.3f}" if alpha is not None else ""
+        max_length = 512
+
+        available_length = max_length - len(env_part) - len(alpha_suffix) - 2
+
+        if len(dataset_part) + len(model_part) <= available_length:
+            base_name = f"{env_part}_{dataset_part}_{model_part}"
         else:
-            name = base_name
+            half_available = available_length // 2
+            dataset_truncated = dataset_part[:half_available]
+            model_truncated = model_part[: available_length - len(dataset_truncated)]
+            base_name = f"{env_part}_{dataset_truncated}_{model_truncated}"
 
-        if len(name) > 63:
+        name = f"{base_name}{alpha_suffix}"
+
+        if len(name) > max_length:
             raise CollectionNameTooLongError(
                 collection_name=name,
-                max_length=63,
+                max_length=max_length,
             )
 
         return name

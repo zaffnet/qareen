@@ -29,9 +29,9 @@ class AlphaNotAvailableError(Exception):
         self.environment = environment
 
         message = (
-            f"Alpha value {alpha:.2f} is not available for "
+            f"Alpha value {alpha:.3f} is not available for "
             f"dataset '{dataset_name}', model '{model_id}', environment '{environment}'. "
-            f"Available alpha values: {[f'{a:.2f}' for a in self.available_alphas]}. "
+            f"Available alpha values: {[f'{a:.3f}' for a in self.available_alphas]}. "
             f"Please re-index with the desired alpha value."
         )
         super().__init__(message)
@@ -49,7 +49,7 @@ class CollectionNameTooLongError(Exception):
     def __init__(
         self,
         collection_name: str,
-        max_length: int = 63,
+        max_length: int = 512,
         suggested_alternatives: list[str] | None = None,
     ) -> None:
         self.collection_name = collection_name
@@ -93,7 +93,7 @@ class InvalidCollectionNameError(Exception):
         super().__init__(message)
 
 
-class InvalidAlphaError(Exception):
+class InvalidAlphaError(ValueError):
     """Raised when alpha value is outside the valid range [0.0, 1.0].
 
     Attributes:
@@ -162,7 +162,7 @@ class CollectionNotFoundError(Exception):
 
         message = (
             f"Collection '{collection_name}' does not exist for "
-            f"dataset '{dataset_name}', model '{model_id}', alpha {alpha:.2f}, "
+            f"dataset '{dataset_name}', model '{model_id}', alpha {alpha:.3f}, "
             f"environment '{environment}'. "
             f"Please index the dataset with these parameters before creating a vectorstore."
         )

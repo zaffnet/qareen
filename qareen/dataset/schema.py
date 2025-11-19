@@ -56,7 +56,7 @@ class DatasetItem(BaseModel):
     @classmethod
     def validate_text(cls, v: str | None) -> str | None:
         """Validate text is non-empty if provided."""
-        if v is not None and (not v or not v.strip()):
+        if v is not None and not v.strip():
             raise ValueError(cls.TEXT_EMPTY_ERROR)
         if v is not None:
             return v.strip()

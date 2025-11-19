@@ -215,7 +215,7 @@ def test_alpha_ignored_for_text_only_samples() -> None:
             settings=settings,
         )
 
-        vectorstores = indexer.index(alpha_values=[0.8], batch_size=10)
+        vectorstores = indexer.index(alpha_values=[0.8], rebuild=True, batch_size=10)
 
         assert len(vectorstores) == 1
         assert len(model.embed_calls) == 1
@@ -239,7 +239,7 @@ def test_alpha_ignored_for_image_only_samples() -> None:
             settings=settings,
         )
 
-        vectorstores = indexer.index(alpha_values=[0.2], batch_size=10)
+        vectorstores = indexer.index(alpha_values=[0.2], rebuild=True, batch_size=10)
 
         assert len(vectorstores) == 1
         assert len(model.embed_calls) == 1
@@ -263,7 +263,7 @@ def test_alpha_matters_for_dual_modality_samples() -> None:
             settings=settings,
         )
 
-        vectorstores = indexer.index(alpha_values=[0.5], batch_size=10)
+        vectorstores = indexer.index(alpha_values=[0.5], rebuild=True, batch_size=10)
 
         assert len(vectorstores) == 1
         assert len(model.embed_calls) == 1
@@ -287,7 +287,7 @@ def test_multiple_alphas_with_single_modality() -> None:
             settings=settings,
         )
 
-        vectorstores = indexer.index(alpha_values=[0.0, 0.5, 1.0], batch_size=10)
+        vectorstores = indexer.index(alpha_values=[0.0, 0.5, 1.0], rebuild=True, batch_size=10)
 
         assert len(vectorstores) == 3
         assert 0.0 in vectorstores
@@ -314,7 +314,7 @@ def test_text_only_query_with_text_only_index() -> None:
             settings=settings,
         )
 
-        vectorstores = indexer.index(alpha_values=[0.5], batch_size=10)
+        vectorstores = indexer.index(alpha_values=[0.5], rebuild=True, batch_size=10)
         vectorstore = vectorstores[0.5]
 
         results = vectorstore.similarity_search("apple", k=1)
@@ -338,7 +338,7 @@ def test_image_query_embedding_with_image_only_index() -> None:
             settings=settings,
         )
 
-        vectorstores = indexer.index(alpha_values=[0.5], batch_size=10)
+        vectorstores = indexer.index(alpha_values=[0.5], rebuild=True, batch_size=10)
         vectorstore = vectorstores[0.5]
 
         results = vectorstore.similarity_search("query text", k=2)
@@ -359,7 +359,7 @@ def test_alpha_zero_equivalent_to_text_only() -> None:
             settings=settings,
         )
 
-        vectorstores = indexer.index(alpha_values=[0.0], batch_size=10)
+        vectorstores = indexer.index(alpha_values=[0.0], rebuild=True, batch_size=10)
 
         assert len(vectorstores) == 1
         assert len(model.embed_calls) == 1
@@ -381,7 +381,7 @@ def test_alpha_one_equivalent_to_image_only() -> None:
             settings=settings,
         )
 
-        vectorstores = indexer.index(alpha_values=[1.0], batch_size=10)
+        vectorstores = indexer.index(alpha_values=[1.0], rebuild=True, batch_size=10)
 
         assert len(vectorstores) == 1
         assert len(model.embed_calls) == 1

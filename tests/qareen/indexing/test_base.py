@@ -24,6 +24,7 @@ def test_vector_store_indexer_contract_and_naming() -> None:
         def index(
             self,
             alpha_values: list[float],
+            rebuild: bool,
             batch_size: int = 100,
             sample_size: int | None = None,
         ) -> dict[float, VectorStore]:

@@ -2472,6 +2472,7 @@ dependencies = [
     { name = "pydantic" },
     { name = "pydantic-settings" },
     { name = "requests" },
+    { name = "rich" },
     { name = "sentence-transformers" },
     { name = "sentencepiece" },
     { name = "tqdm" },
@@ -2493,7 +2494,7 @@ requires-dist = [
     { name = "datasets", specifier = "~=2.18.0" },
     { name = "ftfy", specifier = "~=6.2.0" },
     { name = "langchain", specifier = "~=0.3.0" },
-    { name = "langchain-chroma", specifier = "~=0.1.0" },
+    { name = "langchain-chroma", specifier = "~=0.1.2" },
     { name = "mypy", marker = "extra == 'dev'", specifier = "~=1.8.0" },
     { name = "numpy", specifier = "~=1.26.0" },
     { name = "open-clip-torch", specifier = "~=2.26.0" },
@@ -2504,9 +2505,10 @@ requires-dist = [
     { name = "pydantic-settings", specifier = "~=2.6.0" },
     { name = "pytest", marker = "extra == 'dev'", specifier = "~=8.0.0" },
     { name = "requests", specifier = "~=2.31.0" },
+    { name = "rich", specifier = "~=13.7.0" },
     { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.14.5" },
     { name = "sentence-transformers", specifier = "~=5.1.0" },
-    { name = "sentencepiece", specifier = "~=0.2.0" },
+    { name = "sentencepiece", specifier = "~=0.2.1" },
     { name = "tqdm", specifier = "~=4.67.0" },
     { name = "transformers", specifier = "~=4.57.0" },
     { name = "typer", specifier = "~=0.20.0" },
@@ -2648,15 +2650,15 @@ wheels = [
 
 [[package]]
 name = "rich"
-version = "14.2.0"
+version = "13.7.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "markdown-it-py" },
     { name = "pygments" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/fb/d2/8920e102050a0de7bfabeb4c4614a49248cf8d5d7a8d01885fbb24dc767a/rich-14.2.0.tar.gz", hash = "sha256:73ff50c7c0c1c77c8243079283f4edb376f0f6442433aecb8ce7e6d0b92d1fe4", size = 219990, upload-time = "2025-10-09T14:16:53.064Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/b3/01/c954e134dc440ab5f96952fe52b4fdc64225530320a910473c1fe270d9aa/rich-13.7.1.tar.gz", hash = "sha256:9be308cb1fe2f1f57d67ce99e95af38a1e2bc71ad9813b0e247cf7ffbcc3a432", size = 221248, upload-time = "2024-02-28T14:51:19.472Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/25/7a/b0178788f8dc6cafce37a212c99565fa1fe7872c70c6c9c1e1a372d9d88f/rich-14.2.0-py3-none-any.whl", hash = "sha256:76bc51fe2e57d2b1be1f96c524b890b816e334ab4c1e45888799bfaab0021edd", size = 243393, upload-time = "2025-10-09T14:16:51.245Z" },
+    { url = "https://files.pythonhosted.org/packages/87/67/a37f6214d0e9fe57f6ae54b2956d550ca8365857f42a1ce0392bb21d9410/rich-13.7.1-py3-none-any.whl", hash = "sha256:4edbae314f59eb482f54e9e30bf00d33350aaa94f4bfcd4e9e3110e64d0d7222", size = 240681, upload-time = "2024-02-28T14:51:14.353Z" },
 ]
 
 [[package]]

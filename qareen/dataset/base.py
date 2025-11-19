@@ -10,6 +10,10 @@ from datasets import DatasetDict
 
 from qareen.dataset.schema import DatasetSchema
 
+DATASETDICT_NO_SPLITS_ERROR = "DatasetDict has no splits"
+NO_NON_EMPTY_SPLITS_ERROR = "Dataset contains no non-empty splits"
+EMPTY_DATASET_ERROR = "Dataset is empty"
+
 
 def validate_dataset_schema(
     dataset: HFDataset | DatasetDict,
@@ -26,7 +30,7 @@ def validate_dataset_schema(
     """
     if isinstance(dataset, dict):
         if not dataset:
-            raise ValueError("DatasetDict has no splits")
+            raise ValueError(DATASETDICT_NO_SPLITS_ERROR)
         features = next(iter(dataset.values())).features
     else:
         features = dataset.features
@@ -49,13 +53,13 @@ def validate_dataset_schema(
                 non_empty_split = split
                 break
         if non_empty_split is None:
-            raise ValueError("Dataset contains no non-empty splits")
+            raise ValueError(NO_NON_EMPTY_SPLITS_ERROR)
         sample = non_empty_split[0]
     else:
         if len(dataset) > 0:
             sample = dataset[0]
         else:
-            raise ValueError("Dataset is empty")
+            raise ValueError(EMPTY_DATASET_ERROR)
 
     DatasetSchema(**sample)
 

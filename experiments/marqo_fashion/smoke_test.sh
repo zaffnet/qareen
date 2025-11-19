@@ -7,8 +7,6 @@ PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 
 cd "$PROJECT_ROOT"
 
-cd "$PROJECT_ROOT"
-
 if [ ! -f .venv/bin/activate ]; then
     echo "ERROR: Virtual environment not found at .venv"
     echo "Please run: python -m venv .venv && source .venv/bin/activate && pip install -e ."
@@ -63,7 +61,8 @@ for i in "${!MODELS[@]}"; do
         --alpha-values "$ALPHA" \
         --environment dev \
         --sample-size 10 \
-        --batch-size 10; then
+        --batch-size 10 \
+        --rebuild; then
         echo "ERROR: Smoke test failed for model $MODEL"
         exit 1
     fi
@@ -75,15 +74,15 @@ echo "Smoke Test Complete! Now testing visualization..."
 echo "==================================================================="
 echo ""
 
-MODEL_FLAGS=""
+MODEL_FLAGS=()
 for MODEL in "${MODELS[@]}"; do
-    MODEL_FLAGS="$MODEL_FLAGS --models $MODEL"
+    MODEL_FLAGS+=("--models" "$MODEL")
 done
 
 if ! python scripts/visualize_marqo_comparison.py \
     --dataset-path "$DATASET_PATH" \
-    "$MODEL_FLAGS" \
-    --alpha-values $ALPHA \
+    "${MODEL_FLAGS[@]}" \
+    --alpha-values "$ALPHA" \
     --environment dev \
     --k 5 \
     --output "data/marqo_smoke_test.md" \

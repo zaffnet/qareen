@@ -12,6 +12,10 @@ from qareen.indexing.exceptions import (
     UnsupportedImageTypeError,
 )
 
+TEST_MAX_LENGTH = 512
+TEST_LONG_NAME_LENGTH = 700
+TEST_SHORT_NAME_LENGTH = 70
+
 
 def test_alpha_not_available_error():
     error = AlphaNotAvailableError(
@@ -34,21 +38,21 @@ def test_alpha_not_available_error():
 
 def test_collection_name_too_long_error():
     error = CollectionNameTooLongError(
-        collection_name="a" * 70,
-        max_length=63,
+        collection_name="a" * TEST_LONG_NAME_LENGTH,
+        max_length=TEST_MAX_LENGTH,
         suggested_alternatives=["short1", "short2"],
     )
 
-    assert error.collection_name == "a" * 70
-    assert error.max_length == 63
+    assert error.collection_name == "a" * TEST_LONG_NAME_LENGTH
+    assert error.max_length == TEST_MAX_LENGTH
     assert error.suggested_alternatives == ["short1", "short2"]
-    assert "70" in str(error)
-    assert "63" in str(error)
+    assert str(TEST_LONG_NAME_LENGTH) in str(error)
+    assert str(TEST_MAX_LENGTH) in str(error)
     assert "short1" in str(error)
 
 
 def test_collection_name_too_long_error_no_suggestions():
-    error = CollectionNameTooLongError(collection_name="a" * 70)
+    error = CollectionNameTooLongError(collection_name="a" * TEST_SHORT_NAME_LENGTH)
 
     assert error.suggested_alternatives == []
     assert "shorter dataset or model name" in str(error)

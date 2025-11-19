@@ -8,30 +8,25 @@ from typing import Annotated
 
 import typer
 from datasets import load_dataset
+from rich.logging import RichHandler
 
 app = typer.Typer()
 
 logging.basicConfig(
     level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+    format="%(message)s",
+    handlers=[RichHandler(rich_tracebacks=True, show_path=False)],
 )
 logger = logging.getLogger(__name__)
 
 
 @app.command()
 def main(
-    output_dir: Annotated[
-        str, typer.Option(help="Output directory for sampled dataset")
-    ] = "data/marqo_fashion_3000",
+    output_dir: Annotated[str, typer.Option(help="Output directory for sampled dataset")],
     sample_size: Annotated[int, typer.Option(help="Number of samples to select")] = 3000,
     seed: Annotated[int, typer.Option(help="Random seed for sampling")] = 42,
-) -> int:
-    """Prepare Marqo fashion dataset: load, rename columns, sample, and save.
-
-    Returns:
-        Exit code (0 for success, 1 for failure)
-
-    """
+) -> None:
+    """Prepare Marqo fashion dataset: load, rename columns, sample, and save."""
     try:
         logger.info("Loading Marqo/marqo-gs-woman-fashion dataset from HuggingFace...")
         dataset = load_dataset("Marqo/marqo-gs-woman-fashion", split="zero_shot")
@@ -68,7 +63,7 @@ def main(
 
     except Exception:
         logger.exception("Error preparing Marqo dataset")
-        return 1
+        raise typer.Exit(code=1) from None
     else:
         output_path = Path(output_dir)
         output_path.mkdir(parents=True, exist_ok=True)
@@ -79,14 +74,12 @@ def main(
             dataset.save_to_disk(save_path)
         except Exception:
             logger.exception("Failed to save dataset to disk: %s", save_path)
-            return 1
+            raise typer.Exit(code=1) from None
 
         logger.info(f"✓ Dataset successfully prepared and saved to {save_path}")
         logger.info(f"  - Size: {len(dataset)} samples")
         logger.info(f"  - Columns: {dataset.column_names}")
         logger.info(f"  - Seed: {seed}")
-
-        return 0
 
 
 if __name__ == "__main__":

@@ -4,17 +4,31 @@ from __future__ import annotations
 
 import logging
 import re
+import warnings
 from pathlib import Path
 from typing import Any, cast
 
 import numpy as np
-import open_clip
 import torch
 from PIL import Image, UnidentifiedImageError
+from rich.logging import RichHandler
 
-from qareen.indexing.exceptions import InvalidAlphaError
-from qareen.indexing.models import EmbeddingModel
+warnings.filterwarnings(
+    "ignore",
+    message="Importing from timm.models.layers is deprecated",
+    category=FutureWarning,
+    module="timm.models.layers",
+)
+import open_clip  # noqa: E402
 
+from qareen.indexing.exceptions import InvalidAlphaError  # noqa: E402
+from qareen.indexing.models import EmbeddingModel  # noqa: E402
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(message)s",
+    handlers=[RichHandler(rich_tracebacks=True, show_path=False)],
+)
 logger = logging.getLogger(__name__)
 
 
@@ -26,6 +40,7 @@ class MarqoFashionSigLIPModel(EmbeddingModel):
         device: Device to run model on (cuda/cpu)
         model: Loaded model instance
         processor: Loaded processor instance
+
     """
 
     IMAGE_TYPE_ERROR: str = "Image must be PIL Image or path string"
@@ -35,6 +50,7 @@ class MarqoFashionSigLIPModel(EmbeddingModel):
 
         Args:
             model_id: HuggingFace model identifier
+
         """
         self.model_id = model_id
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -49,7 +65,7 @@ class MarqoFashionSigLIPModel(EmbeddingModel):
             try:
                 model_name = f"hf-hub:{self.model_id}"
                 self.model, _, self.preprocess_val = open_clip.create_model_and_transforms(
-                    model_name
+                    model_name,
                 )
                 self.model.eval()
                 if self.device == "cuda":
@@ -60,11 +76,9 @@ class MarqoFashionSigLIPModel(EmbeddingModel):
                     self.device,
                 )
             except Exception as e:
-                logger.exception(
-                    "Failed to load Marqo Fashion SIGLIP model '%s': %s", self.model_id, e
-                )
+                logger.exception("Failed to load model '%s'", self.model_id)
                 raise RuntimeError(
-                    f"Failed to load Marqo Fashion SIGLIP model '{self.model_id}': {e}"
+                    f"Failed to load Marqo Fashion SIGLIP model '{self.model_id}': {e}",
                 ) from e
 
         if self.tokenizer is None:
@@ -73,9 +87,9 @@ class MarqoFashionSigLIPModel(EmbeddingModel):
                 self.tokenizer = open_clip.get_tokenizer(model_name)
                 logger.info("Successfully loaded tokenizer: model_id=%s", self.model_id)
             except Exception as e:
-                logger.exception("Failed to load tokenizer for model '%s': %s", self.model_id, e)
+                logger.exception("Failed to load tokenizer for model '%s'", self.model_id)
                 raise RuntimeError(
-                    f"Failed to load tokenizer for model '{self.model_id}': {e}"
+                    f"Failed to load tokenizer for model '{self.model_id}': {e}",
                 ) from e
 
     def embed_text(self, text: str | None) -> np.ndarray | None:
@@ -86,6 +100,7 @@ class MarqoFashionSigLIPModel(EmbeddingModel):
 
         Returns:
             L2-normalized text embedding vector or None if text is None
+
         """
         if text is None:
             return None
@@ -116,6 +131,7 @@ class MarqoFashionSigLIPModel(EmbeddingModel):
 
         Returns:
             L2-normalized image embedding vector or None if image is None
+
         """
         if image is None:
             return None
@@ -164,6 +180,7 @@ class MarqoFashionSigLIPModel(EmbeddingModel):
 
         Returns:
             L2-normalized combined embedding vector
+
         """
         if not (0.0 <= alpha <= 1.0):
             raise InvalidAlphaError(alpha)
@@ -175,10 +192,10 @@ class MarqoFashionSigLIPModel(EmbeddingModel):
             raise ValueError("At least one modality must be present")
 
         if image_embedding is None:
-            return cast(np.ndarray, text_embedding)
+            return cast("np.ndarray", text_embedding)
 
         if text_embedding is None:
-            return cast(np.ndarray, image_embedding)
+            return cast("np.ndarray", image_embedding)
 
         combined = alpha * image_embedding + (1 - alpha) * text_embedding
         return self.normalize_l2(combined)
@@ -188,6 +205,7 @@ class MarqoFashionSigLIPModel(EmbeddingModel):
 
         Returns:
             Normalized model identifier
+
         """
         normalized = self.model_id.lower()
         normalized = re.sub(r"[^a-z0-9_\-/]+", "_", normalized)
@@ -199,6 +217,7 @@ class MarqoFashionSigLIPModel(EmbeddingModel):
 
         Returns:
             Embedding dimension as integer
+
         """
         if self._cached_embedding_dim is not None:
             return self._cached_embedding_dim
@@ -210,11 +229,11 @@ class MarqoFashionSigLIPModel(EmbeddingModel):
             embedding = self.embed_text("dummy")
             if embedding is None:
                 raise RuntimeError(
-                    f"Failed to determine embedding dimension for model '{self.model_id}'"
+                    f"Failed to determine embedding dimension for model '{self.model_id}'",
                 )
             self._cached_embedding_dim = len(embedding)
             return self._cached_embedding_dim
         except Exception as err:
             raise RuntimeError(
-                f"Failed to determine embedding dimension for model '{self.model_id}'"
+                f"Failed to determine embedding dimension for model '{self.model_id}'",
             ) from err

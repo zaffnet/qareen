@@ -15,20 +15,21 @@ else
     exit 1
 fi
 
-DATASET_PATH="data/marqo_fashion_3000"
-SAMPLE_SIZE=3000
+DATASET_PATH="data/marqo_3k"
+SAMPLE_SIZE=300
 SEED=42
 ENVIRONMENT="dev"
-BATCH_SIZE=100
+BATCH_SIZE=10
+REBUILD=false
 
 MODELS=(
     "openai/clip-vit-large-patch14"
     "Marqo/marqo-fashionSigLIP"
-    "google/siglip2-so400m-patch16-512"
-    "Marqo/marqo-ecommerce-embeddings-L"
+    # "google/siglip2-so400m-patch16-512"
+    # "Marqo/marqo-ecommerce-embeddings-L"
 )
 
-ALPHA_VALUES=(0.0 0.125 0.250 0.375 0.500 0.625 0.750 0.875 1.0)
+ALPHA_VALUES=(0.0 0.250 0.500 0.750 1.0)
 
 STEP="${1:-all}"
 
@@ -70,6 +71,7 @@ echo "  Sample Size: $SAMPLE_SIZE"
 echo "  Random Seed: $SEED"
 echo "  Environment: $ENVIRONMENT"
 echo "  Batch Size: $BATCH_SIZE"
+echo "  Rebuild: $REBUILD"
 echo "  Models: ${MODELS[*]}"
 echo "  Alpha Values: ${ALPHA_VALUES[*]}"
 echo "  Step: $STEP"
@@ -81,7 +83,7 @@ if [[ "$STEP" == "all" ]] || [[ "$STEP" == "prepare" ]]; then
     if [ -d "$DATASET_PATH" ]; then
         echo "Dataset already exists at $DATASET_PATH, skipping preparation..."
     else
-        if ! python scripts/prepare_marqo_dataset.py; then
+        if ! python scripts/prepare_marqo_dataset.py --output-dir "$DATASET_PATH"; then
             echo "ERROR: Dataset preparation failed"
             exit 1
         fi
@@ -110,13 +112,22 @@ if [[ "$STEP" == "all" ]] || [[ "$STEP" == "index" ]]; then
             ALPHA_FLAGS+=("--alpha-values" "$ALPHA")
         done
 
-        if ! python scripts/build_index.py \
-            --dataset-name "$DATASET_PATH" \
-            --models "$MODEL" \
-            "${ALPHA_FLAGS[@]}" \
-            --environment "$ENVIRONMENT" \
-            --sample-size "$SAMPLE_SIZE" \
-            --batch-size "$BATCH_SIZE"; then
+        declare -a BUILD_CMD
+        BUILD_CMD=(
+            "python" "scripts/build_index.py"
+            "--dataset-name" "$DATASET_PATH"
+            "--models" "$MODEL"
+            "${ALPHA_FLAGS[@]}"
+            "--environment" "$ENVIRONMENT"
+            "--sample-size" "$SAMPLE_SIZE"
+            "--batch-size" "$BATCH_SIZE"
+        )
+
+        if [[ "$REBUILD" == "true" ]]; then
+            BUILD_CMD+=("--rebuild")
+        fi
+
+        if ! "${BUILD_CMD[@]}"; then
             echo "ERROR: Index building failed for model $MODEL"
             exit 1
         fi

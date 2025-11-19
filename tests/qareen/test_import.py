@@ -30,8 +30,12 @@ def test_gpu_warning_stacklevel() -> None:
         warnings.simplefilter("always")
         frame = inspect.currentframe()
         if frame is None:
-            frame = inspect.stack()[0].frame
-        call_line = frame.f_lineno + 1
+            try:
+                stack = inspect.stack()
+                frame = stack[1].frame if len(stack) > 1 else None
+            except (IndexError, AttributeError):
+                frame = None
+        call_line = frame.f_lineno + 1 if frame else 0
         _call_check_gpu_available()
 
         assert len(w) > 0, "Warning should be emitted when CUDA is not available"
