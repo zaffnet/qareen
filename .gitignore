@@ -206,6 +206,8 @@ marimo/_static/
 marimo/_lsp/
 __marimo__/
 
-# qareen specific
+# Qareen-specific runtime artifacts
+# Ignore data/ (datasets and extracted runtime artifacts) and chroma_db/ (vector DB indexes)
+# to prevent committing large/generated files that should be created during runtime or testing.
 data/
 chroma_db/

@@ -10,18 +10,13 @@ from typing import cast
 import numpy as np
 import torch
 from PIL import Image, UnidentifiedImageError
-from rich.logging import RichHandler
 from transformers import AutoModel, AutoProcessor
 
 from qareen.indexing.exceptions import InvalidAlphaError
 from qareen.indexing.models import EmbeddingModel
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(message)s",
-    handlers=[RichHandler(rich_tracebacks=True, show_path=False)],
-)
 logger = logging.getLogger(__name__)
+logger.addHandler(logging.NullHandler())
 
 
 class SIGLIPEmbeddingModel(EmbeddingModel):

@@ -15,6 +15,8 @@ from qareen.dataset.base import DatasetLoader
 from qareen.indexing.chroma_indexer import ChromaIndexer
 from qareen.indexing.models import EmbeddingModel
 
+MISSING_MODALITY_ERROR = "At least one modality must be present"
+
 
 class SingleModalityEmbeddingModel(EmbeddingModel):
     """Mock embedding model supporting single-modality inputs."""
@@ -92,7 +94,7 @@ class SingleModalityEmbeddingModel(EmbeddingModel):
         text_emb = self.embed_text(text)
 
         if image_emb is None and text_emb is None:
-            raise ValueError("At least one modality must be present")
+            raise ValueError(MISSING_MODALITY_ERROR)
 
         if image_emb is None:
             assert text_emb is not None
@@ -132,7 +134,7 @@ class SingleModalityDatasetLoader(DatasetLoader):
         """
         dataset = MagicMock()
         samples_len = len(self.samples)
-        dataset.__len__ = lambda self: samples_len
+        dataset.__len__ = lambda _: samples_len
         dataset.column_names = ["text", "image"]
 
         def getitem(*args: object) -> dict[str, object]:
@@ -152,7 +154,7 @@ class SingleModalityDatasetLoader(DatasetLoader):
             indices_list = list(indices)
             selected = MagicMock()
             indices_len = len(indices_list)
-            selected.__len__ = lambda self: indices_len
+            selected.__len__ = lambda _: indices_len
             selected.column_names = ["text", "image"]
 
             def getitem_selected(*args: object) -> dict[str, object]:
@@ -185,7 +187,6 @@ class SingleModalityDatasetLoader(DatasetLoader):
 
     def validate_schema(self) -> None:
         """Validate schema."""
-        pass
 
     def get_dataset_info(self) -> dict[str, object]:
         """Return dataset info."""

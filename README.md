@@ -43,6 +43,10 @@ See [docs/QUICKSTART.md](docs/QUICKSTART.md) for full steps; e.g., `./scripts/bu
 
 **Marqo Fashion Experiment:** Run `./scripts/build_marqo_fashion_index.sh` to compare 4 embedding models across 9 alpha values on fashion dataset.
 
+## Configuration
+
+See [docs/CONFIGURATION.md](docs/CONFIGURATION.md) for environment variables, logging setup, and telemetry settings.
+
 ## References
 
 1. <a id="ref1"></a>**Zheng, L., et al.** (2024). Judging the Judges: A Systematic Study of Position Bias in LLM-as-a-Judge. *arXiv preprint arXiv:2406.07791*. [https://arxiv.org/abs/2406.07791](https://arxiv.org/abs/2406.07791)

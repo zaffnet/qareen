@@ -34,7 +34,7 @@ Pydantic-first: use Pydantic models for all data structures, configs, schemas. U
 **Anti-patterns:**
 - ❌ Creating new files when editing would work
 - ❌ Adding logging/error handling that wasn't requested
-- ❌ Creating unrelated documentation files proactively (documentation within PR scope or requested maintenance is allowed; e.g., updating README for a new feature is fine, creating CONTRIBUTING.md unsolicited is not)
+- ❌ Creating unrelated documentation files proactively (documentation within PR scope or requested maintenance is allowed; e.g., updating setup instructions for new dependencies or adding brief README notes for a shipped feature is allowed; creating detailed API reference or full CONTRIBUTING.md proactively is not)
 - ❌ Writing test helpers or fixtures that weren't needed
 - ❌ Refactoring code that works and wasn't mentioned
 - ❌ Adding type hints to files you didn't touch

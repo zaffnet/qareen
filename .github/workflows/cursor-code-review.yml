@@ -16,7 +16,8 @@ jobs:
       cancel-in-progress: true
     env:
       BLOCKING_REVIEW: ${{ vars.BLOCKING_REVIEW || 'false' }}
-    runs-on: ubuntu-latest # Skip automated code review for draft PRs
+    runs-on: ubuntu-latest
+    # Skip automated code review for draft PRs
     if: github.event.pull_request.draft == false
     steps:
       - name: Checkout repository
@@ -44,7 +45,6 @@ jobs:
 
       - name: Verify cached Cursor CLI
         id: verify-cache
-        if: steps.cache-cursor.outputs.cache-hit == 'true'
         continue-on-error: true
         run: |
           export PATH="$HOME/.cursor/bin:$PATH"
@@ -62,11 +62,19 @@ jobs:
           echo "cache-valid=true" >> "$GITHUB_OUTPUT"
 
       - name: Install Cursor CLI
-        if: steps.cache-cursor.outputs.cache-hit != 'true' || (steps.verify-cache.outcome == 'failure')
+        if: steps.verify-cache.outcome != 'success'
+        env:
+          CURSOR_VERSION: "latest"
         run: |
           set -e
-          curl --fail --show-error -fsS https://cursor.com/install -o /tmp/cursor-install.sh
-          curl --fail --show-error -fsS https://cursor.com/install.sha256 -o /tmp/cursor-install.sh.sha256 || {
+          INSTALL_URL="https://cursor.com/install"
+          CHECKSUM_URL="https://cursor.com/install.sha256"
+          if [ "$CURSOR_VERSION" != "latest" ]; then
+            INSTALL_URL="https://cursor.com/install/${CURSOR_VERSION}"
+            CHECKSUM_URL="https://cursor.com/install/${CURSOR_VERSION}.sha256"
+          fi
+          curl --fail --show-error -fsS "$INSTALL_URL" -o /tmp/cursor-install.sh
+          curl --fail --show-error -fsS "$CHECKSUM_URL" -o /tmp/cursor-install.sh.sha256 || {
             echo "Error: Failed to download checksum file"
             rm -f /tmp/cursor-install.sh /tmp/cursor-install.sh.sha256
             exit 1

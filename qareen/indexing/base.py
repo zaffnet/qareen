@@ -67,7 +67,7 @@ class VectorStoreIndexer(ABC):
         Args:
             dataset_name: Dataset identifier
             model_id: Model identifier
-            alpha: Alpha value (optional, formatted to 2 decimals if provided)
+            alpha: Alpha value (optional, formatted to 3 decimals if provided)
             environment: Environment (dev/staging/prod)
 
         Returns:

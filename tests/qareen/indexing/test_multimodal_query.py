@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any
 
 import numpy as np
+import pytest
 from datasets import Dataset
 from PIL import Image
 
@@ -387,7 +388,7 @@ def test_query_multimodal_validates_alpha() -> None:
         vectorstores = indexer.index(alpha_values=[0.5], rebuild=True, batch_size=10)
         vectorstore = vectorstores[0.5]
 
-        try:
+        with pytest.raises(ValueError) as exc:
             indexer.query_multimodal(
                 vectorstore=vectorstore,
                 image=None,
@@ -395,11 +396,9 @@ def test_query_multimodal_validates_alpha() -> None:
                 alpha=1.5,
                 k=1,
             )
-            raise AssertionError("Should have raised ValueError for alpha > 1.0")
-        except ValueError as e:
-            assert "alpha must be in range" in str(e)
+        assert "alpha must be in range" in str(exc.value)
 
-        try:
+        with pytest.raises(ValueError) as exc:
             indexer.query_multimodal(
                 vectorstore=vectorstore,
                 image=None,
@@ -407,9 +406,7 @@ def test_query_multimodal_validates_alpha() -> None:
                 alpha=-0.1,
                 k=1,
             )
-            raise AssertionError("Should have raised ValueError for alpha < 0.0")
-        except ValueError as e:
-            assert "alpha must be in range" in str(e)
+        assert "alpha must be in range" in str(exc.value)
 
 
 def test_query_multimodal_with_score_threshold() -> None:

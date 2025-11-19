@@ -171,8 +171,8 @@ class FixedDatasetLoader(DatasetLoader):
         return self._dataset
 
     def validate_schema(self) -> None:
-        """Validate dataset schema."""
-        pass
+        """Validate dataset schema. Intentionally empty for tests."""
+        ...
 
     def get_dataset_name(self) -> str:
         """Return dataset name.

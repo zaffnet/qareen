@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING, Any, cast
 
 import chromadb
 import requests
+from chromadb.config import Settings as ChromaSettings
 from chromadb.errors import NotFoundError
 from datasets import DatasetDict
 from langchain_chroma import Chroma
@@ -33,12 +34,23 @@ if TYPE_CHECKING:
     from qareen.dataset.base import DatasetLoader
     from qareen.indexing.models import EmbeddingModel
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(message)s",
-    handlers=[RichHandler(rich_tracebacks=True, show_path=False)],
-)
 logger = logging.getLogger(__name__)
+
+
+def setup_logging(rich: bool = True, level: int = logging.INFO) -> None:
+    """Configure logging with optional RichHandler.
+
+    Args:
+        rich: If True, use RichHandler for formatted output
+        level: Logging level (default: INFO)
+
+    """
+    if not logging.getLogger().handlers:
+        if rich:
+            handler = RichHandler(rich_tracebacks=True, show_path=False)
+            logging.basicConfig(level=level, format="%(message)s", handlers=[handler])
+        else:
+            logging.basicConfig(level=level, format="%(message)s")
 
 
 class EmbeddingModelWrapper(Embeddings):
@@ -409,7 +421,10 @@ class ChromaIndexer(VectorStoreIndexer):
         self.embedding_model.load_model()
 
         vectorstores: dict[float, VectorStore] = {}
-        chroma_client = chromadb.PersistentClient(path=str(self.settings.chroma_db_dir))
+        chroma_client = chromadb.PersistentClient(
+            path=str(self.settings.chroma_db_dir),
+            settings=ChromaSettings(anonymized_telemetry=False),
+        )
 
         for alpha in alpha_values:
             collection_name = self.get_collection_name(
@@ -522,7 +537,10 @@ class ChromaIndexer(VectorStoreIndexer):
             environment=environment,
         )
 
-        chroma_client = chromadb.PersistentClient(path=str(self.settings.chroma_db_dir))
+        chroma_client = chromadb.PersistentClient(
+            path=str(self.settings.chroma_db_dir),
+            settings=ChromaSettings(anonymized_telemetry=False),
+        )
 
         try:
             chroma_client.get_collection(name=collection_name)
@@ -664,7 +682,10 @@ class ChromaIndexer(VectorStoreIndexer):
             Sorted list of available alpha values
 
         """
-        chroma_client = chromadb.PersistentClient(path=str(self.settings.chroma_db_dir))
+        chroma_client = chromadb.PersistentClient(
+            path=str(self.settings.chroma_db_dir),
+            settings=ChromaSettings(anonymized_telemetry=False),
+        )
 
         collections = chroma_client.list_collections()
 
@@ -677,7 +698,7 @@ class ChromaIndexer(VectorStoreIndexer):
 
         for collection in collections:
             if collection.name.startswith(prefix):
-                match = re.search(r"alpha(\d+(?:\.\d+)?)", collection.name)
+                match = re.search(r"_a(\d+\.\d+)", collection.name)
                 if match:
                     alphas.append(float(match.group(1)))
 

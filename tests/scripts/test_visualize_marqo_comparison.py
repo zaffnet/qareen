@@ -108,7 +108,7 @@ def test_main_empty_dataset(mock_load_from_disk):
 @patch("scripts.visualize_marqo_comparison.load_from_disk")
 def test_main_sample_index_out_of_bounds(mock_load_from_disk):
     mock_dataset = MagicMock()
-    type(mock_dataset).__len__ = lambda self: 10
+    type(mock_dataset).__len__ = lambda _: 10
     mock_load_from_disk.return_value = mock_dataset
 
     result = runner.invoke(
@@ -133,8 +133,8 @@ def test_main_success(
     tmp_path,
 ):
     mock_dataset = MagicMock()
-    type(mock_dataset).__len__ = lambda self: 100
-    mock_dataset.__getitem__ = lambda self, idx: {"text": "test query", "image": None}
+    type(mock_dataset).__len__ = lambda _: 100
+    mock_dataset.__getitem__ = lambda _, idx: {"text": "test query", "image": None}
     mock_load_from_disk.return_value = mock_dataset
 
     mock_loader = Mock()
@@ -179,7 +179,7 @@ def test_main_success(
 
 @patch("scripts.visualize_marqo_comparison.load_from_disk")
 @patch("scripts.visualize_marqo_comparison.Settings")
-def test_main_exception_during_processing(mock_settings, mock_load_from_disk):
+def test_main_exception_during_processing(_mock_settings, mock_load_from_disk):
     mock_load_from_disk.side_effect = Exception("Processing error")
 
     result = runner.invoke(

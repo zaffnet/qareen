@@ -89,6 +89,10 @@ class Settings(BaseSettings):
             return v.lower()
         return v
 
+    def model_post_init(self, __context: object) -> None:
+        """Initialize after model creation."""
+        self.ensure_directories()
+
     def ensure_directories(self) -> None:
         """Create filesystem directories if they do not exist.
 

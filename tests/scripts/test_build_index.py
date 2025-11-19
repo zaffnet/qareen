@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock, patch
 
-import pytest
 import typer
 from typer.testing import CliRunner
 
@@ -32,7 +31,7 @@ def test_build_index_cli_invalid_environment() -> None:
     assert result.exception is None or isinstance(result.exception, SystemExit)
 
 
-def test_build_index_cli_with_mocked_dependencies(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_build_index_cli_with_mocked_dependencies() -> None:
     """Test CLI with mocked dataset loader and indexer."""
     runner = CliRunner()
 

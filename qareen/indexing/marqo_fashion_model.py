@@ -9,9 +9,12 @@ from pathlib import Path
 from typing import Any, cast
 
 import numpy as np
+import open_clip
 import torch
 from PIL import Image, UnidentifiedImageError
-from rich.logging import RichHandler
+
+from qareen.indexing.exceptions import InvalidAlphaError
+from qareen.indexing.models import EmbeddingModel
 
 warnings.filterwarnings(
     "ignore",
@@ -19,16 +22,7 @@ warnings.filterwarnings(
     category=FutureWarning,
     module="timm.models.layers",
 )
-import open_clip  # noqa: E402
 
-from qareen.indexing.exceptions import InvalidAlphaError  # noqa: E402
-from qareen.indexing.models import EmbeddingModel  # noqa: E402
-
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(message)s",
-    handlers=[RichHandler(rich_tracebacks=True, show_path=False)],
-)
 logger = logging.getLogger(__name__)
 
 
@@ -61,9 +55,10 @@ class MarqoFashionSigLIPModel(EmbeddingModel):
 
     def load_model(self) -> None:
         """Load Marqo Fashion SIGLIP model using OpenCLIP."""
+        model_name = f"hf-hub:{self.model_id}"
+
         if self.model is None:
             try:
-                model_name = f"hf-hub:{self.model_id}"
                 self.model, _, self.preprocess_val = open_clip.create_model_and_transforms(
                     model_name,
                 )
@@ -83,7 +78,6 @@ class MarqoFashionSigLIPModel(EmbeddingModel):
 
         if self.tokenizer is None:
             try:
-                model_name = f"hf-hub:{self.model_id}"
                 self.tokenizer = open_clip.get_tokenizer(model_name)
                 logger.info("Successfully loaded tokenizer: model_id=%s", self.model_id)
             except Exception as e:
@@ -192,10 +186,10 @@ class MarqoFashionSigLIPModel(EmbeddingModel):
             raise ValueError("At least one modality must be present")
 
         if image_embedding is None:
-            return cast("np.ndarray", text_embedding)
+            return cast(np.ndarray, text_embedding)
 
         if text_embedding is None:
-            return cast("np.ndarray", image_embedding)
+            return cast(np.ndarray, image_embedding)
 
         combined = alpha * image_embedding + (1 - alpha) * text_embedding
         return self.normalize_l2(combined)

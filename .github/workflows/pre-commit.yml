@@ -23,8 +23,8 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v6
         with:
-          # CI tests on 3.11 and 3.12 for guaranteed compatibility.
-          # Package supports 3.13/3.14 but some deps (sentencepiece, PyTorch)
+          # CI tests on 3.11 for guaranteed compatibility.
+          # Package supports 3.12/3.13/3.14 but some deps (sentencepiece, PyTorch)
           # may lack prebuilt wheels; users must compile from source.
           python-version: "3.11"
 

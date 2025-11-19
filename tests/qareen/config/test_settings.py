@@ -28,12 +28,6 @@ def test_ensure_directories_creates_directories(tmp_path: Path) -> None:
         chroma_db_dir=tmp_path / "chroma_db",
     )
 
-    assert not settings.data_dir.exists()
-    assert not settings.chroma_db_dir.exists()
-    assert not settings._dirs_ensured
-
-    settings.ensure_directories()
-
     assert settings.data_dir.exists()
     assert settings.chroma_db_dir.exists()
     assert settings._dirs_ensured
@@ -67,7 +61,7 @@ def test_ensure_directories_with_existing_directories(tmp_path: Path) -> None:
 
     assert settings.data_dir.exists()
     assert settings.chroma_db_dir.exists()
-    assert not settings._dirs_ensured
+    assert settings._dirs_ensured
 
     settings.ensure_directories()
 
@@ -82,10 +76,6 @@ def test_ensure_directories_with_partial_existing_directories(tmp_path: Path) ->
         data_dir=data_dir,
         chroma_db_dir=chroma_db_dir,
     )
-
-    data_dir.mkdir(parents=True)
-
-    settings.ensure_directories()
 
     assert settings.data_dir.exists()
     assert settings.chroma_db_dir.exists()
