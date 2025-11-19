@@ -35,6 +35,7 @@ if TYPE_CHECKING:
     from qareen.indexing.models import EmbeddingModel
 
 logger = logging.getLogger(__name__)
+logging.getLogger("chromadb.telemetry.posthog").setLevel(logging.CRITICAL)
 
 
 def setup_logging(rich: bool = True, level: int = logging.INFO) -> None:

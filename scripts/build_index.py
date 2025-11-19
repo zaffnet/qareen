@@ -3,22 +3,27 @@
 from __future__ import annotations
 
 import logging
+import warnings
 from enum import Enum
 from pathlib import Path
-from typing import Annotated
+from typing import TYPE_CHECKING, Annotated
 
 import typer
 from pydantic import ValidationError
 from rich.logging import RichHandler
 
 from qareen.config.settings import Settings
-from qareen.dataset.base import DatasetLoader
 from qareen.dataset.hf_dataset import HuggingFaceDatasetLoader
 from qareen.dataset.local_dataset import LocalDatasetLoader
 from qareen.indexing.chroma_indexer import ChromaIndexer
 from qareen.indexing.marqo_fashion_model import MarqoFashionSigLIPModel
-from qareen.indexing.models import EmbeddingModel
 from qareen.indexing.siglip_model import SIGLIPEmbeddingModel
+
+if TYPE_CHECKING:
+    from qareen.dataset.base import DatasetLoader
+    from qareen.indexing.models import EmbeddingModel
+
+warnings.filterwarnings("ignore", message=".*Importing from timm.models.layers is deprecated.*")
 
 
 class Environment(str, Enum):
@@ -34,6 +39,8 @@ logging.basicConfig(
     format="%(message)s",
     handlers=[RichHandler(rich_tracebacks=True, show_path=False)],
 )
+logging.getLogger("chromadb.telemetry.posthog").setLevel(logging.CRITICAL)
+logging.getLogger("chromadb.telemetry.product.posthog").setLevel(logging.CRITICAL)
 logger = logging.getLogger(__name__)
 
 app = typer.Typer()
@@ -53,7 +60,7 @@ def main(
         Environment, typer.Option(help="Environment (dev/staging/prod)")
     ] = Environment.DEV,
     sample_size: Annotated[int | None, typer.Option(help="Override dev sample size")] = None,
-    batch_size: Annotated[int, typer.Option(help="Batch size for processing")] = 100,
+    batch_size: Annotated[int, typer.Option(help="Batch size for processing")] = 3000,
     rebuild: Annotated[
         bool, typer.Option(help="Delete existing collections before indexing")
     ] = False,

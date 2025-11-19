@@ -16,12 +16,8 @@ from PIL import Image, UnidentifiedImageError
 from qareen.indexing.exceptions import InvalidAlphaError
 from qareen.indexing.models import EmbeddingModel
 
-warnings.filterwarnings(
-    "ignore",
-    message="Importing from timm.models.layers is deprecated",
-    category=FutureWarning,
-    module="timm.models.layers",
-)
+warnings.filterwarnings("ignore", category=FutureWarning, module="timm.models.layers")
+warnings.filterwarnings("ignore", message=".*timm.*deprecated.*", category=FutureWarning)
 
 logger = logging.getLogger(__name__)
 
