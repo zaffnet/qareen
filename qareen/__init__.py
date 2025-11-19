@@ -63,7 +63,7 @@ def check_gpu_available() -> bool:
     try:
         import torch
 
-        is_available: bool = torch.cuda.is_available()
+        is_available = torch.cuda.is_available()
 
         if not is_available:
             suppress_warning = os.getenv("QAREEN_SUPPRESS_GPU_WARNING", "").lower() in (

@@ -61,6 +61,12 @@ Repository = "https://github.com/zaffnet/qareen"
 Documentation = "https://github.com/zaffnet/qareen#readme"
 Issues = "https://github.com/zaffnet/qareen/issues"
 
+[dependency-groups]
+dev = [
+    "pytest>=8.0.2",
+    "ruff>=0.14.5",
+]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["."]
@@ -108,7 +114,6 @@ show_error_codes = true
 
 [[tool.mypy.overrides]]
 module = [
-    "gradio.*",
     "transformers.*",
     "sentence_transformers.*",
     "datasets.*",
