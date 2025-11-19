@@ -1,52 +1,100 @@
 # qareen
 
-**`qareen`** (قرين) is Arabic for "constant companion"—an ever-present guide that influences decisions. In Islamic tradition, a qareen is a spiritual companion assigned to each person, accompanying them throughout life and shaping their choices through subtle guidance.
+*A multimodal few-shot companion that balances relevance and diversity for LLM-as-a-Judge workflows.*
 
-This project is named `qareen` because it serves the same role for Large Language Models: a constant companion that provides the right few-shot examples at the right time, guiding the LLM's judgments and enhancing its decision-making. Just as a qareen influences a person's path, `qareen` influences an LLM's performance by selecting the most relevant multimodal examples from your dataset.
+<p align="center">
+  <a href="https://www.python.org/"><img alt="Python" src="https://img.shields.io/badge/Python-3.11+-3776AB?logo=python&logoColor=white"></a>
+  <a href="https://pytorch.org/"><img alt="PyTorch" src="https://img.shields.io/badge/PyTorch-EE4C2C?logo=pytorch&logoColor=white"></a>
+  <a href="https://www.gradio.app/"><img alt="Gradio" src="https://img.shields.io/badge/Gradio-Interactive%20UI-00C4B3?logo=gradio&logoColor=white"></a>
+  <a href="https://huggingface.co/docs/transformers/index"><img alt="Transformers" src="https://img.shields.io/badge/Hugging%20Face-Transformers-FCC624?logo=huggingface&logoColor=white"></a>
+  <a href="https://www.sbert.net/"><img alt="SentenceTransformers" src="https://img.shields.io/badge/SentenceTransformers-Embedding%20Models-18BCEE?logo=huggingface&logoColor=white"></a>
+  <a href="https://numpy.org/"><img alt="NumPy" src="https://img.shields.io/badge/NumPy-Scientific%20Computing-013243?logo=numpy&logoColor=white"></a>
+  <a href="https://pandas.pydata.org/"><img alt="pandas" src="https://img.shields.io/badge/pandas-Data%20Frames-150458?logo=pandas&logoColor=white"></a>
+  <a href="https://ruff.rs/"><img alt="Ruff" src="https://img.shields.io/badge/Ruff-Linting-1f2328?logo=ruff&logoColor=white"></a>
+  <a href="https://mypy-lang.org/"><img alt="mypy" src="https://img.shields.io/badge/mypy-Static%20Types-2A6DB2?logo=python&logoColor=white"></a>
+  <a href="https://docs.pytest.org/"><img alt="pytest" src="https://img.shields.io/badge/pytest-Testing-0A9EDC?logo=pytest&logoColor=white"></a>
+</p>
 
-## The Problem
+## Overview
 
-Few-shot example selection impacts LLM-as-a-Judge performance, yet optimal selection strategies remain poorly understood. [Zheng et al. (2024)](#ref1) demonstrate that LLM judges systematically favor responses based on position rather than quality, undermining evaluation reliability. [Tang et al. (2025)](#ref2) show that over-prompting with too many examples degrades performance, while naive top-k similarity retrieval returns redundant examples that fail to clarify task boundaries. The broader problem can be thought of as striking a balance between providing relevant few-shot examples (to allow in-context learning) while maintaining diversity (to avoid overfitting).
+**`qareen`** (قرين) means "constant companion"—a guide that subtly shapes decisions. The
+project plays the same role for Large Language Models: it supplies the right few-shot examples
+at the right moment, guiding model judgments for multimodal tasks that mix text and images.
 
-For multimodal tasks, the challenge is twofold: you must balance relevance and diversity, and decide how much weight to assign to each modality (text or image). This is particularly important when LLMs evaluate product descriptions, score image–text relevance, or assess quality, since poor example selection can directly impact LLM-as-a-Judge.
+## Why it matters
 
+Few-shot selection significantly influences LLM-as-a-Judge quality. Position bias, redundant
+examples, and modality imbalance can all distort evaluations. `qareen` addresses these pitfalls
+by extending Maximum Marginal Relevance (MMR) to multimodal retrieval with a tunable `alpha`
+parameter that controls text–image weighting.
 
-## Our Solution
+## Key features
 
-`qareen` is a tool for analyzing and optimizing multimodal few-shot example selection. It extends Maximum Marginal Relevance to multimodal retrieval by introducing a tunable alpha parameter that controls the relative weight of image versus text similarity, enabling researchers to explore the optimal balance between modalities for a given task and dataset.
-
-The tool works with any multimodal embedding model from Hugging Face—CLIP, SIGLIP, or domain-specific variants—allowing comparison of how different architectures handle modality weighting. Through an interactive Gradio interface, users can adjust the alpha parameter in real-time, switch between embedding models, and observe how these choices affect retrieved examples. `qareen` implements MMR-based retrieval that balances relevance and diversity, addressing the redundancy problem that plagues naive k-NN approaches.
+- **Multimodal MMR retrieval:** Balance relevance and diversity across text and image signals.
+- **Model flexibility:** Swap between CLIP, SIGLIP, or other Hugging Face embeddings via
+  `transformers` and `sentence-transformers`.
+- **Interactive exploration:** Adjust modality weights live through a Gradio UI to see how
+  examples shift.
+- **GPU-aware runtime:** Detects CUDA availability and guides you to install a compatible
+  PyTorch build when acceleration is possible.
+- **Type-safe development:** Ruff + mypy + pytest keep the codebase linted, typed, and tested.
 
 ## Demo
 
-We demonstrate `qareen` on the Shopping Queries Image Dataset (SQID) [Al Ghossein et al. (2024)](#ref4), part of Amazon's ESCI benchmark for product search. 
+We showcase `qareen` on the Shopping Queries Image Dataset (SQID) [Al Ghossein et al. (2024)](#ref4),
+part of Amazon's ESCI benchmark for product search.
 
 ![Demo GIF placeholder]
 
 [Live Demo URL placeholder]
 
-## Installation
+## Getting started
 
-Install the base package:
+### Installation
+
+Install the base package from PyPI:
 
 ```bash
 pip install qareen
 ```
 
-**Note on GPU support:** The `gpu` extra is currently a placeholder and does not install any GPU-specific packages. For GPU support, you must install a CUDA-enabled PyTorch build from the [official PyTorch installation guide](https://pytorch.org/get-started/locally/) **before** installing `qareen`. The package will automatically check at runtime and warn if CUDA is not available. The base package will work with CPU-only PyTorch (installed automatically via dependencies).
+To develop locally with the documented toolchain:
 
-## Usage
+```bash
+uv sync --all-extras
+```
 
-See [docs/QUICKSTART.md](docs/QUICKSTART.md) for full steps; e.g., `./scripts/build_index.sh <data> && ./scripts/run_gradio.sh`
+> **Note on GPU support:** The `gpu` extra is currently a placeholder and does not install any
+> GPU-specific packages. For GPU support, install a CUDA-enabled PyTorch build from the
+> [official PyTorch installation guide](https://pytorch.org/get-started/locally/) **before**
+> installing `qareen`. The package works with CPU-only PyTorch as well.
+
+### Quickstart
+
+Run the end-to-end example (requires data prepared per the docs):
+
+```bash
+./scripts/build_index.sh <data_dir>
+./scripts/run_gradio.sh
+```
+
+See [docs/QUICKSTART.md](docs/QUICKSTART.md) for detailed steps.
 
 ## References
 
-1. <a id="ref1"></a>**Zheng, L., et al.** (2024). Judging the Judges: A Systematic Study of Position Bias in LLM-as-a-Judge. *arXiv preprint arXiv:2406.07791*. [https://arxiv.org/abs/2406.07791](https://arxiv.org/abs/2406.07791)
-
-2. <a id="ref2"></a>**Tang, Y., et al.** (2025). The Few-shot Dilemma: Over-prompting Large Language Models. *arXiv preprint arXiv:2509.13196*. [https://arxiv.org/abs/2509.13196](https://arxiv.org/abs/2509.13196)
-
-3. <a id="ref3"></a>**Carbonell, J., & Goldstein, J.** (1998). The use of MMR, diversity-based reranking for reordering documents and producing summaries. *Proceedings of the 21st Annual International ACM SIGIR Conference on Research and Development in Information Retrieval (SIGIR '98)*, 335-336. [https://doi.org/10.1145/290941.291025](https://doi.org/10.1145/290941.291025)
-
-4. <a id="ref4"></a>**Al Ghossein, M., Chen, C.-W., & Tang, J.** (2024). Shopping Queries Image Dataset (SQID): An Image-Enriched ESCI Dataset for Exploring Multimodal Learning in Product Search. Part of the Shopping Queries Dataset: A Large-Scale ESCI Benchmark for Improving Product Search by Amazon.
-
-5. <a id="ref5"></a>**Zhao, T. Z., et al.** (2021). Calibrate Before Use: Improving Few-Shot Performance of Language Models. *Proceedings of the International Conference on Machine Learning (ICML)*. [https://arxiv.org/abs/2102.09690](https://arxiv.org/abs/2102.09690)
+1. <a id="ref1"></a>**Zheng, L., et al.** (2024). Judging the Judges: A Systematic Study of Position
+   Bias in LLM-as-a-Judge. *arXiv preprint arXiv:2406.07791*.
+   [https://arxiv.org/abs/2406.07791](https://arxiv.org/abs/2406.07791)
+2. <a id="ref2"></a>**Tang, Y., et al.** (2025). The Few-shot Dilemma: Over-prompting Large Language
+   Models. *arXiv preprint arXiv:2509.13196*.
+   [https://arxiv.org/abs/2509.13196](https://arxiv.org/abs/2509.13196)
+3. <a id="ref3"></a>**Carbonell, J., & Goldstein, J.** (1998). The use of MMR, diversity-based
+   reranking for reordering documents and producing summaries. *SIGIR '98*.
+   [https://doi.org/10.1145/290941.291025](https://doi.org/10.1145/290941.291025)
+4. <a id="ref4"></a>**Al Ghossein, M., Chen, C.-W., & Tang, J.** (2024). Shopping Queries Image
+   Dataset (SQID): An Image-Enriched ESCI Dataset for Exploring Multimodal Learning in Product
+   Search. Part of the Shopping Queries Dataset: A Large-Scale ESCI Benchmark for Improving
+   Product Search by Amazon.
+5. <a id="ref5"></a>**Zhao, T. Z., et al.** (2021). Calibrate Before Use: Improving Few-Shot
+   Performance of Language Models. *Proceedings of the International Conference on Machine
+   Learning (ICML)*. [https://arxiv.org/abs/2102.09690](https://arxiv.org/abs/2102.09690)
