@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import typer
+
 import scripts.build_index
 
 
@@ -13,6 +15,4 @@ def test_build_index_imports() -> None:
 
 def test_build_index_app_is_typer() -> None:
     """Test that app is a Typer instance."""
-    import typer
-
     assert isinstance(scripts.build_index.app, typer.Typer)

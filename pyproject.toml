@@ -11,7 +11,7 @@ name = "qareen"
 version = "0.1.0"
 description = "A tool for analyzing and optimizing multimodal few-shot example selection"
 readme = "README.md"
-requires-python = ">=3.11,<3.13"
+requires-python = ">=3.11,<3.15"
 license = {text = "MIT"}
 authors = [
     {name = "Zafarullah Mahmood", email = "zafar@zafarmahmood.com"}
@@ -24,13 +24,13 @@ dependencies = [
     "numpy~=1.26.0",
     "pandas~=2.2.0",
     "sentence-transformers~=5.1.0",
-    "datasets~=2.0",
-    "langchain~=1.0",
-    "langchain-chroma~=1.0",
-    "pydantic~=2.0",
-    "pydantic-settings~=2.0",
-    "pillow~=10.0",
-    "tqdm~=4.65",
+    "datasets~=2.18.0",
+    "langchain~=0.3.0",
+    "langchain-chroma~=0.1.0",
+    "pydantic~=2.9.0",
+    "pydantic-settings~=2.6.0",
+    "pillow~=10.4.0",
+    "tqdm~=4.67.0",
     "sentencepiece~=0.2.0",
     "requests~=2.31.0",
     "typer~=0.20.0",

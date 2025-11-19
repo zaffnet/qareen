@@ -97,7 +97,7 @@ jobs:
 
       - name: Add Cursor to PATH
         run: |
-          echo "$HOME/.cursor/bin" >> $GITHUB_PATH
+          echo "$HOME/.cursor/bin" >> "$GITHUB_PATH"
 
       - name: Verify Cursor CLI installation
         run: |

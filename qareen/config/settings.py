@@ -92,22 +92,18 @@ class Settings(BaseSettings):
         super().__init__(**kwargs)
         self._dirs_ensured: bool = False
 
-    def ensure_directories(self) -> bool:
+    def ensure_directories(self) -> None:
         """Create filesystem directories if they do not exist.
 
         Handles race conditions where directories might be created concurrently.
-        Returns True if directories were ensured (newly created or already existed).
-
-        Returns:
-            bool: True if directories were successfully ensured, False otherwise.
+        Raises exception on failure (from mkdir operations).
         """
         if self._dirs_ensured:
-            return True
+            return
 
         self.data_dir.mkdir(parents=True, exist_ok=True)
         self.chroma_db_dir.mkdir(parents=True, exist_ok=True)
         self._dirs_ensured = True
-        return True
 
     @field_validator("embedding_models")
     @classmethod

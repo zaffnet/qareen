@@ -49,7 +49,7 @@ def main(
         Exit code (0 for success, 1 for failure)
     """
     if environment not in ["dev", "staging", "prod"]:
-        logger.error(f"Invalid environment: {environment}. Must be dev, staging, or prod")
+        logger.error("Invalid environment: %s. Must be dev, staging, or prod", environment)
         return 1
 
     try:
@@ -64,19 +64,19 @@ def main(
 
         for alpha in alpha_list:
             if not (0.0 <= alpha <= 1.0):
-                logger.error(f"Alpha value {alpha} must be in range [0.0, 1.0]")
+                logger.error("Alpha value %s must be in range [0.0, 1.0]", alpha)
                 return 1
 
-        logger.info(f"Building indexes for dataset: {dataset_name}")
-        logger.info(f"Environment: {settings.environment}")
-        logger.info(f"Models: {model_list}")
-        logger.info(f"Alpha values: {alpha_list}")
-        logger.info(f"Batch size: {batch_size}")
+        logger.info("Building indexes for dataset: %s", dataset_name)
+        logger.info("Environment: %s", settings.environment)
+        logger.info("Models: %s", model_list)
+        logger.info("Alpha values: %s", alpha_list)
+        logger.info("Batch size: %s", batch_size)
 
         dev_sample_size = None
         if settings.environment == "dev":
             dev_sample_size = sample_size or settings.dev_sample_size
-            logger.info(f"Dev sample size: {dev_sample_size}")
+            logger.info("Dev sample size: %s", dev_sample_size)
 
         dataset_loader: DatasetLoader
         dataset_path = Path(dataset_name)
@@ -86,10 +86,10 @@ def main(
                     f"Dataset path exists but is not a directory: {dataset_name}. "
                     "Please provide a directory path or remove the file to use HuggingFace Hub."
                 )
-            logger.info(f"Loading dataset from local path: {dataset_name}")
+            logger.info("Loading dataset from local path: %s", dataset_name)
             dataset_loader = LocalDatasetLoader(dataset_path=dataset_name)
         else:
-            logger.info(f"Loading dataset from HuggingFace Hub: {dataset_name}")
+            logger.info("Loading dataset from HuggingFace Hub: %s", dataset_name)
             dataset_loader = HuggingFaceDatasetLoader(
                 dataset_name=dataset_name,
                 split="train",
@@ -101,7 +101,7 @@ def main(
         dataset_loader.validate_schema()
 
         for model_id in model_list:
-            logger.info(f"Processing model: {model_id}")
+            logger.info("Processing model: %s", model_id)
 
             embedding_model: EmbeddingModel
             if model_id.lower().startswith("marqo/"):
@@ -115,7 +115,7 @@ def main(
                 settings=settings,
             )
 
-            logger.info(f"Building indexes for alpha values: {alpha_list}")
+            logger.info("Building indexes for alpha values: %s", alpha_list)
             vectorstores = indexer.index(
                 alpha_values=alpha_list,
                 batch_size=batch_size,
@@ -130,7 +130,7 @@ def main(
                     alpha=alpha,
                     environment=settings.environment,
                 )
-                logger.info(f"✓ Completed collection: {collection_name} (alpha={alpha:.2f})")
+                logger.info("✓ Completed collection: %s (alpha=%.2f)", collection_name, alpha)
 
     except FileNotFoundError:
         logger.exception("File or directory not found")

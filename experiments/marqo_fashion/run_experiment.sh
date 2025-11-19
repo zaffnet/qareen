@@ -7,7 +7,13 @@ PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 
 cd "$PROJECT_ROOT"
 
-source .venv/bin/activate
+if [ -f ".venv/bin/activate" ] && [ -r ".venv/bin/activate" ]; then
+    source .venv/bin/activate
+else
+    echo "ERROR: Virtual environment activation script not found or not readable at .venv/bin/activate" >&2
+    echo "Please create and activate the virtual environment first." >&2
+    exit 1
+fi
 
 DATASET_PATH="data/marqo_fashion_3000"
 SAMPLE_SIZE=3000
@@ -98,15 +104,16 @@ if [[ "$STEP" == "all" ]] || [[ "$STEP" == "index" ]]; then
         echo "Building indexes for model: $MODEL"
         echo "-------------------------------------------------------------------"
 
-        ALPHA_FLAGS=""
+        declare -a ALPHA_FLAGS
+        ALPHA_FLAGS=()
         for ALPHA in "${ALPHA_VALUES[@]}"; do
-            ALPHA_FLAGS="$ALPHA_FLAGS --alpha-values $ALPHA"
+            ALPHA_FLAGS+=("--alpha-values" "$ALPHA")
         done
 
         if ! python scripts/build_index.py \
             --dataset-name "$DATASET_PATH" \
             --models "$MODEL" \
-            "$ALPHA_FLAGS" \
+            "${ALPHA_FLAGS[@]}" \
             --environment "$ENVIRONMENT" \
             --sample-size $SAMPLE_SIZE \
             --batch-size $BATCH_SIZE; then
@@ -121,20 +128,22 @@ if [[ "$STEP" == "all" ]] || [[ "$STEP" == "visualize" ]]; then
     echo "Step 3: Generating Comparison Visualization"
     echo "-------------------------------------------------------------------"
 
-    MODEL_FLAGS=""
+    declare -a MODEL_FLAGS_ARRAY
+    MODEL_FLAGS_ARRAY=()
     for MODEL in "${MODELS[@]}"; do
-        MODEL_FLAGS="$MODEL_FLAGS --models $MODEL"
+        MODEL_FLAGS_ARRAY+=("--models" "$MODEL")
     done
 
-    ALPHA_FLAGS=""
+    declare -a ALPHA_FLAGS_ARRAY
+    ALPHA_FLAGS_ARRAY=()
     for ALPHA in "${ALPHA_VALUES[@]}"; do
-        ALPHA_FLAGS="$ALPHA_FLAGS --alpha-values $ALPHA"
+        ALPHA_FLAGS_ARRAY+=("--alpha-values" "$ALPHA")
     done
 
     if ! python scripts/visualize_marqo_comparison.py \
         --dataset-path "$DATASET_PATH" \
-        "$MODEL_FLAGS" \
-        "$ALPHA_FLAGS" \
+        "${MODEL_FLAGS_ARRAY[@]}" \
+        "${ALPHA_FLAGS_ARRAY[@]}" \
         --environment "$ENVIRONMENT" \
         --k 5 \
         --output "data/marqo_comparison.md" \

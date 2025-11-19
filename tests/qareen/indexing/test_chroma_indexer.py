@@ -73,8 +73,9 @@ class MockEmbeddingModel(EmbeddingModel):
         """
         if image is None:
             return None
-        image_hash = hash(str(image.tobytes() if isinstance(image, Image.Image) else image))
-        np.random.seed(image_hash % 2**32)
+        image_bytes = image.tobytes() if isinstance(image, Image.Image) else str(image).encode()
+        seed = int.from_bytes(image_bytes[:4].ljust(4, b"\0"), "little") & 0xFFFFFFFF
+        np.random.seed(seed)
         embedding = np.random.randn(self.embedding_dim).astype(np.float32)
         return self.normalize_l2(embedding)
 

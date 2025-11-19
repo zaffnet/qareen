@@ -96,6 +96,25 @@ def main(
         logger.error(f"Invalid environment: {environment}. Must be dev, staging, or prod")
         return 1
 
+    if not isinstance(k, int) or k <= 0:
+        logger.error(f"Invalid k value: {k}. Must be an integer > 0")
+        return 1
+
+    if models is not None and not models:
+        logger.error("models parameter is an empty list. Must provide at least one model")
+        return 1
+
+    if alpha_values is not None:
+        if not alpha_values:
+            logger.error(
+                "alpha_values parameter is an empty list. Must provide at least one alpha value"
+            )
+            return 1
+        for alpha in alpha_values:
+            if not isinstance(alpha, float) or not (0.0 <= alpha <= 1.0):
+                logger.error(f"Invalid alpha value: {alpha}. Must be a float in range [0.0, 1.0]")
+                return 1
+
     try:
         settings = Settings(environment=environment)
 

@@ -75,7 +75,11 @@ def main(
         save_path = str(output_path)
 
         logger.info(f"Saving dataset to {save_path}...")
-        dataset.save_to_disk(save_path)
+        try:
+            dataset.save_to_disk(save_path)
+        except Exception:
+            logger.exception("Failed to save dataset to disk: %s", save_path)
+            return 1
 
         logger.info(f"✓ Dataset successfully prepared and saved to {save_path}")
         logger.info(f"  - Size: {len(dataset)} samples")

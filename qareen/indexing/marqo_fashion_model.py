@@ -55,22 +55,28 @@ class MarqoFashionSigLIPModel(EmbeddingModel):
                 if self.device == "cuda":
                     self.model = self.model.to(self.device)
                 logger.info(
-                    f"Successfully loaded model: model_id={self.model_id}, device={self.device}"
+                    "Successfully loaded model: model_id=%s, device=%s",
+                    self.model_id,
+                    self.device,
                 )
             except Exception as e:
-                error_msg = f"Failed to load Marqo Fashion SIGLIP model '{self.model_id}': {e}"
-                logger.exception(error_msg)
-                raise RuntimeError(error_msg) from e
+                logger.exception(
+                    "Failed to load Marqo Fashion SIGLIP model '%s': %s", self.model_id, e
+                )
+                raise RuntimeError(
+                    f"Failed to load Marqo Fashion SIGLIP model '{self.model_id}': {e}"
+                ) from e
 
         if self.tokenizer is None:
             try:
                 model_name = f"hf-hub:{self.model_id}"
                 self.tokenizer = open_clip.get_tokenizer(model_name)
-                logger.info(f"Successfully loaded tokenizer: model_id={self.model_id}")
+                logger.info("Successfully loaded tokenizer: model_id=%s", self.model_id)
             except Exception as e:
-                error_msg = f"Failed to load tokenizer for model '{self.model_id}': {e}"
-                logger.exception(error_msg)
-                raise RuntimeError(error_msg) from e
+                logger.exception("Failed to load tokenizer for model '%s': %s", self.model_id, e)
+                raise RuntimeError(
+                    f"Failed to load tokenizer for model '{self.model_id}': {e}"
+                ) from e
 
     def embed_text(self, text: str | None) -> np.ndarray | None:
         """Generate L2-normalized text embedding.

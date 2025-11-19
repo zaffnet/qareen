@@ -107,13 +107,12 @@ class EmbeddingModelWrapper(Embeddings):
             ValueError: If embedding is None or cannot be converted to list
         """
         embedding = self.embedding_model.embed_text(text)
+        model_id = self.embedding_model.get_model_id()
         if embedding is None:
-            model_id = self.embedding_model.get_model_id()
             raise ValueError(
                 f"Embedding returned None for provided text. "
                 f"Model: {model_id}, Text: {text[:100] if text else 'None'}..."
             )
-        model_id = self.embedding_model.get_model_id()
         if hasattr(embedding, "tolist"):
             return cast(list[float], embedding.tolist())
         elif hasattr(embedding, "__iter__") and not isinstance(embedding, (str, bytes)):
@@ -317,8 +316,8 @@ class ChromaIndexer(VectorStoreIndexer):
             else:
                 try:
                     image = Image.open(image)
-                except Exception:
-                    logger.exception(f"Failed to open image file: {image}")
+                except (FileNotFoundError, UnidentifiedImageError, OSError) as e:
+                    logger.exception("Failed to open image file: %s - %s", image, type(e).__name__)
                     image = None
         else:
             raise UnsupportedImageTypeError(type(image))
