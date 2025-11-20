@@ -34,10 +34,7 @@ parameter that controls text–image weighting.
 
 ## Demo
 
-We showcase `qareen` on the Shopping Queries Image Dataset (SQID) [Al Ghossein et al. (2024)](#ref4),
-part of Amazon's ESCI benchmark for product search.
-
-<!-- ![Demo GIF placeholder] -->
+We demonstrate `qareen` on the Shopping Queries Image Dataset (SQID) [Al Ghossein et al. (2024)](#ref4), part of Amazon's ESCI benchmark for product search.
 
 <!-- [Live Demo URL placeholder] -->
 
@@ -53,16 +50,24 @@ pip install qareen
 
 To set up the full development environment with linting, type-checking, and testing tools:
 
-```bash
-uv sync --all-extras
-```
+**Python 3.13+ Compatibility:** The package supports Python 3.13 and 3.14. Both `sentencepiece` and PyTorch now provide prebuilt cp313 wheels on PyPI. If you encounter rare environment-specific build issues, Python 3.11 or 3.12 remain stable fallback options. CI testing currently targets Python 3.11 and 3.12.
+
+## Usage
 
 > **Note on GPU support:** The `gpu` extra is currently a placeholder and does not install any
 > GPU-specific packages. For GPU support, install a CUDA-enabled PyTorch build from the
 > [official PyTorch installation guide](https://pytorch.org/get-started/locally/) **before**
 > installing `qareen`. The package works with CPU-only PyTorch as well.
 
-### Quickstart
+**Marqo Fashion Experiment:** Run `./experiments/marqo_fashion/run_experiment.sh` to compare 4 embedding models across 9 alpha values on fashion dataset.
+
+## Configuration
+
+See [docs/CONFIGURATION.md](docs/CONFIGURATION.md) for environment variables, logging setup, and telemetry settings.
+
+See [docs/DISTANCE_METRIC.md](docs/DISTANCE_METRIC.md) for details on the cosine distance metric used for similarity search.
+
+## References
 
 Run the end-to-end example (requires SQID dataset – see docs/QUICKSTART.md for data preparation):
 

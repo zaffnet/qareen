@@ -3,7 +3,46 @@
 import os
 import warnings
 
+from qareen.config import Settings
+from qareen.dataset import (
+    DatasetItem,
+    DatasetLoader,
+    DatasetSchema,
+    HuggingFaceDatasetLoader,
+    LocalDatasetLoader,
+)
+from qareen.indexing import (
+    AlphaMismatchError,
+    AlphaNotAvailableError,
+    ChromaIndexer,
+    CollectionNameTooLongError,
+    EmbeddingModel,
+    InvalidAlphaError,
+    InvalidCollectionNameError,
+    SIGLIPEmbeddingModel,
+    VectorStoreIndexer,
+)
+
 __version__ = "0.1.0"
+
+__all__ = [
+    "AlphaMismatchError",
+    "AlphaNotAvailableError",
+    "ChromaIndexer",
+    "CollectionNameTooLongError",
+    "DatasetItem",
+    "DatasetLoader",
+    "DatasetSchema",
+    "EmbeddingModel",
+    "HuggingFaceDatasetLoader",
+    "InvalidAlphaError",
+    "InvalidCollectionNameError",
+    "LocalDatasetLoader",
+    "SIGLIPEmbeddingModel",
+    "Settings",
+    "VectorStoreIndexer",
+    "check_gpu_available",
+]
 
 
 def check_gpu_available() -> bool:
@@ -44,7 +83,7 @@ def check_gpu_available() -> bool:
                     stacklevel=2,
                 )
 
-        return is_available
+        return bool(is_available)
     except ImportError:
         # torch not installed, which is fine - it may be absent due to
         # environment or optional dependency

@@ -1,0 +1,237 @@
+name: Code Review
+
+on:
+    pull_request:
+        types: [opened, synchronize, reopened, ready_for_review]
+
+permissions:
+    pull-requests: write
+    contents: read
+    issues: write
+
+jobs:
+  code-review:
+    concurrency:
+      group: code-review-pr-${{ github.event.pull_request.number }}
+      cancel-in-progress: true
+    env:
+      BLOCKING_REVIEW: ${{ vars.BLOCKING_REVIEW || 'false' }}
+    runs-on: ubuntu-latest
+    # Skip automated code review for draft PRs
+    if: github.event.pull_request.draft == false
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Validate BLOCKING_REVIEW variable
+        run: |
+          if [ "$BLOCKING_REVIEW" != "true" ] && [ "$BLOCKING_REVIEW" != "false" ]; then
+            echo "❌ Error: BLOCKING_REVIEW must be either 'true' or 'false'"
+            echo "   Current value: '$BLOCKING_REVIEW'"
+            echo "   Please set the BLOCKING_REVIEW repository variable to 'true' or 'false'"
+            exit 1
+          fi
+          echo "✅ BLOCKING_REVIEW validated: $BLOCKING_REVIEW"
+
+      - name: Cache Cursor CLI
+        id: cache-cursor
+        uses: actions/cache@v4
+        with:
+          path: ~/.local
+          key: cursor-cli-${{ runner.os }}-v2
+
+      - name: Verify cached Cursor CLI
+        id: verify-cache
+        continue-on-error: true
+        run: |
+          export PATH="$HOME/.local/bin:$PATH"
+          if [ ! -x "$HOME/.local/bin/cursor-agent" ]; then
+            echo "Warning: Cached Cursor CLI binary not found or not executable"
+            echo "cache-valid=false" >> "$GITHUB_OUTPUT"
+            exit 1
+          fi
+          if ! cursor-agent --version > /dev/null 2>&1 && ! cursor-agent --help > /dev/null 2>&1; then
+            echo "Warning: Cached Cursor CLI failed to run"
+            echo "cache-valid=false" >> "$GITHUB_OUTPUT"
+            exit 1
+          fi
+          echo "✅ Cached Cursor CLI verified successfully"
+          echo "cache-valid=true" >> "$GITHUB_OUTPUT"
+
+      - name: Install Cursor CLI
+        if: steps.verify-cache.outcome != 'success'
+        env:
+          CURSOR_VERSION: "latest"
+        run: |
+          set -e
+          INSTALL_URL="https://cursor.com/install"
+          CHECKSUM_URL="https://cursor.com/install.sha256"
+          if [ "$CURSOR_VERSION" != "latest" ]; then
+            INSTALL_URL="https://cursor.com/install/${CURSOR_VERSION}"
+            CHECKSUM_URL="https://cursor.com/install/${CURSOR_VERSION}.sha256"
+          fi
+
+          echo "Downloading Cursor CLI installer from $INSTALL_URL"
+          curl --fail --show-error -fsS "$INSTALL_URL" -o /tmp/cursor-install.sh
+
+          if [ ! -s /tmp/cursor-install.sh ]; then
+            echo "Error: Downloaded installer is empty"
+            rm -f /tmp/cursor-install.sh
+            exit 1
+          fi
+
+          # Try to download and verify checksum if available
+          if curl --fail --show-error -fsS "$CHECKSUM_URL" -o /tmp/cursor-install.sh.sha256 2>/dev/null; then
+            echo "Verifying installer checksum..."
+            INSTALLER_SHA256=$(sha256sum /tmp/cursor-install.sh | cut -d' ' -f1)
+            EXPECTED_SHA256=$(cat /tmp/cursor-install.sh.sha256 | cut -d' ' -f1)
+            if [ "$INSTALLER_SHA256" != "$EXPECTED_SHA256" ]; then
+              echo "Error: Installer checksum verification failed"
+              echo "Expected: $EXPECTED_SHA256"
+              echo "Got: $INSTALLER_SHA256"
+              rm -f /tmp/cursor-install.sh /tmp/cursor-install.sh.sha256
+              exit 1
+            fi
+            echo "✅ Checksum verified successfully"
+            rm -f /tmp/cursor-install.sh.sha256
+          else
+            echo "⚠️ Warning: Checksum file not available at $CHECKSUM_URL, skipping verification"
+          fi
+
+          echo "Running Cursor CLI installer..."
+          chmod +x /tmp/cursor-install.sh
+          bash /tmp/cursor-install.sh
+          rm -f /tmp/cursor-install.sh
+
+          if [ ! -x "${HOME}/.local/bin/cursor-agent" ]; then
+            echo "Error: Cursor CLI binary not found after installation"
+            echo "Checking installation directory:"
+            ls -la "${HOME}/.local/bin" || echo "Directory does not exist"
+            exit 1
+          fi
+          echo "✅ Cursor CLI installed successfully"
+      - name: Add Cursor to PATH
+        run: |
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: Verify Cursor CLI installation
+        run: |
+          export PATH="$HOME/.local/bin:$PATH"
+          if [ ! -d "$HOME/.local/bin" ]; then
+            echo "Error: Cursor bin directory does not exist"
+            exit 1
+          fi
+          if [ ! -x "$HOME/.local/bin/cursor-agent" ]; then
+            echo "Error: Cursor CLI binary not found or not executable"
+            ls -la "$HOME/.local/bin" || true
+            exit 1
+          fi
+          if ! which cursor-agent > /dev/null 2>&1; then
+            echo "Error: cursor-agent command not found in PATH"
+            echo "PATH: $PATH"
+            exit 1
+          fi
+          if ! cursor-agent --version > /dev/null 2>&1 && ! cursor-agent --help > /dev/null 2>&1; then
+            echo "Error: Cursor CLI failed to run"
+            exit 1
+          fi
+          echo "✅ Cursor CLI verified successfully"
+          cursor-agent --version || cursor-agent --help
+
+      - name: Configure git identity
+        run: |
+          git config user.name "Cursor Agent"
+          git config user.email "cursoragent@cursor.com"
+
+      - name: Validate CURSOR_API_KEY
+        env:
+          CURSOR_API_KEY: ${{ secrets.CURSOR_API_KEY }}
+        run: |
+          if [ -z "$CURSOR_API_KEY" ]; then
+            echo "❌ Error: CURSOR_API_KEY secret is not configured"
+            echo "   Please set the CURSOR_API_KEY repository secret in GitHub Settings > Secrets and variables > Actions"
+            exit 1
+          fi
+          echo "✅ CURSOR_API_KEY validated successfully"
+
+      - name: Perform automated code review
+        env:
+          CURSOR_API_KEY: ${{ secrets.CURSOR_API_KEY }}
+          MODEL: auto
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          GH_PR_NUMBER: ${{ github.event.pull_request.number }}
+          GH_PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          GH_PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          GH_BLOCKING_REVIEW: ${{ env.BLOCKING_REVIEW }}
+        run: |
+          export PATH="$HOME/.local/bin:$PATH"
+          if ! command -v cursor-agent > /dev/null 2>&1; then
+            echo "Error: cursor-agent command not found in PATH"
+            echo "PATH: $PATH"
+            echo "Checking installation:"
+            ls -la "$HOME/.local/bin" || true
+            exit 1
+          fi
+
+          echo "✅ cursor-agent found, checking version and help..."
+          cursor-agent --version || echo "No --version flag"
+          cursor-agent --help || echo "No --help flag"
+
+          if [ ! -f ".github/prompts/code-review.md" ]; then
+            echo "Error: Prompt file not found at .github/prompts/code-review.md"
+            exit 1
+          fi
+
+          echo "✅ Preparing prompt..."
+          PROMPT=$(envsubst < .github/prompts/code-review.md)
+
+          echo "✅ Running cursor-agent agent command..."
+          set +e  # Don't exit on error
+          cursor-agent agent --force --model "$MODEL" --output-format=text --print <<PROMPT_END 2>&1 | tee /tmp/review-output.txt
+          $PROMPT
+          PROMPT_END
+          AGENT_EXIT_CODE=$?
+          set -e
+
+          echo "Agent exit code: $AGENT_EXIT_CODE"
+          echo "Agent output length: $(wc -l < /tmp/review-output.txt) lines"
+          echo "First 50 lines of output:"
+          head -50 /tmp/review-output.txt || true
+          echo "Last 50 lines of output:"
+          tail -50 /tmp/review-output.txt || true
+
+          if [ $AGENT_EXIT_CODE -ne 0 ]; then
+            echo "⚠️ Warning: cursor-agent exited with code $AGENT_EXIT_CODE"
+          fi
+
+          # Parse agent output for CRITICAL_ISSUES_FOUND marker
+          if grep -q "CRITICAL_ISSUES_FOUND: true" /tmp/review-output.txt; then
+            echo "CRITICAL_ISSUES_FOUND=true" >> "$GITHUB_ENV"
+            echo "✅ Parsed: CRITICAL_ISSUES_FOUND=true"
+          elif grep -q "CRITICAL_ISSUES_FOUND: false" /tmp/review-output.txt; then
+            echo "CRITICAL_ISSUES_FOUND=false" >> "$GITHUB_ENV"
+            echo "✅ Parsed: CRITICAL_ISSUES_FOUND=false"
+          else
+            echo "⚠️ Warning: CRITICAL_ISSUES_FOUND marker not found in agent output"
+            echo "Searching for 'CRITICAL_ISSUES_FOUND' in output:"
+            grep -i "critical" /tmp/review-output.txt || echo "No 'critical' text found"
+            echo "Defaulting to false"
+            echo "CRITICAL_ISSUES_FOUND=false" >> "$GITHUB_ENV"
+          fi
+
+      - name: Check blocking review results
+        if: env.BLOCKING_REVIEW == 'true'
+        run: |
+          echo "Checking for critical issues..."
+          echo "CRITICAL_ISSUES_FOUND: ${CRITICAL_ISSUES_FOUND:-unset}"
+
+          if [ "${CRITICAL_ISSUES_FOUND:-false}" = "true" ]; then
+            echo "❌ Critical issues found and blocking review is enabled. Failing the workflow."
+            exit 1
+          else
+            echo "✅ No blocking issues found."
+          fi

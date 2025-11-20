@@ -13,10 +13,70 @@ def test_settings_defaults_match_plan() -> None:
     assert issubclass(Settings, BaseSettings)
 
     settings = Settings()
-    assert settings.default_embedding_models, "At least one default embedding model is required"
-    assert all(isinstance(model, str) for model in settings.default_embedding_models)
+    assert settings.embedding_models, "At least one embedding model is required"
+    assert all(isinstance(model, str) for model in settings.embedding_models)
 
     assert settings.data_dir == Path("data")
     assert settings.chroma_db_dir == Path("chroma_db")
-    assert settings.dev_sample_size == 1000
+    assert settings.dev_sample_size == 300
     assert settings.environment in {"dev", "staging", "prod"}
+
+
+def test_ensure_directories_creates_directories(tmp_path: Path) -> None:
+    settings = Settings(
+        data_dir=tmp_path / "data",
+        chroma_db_dir=tmp_path / "chroma_db",
+    )
+
+    assert settings.data_dir.exists()
+    assert settings.chroma_db_dir.exists()
+    assert settings._dirs_ensured
+
+
+def test_ensure_directories_idempotent(tmp_path: Path) -> None:
+    settings = Settings(
+        data_dir=tmp_path / "data",
+        chroma_db_dir=tmp_path / "chroma_db",
+    )
+
+    settings.ensure_directories()
+    settings.ensure_directories()
+    settings.ensure_directories()
+
+    assert settings._dirs_ensured
+    assert settings.data_dir.exists()
+    assert settings.chroma_db_dir.exists()
+
+
+def test_ensure_directories_with_existing_directories(tmp_path: Path) -> None:
+    data_dir = tmp_path / "data"
+    chroma_db_dir = tmp_path / "chroma_db"
+    data_dir.mkdir(parents=True)
+    chroma_db_dir.mkdir(parents=True)
+
+    settings = Settings(
+        data_dir=data_dir,
+        chroma_db_dir=chroma_db_dir,
+    )
+
+    assert settings.data_dir.exists()
+    assert settings.chroma_db_dir.exists()
+    assert settings._dirs_ensured
+
+    settings.ensure_directories()
+
+    assert settings._dirs_ensured
+
+
+def test_ensure_directories_with_partial_existing_directories(tmp_path: Path) -> None:
+    data_dir = tmp_path / "data"
+    chroma_db_dir = tmp_path / "chroma_db"
+
+    settings = Settings(
+        data_dir=data_dir,
+        chroma_db_dir=chroma_db_dir,
+    )
+
+    assert settings.data_dir.exists()
+    assert settings.chroma_db_dir.exists()
+    assert settings._dirs_ensured

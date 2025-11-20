@@ -1,0 +1,21 @@
+---
+alwaysApply: true
+---
+
+# Python Script Execution Rules
+
+## Critical Execution Guidelines
+
+**NEVER run Python scripts in background**
+- Always set `is_background=false` when running Python scripts
+- Python scripts must run in foreground with full output visible to user
+
+**NEVER hide Python script output**
+- User must see complete execution output
+- No suppressing, truncating, or hiding stdout/stderr
+- No piping to /dev/null or redirecting output away from terminal
+
+**Rationale:**
+- User needs to monitor progress and errors in real-time
+- Long-running processes require visibility
+- Debugging requires full output traces

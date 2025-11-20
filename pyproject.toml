@@ -11,7 +11,7 @@ name = "qareen"
 version = "0.1.0"
 description = "A tool for analyzing and optimizing multimodal few-shot example selection"
 readme = "README.md"
-requires-python = ">=3.11"
+requires-python = ">=3.11,<3.15"
 license = {text = "MIT"}
 authors = [
     {name = "Zafarullah Mahmood", email = "zafar@zafarmahmood.com"}
@@ -20,11 +20,23 @@ maintainers = [
     {name = "Zafarullah Mahmood", email = "zafar@zafarmahmood.com"}
 ]
 dependencies = [
-    "gradio~=4.0.0",
     "transformers~=4.57.0",
     "numpy~=1.26.0",
     "pandas~=2.2.0",
     "sentence-transformers~=5.1.0",
+    "datasets~=2.18.0",
+    "langchain~=0.3.0",
+    "langchain-chroma~=0.1.2",
+    "pydantic~=2.9.0",
+    "pydantic-settings~=2.6.0",
+    "pillow~=10.4.0",
+    "tqdm~=4.67.0",
+    "sentencepiece~=0.2.1",
+    "requests~=2.31.0",
+    "typer~=0.20.0",
+    "ftfy~=6.2.0",
+    "open-clip-torch~=2.26.0",
+    "rich~=13.7.0",
 ]
 
 [project.optional-dependencies]
@@ -40,6 +52,7 @@ dev = [
     "ruff>=0.14.5",
     "mypy~=1.8.0",
     "pre-commit~=3.7.0",
+    "types-requests~=2.31.0",
 ]
 
 [project.urls]
@@ -95,8 +108,15 @@ show_error_codes = true
 
 [[tool.mypy.overrides]]
 module = [
-    "gradio.*",
     "transformers.*",
     "sentence_transformers.*",
+    "datasets.*",
+    "tqdm.*",
+    "chromadb.*",
+    "langchain.*",
+    "langchain_chroma.*",
+    "langchain_core.*",
+    "requests.*",
+    "rich.*",
 ]
 ignore_missing_imports = true
