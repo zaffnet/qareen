@@ -83,7 +83,7 @@ def check_gpu_available() -> bool:
                     stacklevel=2,
                 )
 
-        return is_available
+        return bool(is_available)
     except ImportError:
         # torch not installed, which is fine - it may be absent due to
         # environment or optional dependency
