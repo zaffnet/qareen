@@ -38,9 +38,9 @@ parameter that controls text–image weighting.
 We showcase `qareen` on the Shopping Queries Image Dataset (SQID) [Al Ghossein et al. (2024)](#ref4),
 part of Amazon's ESCI benchmark for product search.
 
-![Demo GIF placeholder]
+<!-- ![Demo GIF placeholder] -->
 
-[Live Demo URL placeholder]
+<!-- [Live Demo URL placeholder] -->
 
 ## Getting started
 
