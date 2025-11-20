@@ -2,18 +2,12 @@
 
 *A multimodal few-shot companion that balances relevance and diversity for LLM-as-a-Judge workflows.*
 
-<p align="center">
-  <a href="https://www.python.org/"><img alt="Python" src="https://img.shields.io/badge/Python-3.11+-3776AB?logo=python&logoColor=white"></a>
-  <a href="https://pytorch.org/"><img alt="PyTorch" src="https://img.shields.io/badge/PyTorch-EE4C2C?logo=pytorch&logoColor=white"></a>
-  <a href="https://www.gradio.app/"><img alt="Gradio" src="https://img.shields.io/badge/Gradio-Interactive%20UI-00C4B3?logo=gradio&logoColor=white"></a>
-  <a href="https://huggingface.co/docs/transformers/index"><img alt="Transformers" src="https://img.shields.io/badge/Hugging%20Face-Transformers-FCC624?logo=huggingface&logoColor=white"></a>
-  <a href="https://www.sbert.net/"><img alt="SentenceTransformers" src="https://img.shields.io/badge/SentenceTransformers-Embedding%20Models-18BCEE?logo=huggingface&logoColor=white"></a>
-  <a href="https://numpy.org/"><img alt="NumPy" src="https://img.shields.io/badge/NumPy-Scientific%20Computing-013243?logo=numpy&logoColor=white"></a>
-  <a href="https://pandas.pydata.org/"><img alt="pandas" src="https://img.shields.io/badge/pandas-Data%20Frames-150458?logo=pandas&logoColor=white"></a>
-  <a href="https://ruff.rs/"><img alt="Ruff" src="https://img.shields.io/badge/Ruff-Linting-1f2328?logo=ruff&logoColor=white"></a>
-  <a href="https://mypy-lang.org/"><img alt="mypy" src="https://img.shields.io/badge/mypy-Static%20Types-2A6DB2?logo=python&logoColor=white"></a>
-  <a href="https://docs.pytest.org/"><img alt="pytest" src="https://img.shields.io/badge/pytest-Testing-0A9EDC?logo=pytest&logoColor=white"></a>
-</p>
+[![Python](https://img.shields.io/badge/Python-3.11%2B-3776AB?logo=python&logoColor=white&style=flat-square)](https://www.python.org/)
+[![Hugging Face](https://img.shields.io/badge/Hugging%20Face-Transformers-FFD21E?logo=huggingface&logoColor=black&style=flat-square)](https://huggingface.co/)
+[![LangChain](https://img.shields.io/badge/LangChain-Integration-1C3C3C?logo=langchain&logoColor=white&style=flat-square)](https://www.langchain.com/)
+[![ChromaDB](https://img.shields.io/badge/ChromaDB-Vector%20Store-orange?style=flat-square)](https://www.trychroma.com/)
+[![Pydantic](https://img.shields.io/badge/Pydantic-Validation-E92063?logo=pydantic&logoColor=white&style=flat-square)](https://docs.pydantic.dev/)
+[![CodeRabbit](https://img.shields.io/badge/CodeRabbit-AI%20Review-blue?style=flat-square)](https://coderabbit.ai/)
 
 ## Overview
 
