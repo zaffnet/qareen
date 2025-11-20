@@ -65,7 +65,7 @@ uv sync --all-extras
 
 ### Quickstart
 
-Run the end-to-end example (requires data prepared per the docs):
+Run the end-to-end example (requires SQID dataset – see docs/QUICKSTART.md for data preparation):
 
 ```bash
 ./scripts/build_index.sh <data_dir>
