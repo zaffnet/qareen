@@ -83,7 +83,7 @@ See [docs/QUICKSTART.md](docs/QUICKSTART.md) for detailed steps.
    Models. *arXiv preprint arXiv:2509.13196*.
    [https://arxiv.org/abs/2509.13196](https://arxiv.org/abs/2509.13196)
 3. <a id="ref3"></a>**Carbonell, J., & Goldstein, J.** (1998). The use of MMR, diversity-based
-   reranking for reordering documents and producing summaries. *SIGIR '98*.
+   reranking for reordering documents and producing summaries. *Proceedings of SIGIR '98*, 335-336.
    [https://doi.org/10.1145/290941.291025](https://doi.org/10.1145/290941.291025)
 4. <a id="ref4"></a>**Al Ghossein, M., Chen, C.-W., & Tang, J.** (2024). Shopping Queries Image
    Dataset (SQID): An Image-Enriched ESCI Dataset for Exploring Multimodal Learning in Product
