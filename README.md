@@ -31,7 +31,6 @@ parameter that controls text–image weighting.
   examples shift.
 - **GPU-aware runtime:** Detects CUDA availability and guides you to install a compatible
   PyTorch build when acceleration is possible.
-- **Type-safe development:** Ruff + mypy + pytest keep the codebase linted, typed, and tested.
 
 ## Demo
 
