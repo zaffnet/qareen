@@ -65,7 +65,7 @@ def check_gpu_available() -> bool:
     try:
         import torch
 
-        is_available = bool(torch.cuda.is_available())
+        is_available = torch.cuda.is_available()
 
         if not is_available:
             suppress_warning = os.getenv("QAREEN_SUPPRESS_GPU_WARNING", "").lower() in (
@@ -80,7 +80,7 @@ def check_gpu_available() -> bool:
                     "installing qareen. The package will work with CPU-only PyTorch, but "
                     "GPU acceleration will not be available.",
                     UserWarning,
-                    stacklevel=3,
+                    stacklevel=2,
                 )
 
         return is_available

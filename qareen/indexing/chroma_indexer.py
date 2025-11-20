@@ -240,7 +240,13 @@ class ChromaIndexer(VectorStoreIndexer):
         Returns:
             PIL Image if successful, None otherwise
 
+        Raises:
+            ValueError: If max_retries is not positive
+
         """
+        if max_retries <= 0:
+            raise ValueError("max_retries must be positive")
+
         for attempt in range(max_retries):
             try:
                 with requests.get(image_url, timeout=30, stream=True) as response:
@@ -304,30 +310,30 @@ class ChromaIndexer(VectorStoreIndexer):
                             return None
                         content.extend(chunk)
 
-                    if len(content) > 0:
-                        try:
-                            image_buffer = BytesIO(content)
-                            img = Image.open(image_buffer)
-                            img.verify()
-                            image_buffer.seek(0)
-                            image = Image.open(image_buffer)
-                            return image
-                        except (
-                            UnidentifiedImageError,
-                            OSError,
-                            ValueError,
-                        ) as e:
-                            logger.warning(
-                                f"Invalid image data for URL: "
-                                f"{image_url} "
-                                f"(attempt {attempt + 1}/{max_retries}): {e}",
-                            )
-                            return None
-                    else:
+                    if len(content) == 0:
                         logger.warning(
                             f"Empty response body for image URL: "
                             f"{image_url} "
                             f"(attempt {attempt + 1}/{max_retries})",
+                        )
+                        return None
+
+                    try:
+                        image_buffer = BytesIO(content)
+                        img = Image.open(image_buffer)
+                        img.verify()
+                        image_buffer.seek(0)
+                        image = Image.open(image_buffer)
+                        return image
+                    except (
+                        UnidentifiedImageError,
+                        OSError,
+                        ValueError,
+                    ) as e:
+                        logger.warning(
+                            f"Invalid image data for URL: "
+                            f"{image_url} "
+                            f"(attempt {attempt + 1}/{max_retries}): {e}",
                         )
                         return None
             except (
