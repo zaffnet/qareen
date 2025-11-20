@@ -87,8 +87,8 @@ See [docs/QUICKSTART.md](docs/QUICKSTART.md) for detailed steps.
    [https://doi.org/10.1145/290941.291025](https://doi.org/10.1145/290941.291025)
 4. <a id="ref4"></a>**Al Ghossein, M., Chen, C.-W., & Tang, J.** (2024). Shopping Queries Image
    Dataset (SQID): An Image-Enriched ESCI Dataset for Exploring Multimodal Learning in Product
-   Search. Part of the Shopping Queries Dataset: A Large-Scale ESCI Benchmark for Improving
-   Product Search by Amazon.
+   Search. Part of the Shopping Queries Dataset by Amazon.
+   [Paper Link](https://www.amazon.science/publications/shopping-queries-image-dataset-sqid-an-image-enriched-esci-dataset-for-exploring-multimodal-learning-in-product-search)
 5. <a id="ref5"></a>**Zhao, T. Z., et al.** (2021). Calibrate Before Use: Improving Few-Shot
    Performance of Language Models. *Proceedings of the International Conference on Machine
    Learning (ICML)*. [https://arxiv.org/abs/2102.09690](https://arxiv.org/abs/2102.09690)
