@@ -52,7 +52,7 @@ Install the base package from PyPI:
 pip install qareen
 ```
 
-To develop locally with the documented toolchain:
+To set up the full development environment with linting, type-checking, and testing tools:
 
 ```bash
 uv sync --all-extras
