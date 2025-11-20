@@ -291,7 +291,7 @@ def main(
                                             f'width="150" alt="Result {i}"><br>\n'
                                         )
                             except (ValueError, IndexError, KeyError):
-                                # Silently skip malformed or missing image data
+                                # Silently skip malformed or missing image data during visualization
                                 pass
 
                         f.write(f"**#{i}** Score: {score:.3f}<br>\n")

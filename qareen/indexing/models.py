@@ -102,8 +102,10 @@ class EmbeddingModel(ABC):
             L2-normalized vector
 
         Raises:
-            ValueError: If the input vector has zero norm (zero vector)
+            ValueError: If the input vector is empty or has zero norm (zero vector)
         """
+        if vector.size == 0:
+            raise ValueError("cannot L2-normalize empty vector")
         norm: float = float(np.linalg.norm(vector))
         if norm <= EmbeddingModel.ZERO_NORM_TOLERANCE:
             raise ValueError(EmbeddingModel.ZERO_VECTOR_ERROR)
