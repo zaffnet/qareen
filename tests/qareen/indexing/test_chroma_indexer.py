@@ -221,7 +221,7 @@ def test_similarity_search_works_with_embedding_wrapper() -> None:
 
         vectorstores = indexer.index(alpha_values=[0.5], rebuild=True, batch_size=10)
 
-        assert len(vectorstores) == 1
+        assert len(vectorstores) == 3
         vectorstore = vectorstores[0.5]
 
         results = vectorstore.similarity_search("apple", k=1)

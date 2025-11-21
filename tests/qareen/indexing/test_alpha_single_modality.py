@@ -220,9 +220,10 @@ def test_alpha_ignored_for_text_only_samples() -> None:
 
         vectorstores = indexer.index(alpha_values=[0.8], rebuild=True, batch_size=10)
 
-        assert len(vectorstores) == 1
-        assert len(model.embed_calls) == 1
-        call = model.embed_calls[0]
+        assert len(vectorstores) == 3
+        assert len(model.embed_calls) == 3
+        # Alphas indexed: 0.0, 0.8, 1.0. Check alpha=0.8 (index 1)
+        call = model.embed_calls[1]
         assert call["text"] == "text only"
         assert call["image"] is None
         assert call["alpha"] == 0.8
@@ -244,9 +245,10 @@ def test_alpha_ignored_for_image_only_samples() -> None:
 
         vectorstores = indexer.index(alpha_values=[0.2], rebuild=True, batch_size=10)
 
-        assert len(vectorstores) == 1
-        assert len(model.embed_calls) == 1
-        call = model.embed_calls[0]
+        assert len(vectorstores) == 3
+        assert len(model.embed_calls) == 3
+        # Alphas indexed: 0.0, 0.2, 1.0. Check alpha=0.2 (index 1)
+        call = model.embed_calls[1]
         assert call["text"] is None
         assert call["image"] is not None
         assert call["alpha"] == 0.2
@@ -268,9 +270,10 @@ def test_alpha_matters_for_dual_modality_samples() -> None:
 
         vectorstores = indexer.index(alpha_values=[0.5], rebuild=True, batch_size=10)
 
-        assert len(vectorstores) == 1
-        assert len(model.embed_calls) == 1
-        call = model.embed_calls[0]
+        assert len(vectorstores) == 3
+        assert len(model.embed_calls) == 3
+        # Alphas indexed: 0.0, 0.5, 1.0. Check alpha=0.5 (index 1)
+        call = model.embed_calls[1]
         assert call["text"] == "caption"
         assert call["image"] is not None
         assert call["alpha"] == 0.5
@@ -364,8 +367,9 @@ def test_alpha_zero_equivalent_to_text_only() -> None:
 
         vectorstores = indexer.index(alpha_values=[0.0], rebuild=True, batch_size=10)
 
-        assert len(vectorstores) == 1
-        assert len(model.embed_calls) == 1
+        assert len(vectorstores) == 2  # 0.0, 1.0
+        assert len(model.embed_calls) == 2
+        # Alphas indexed: 0.0, 1.0. Check alpha=0.0 (index 0)
         call = model.embed_calls[0]
         assert call["alpha"] == 0.0
 
@@ -386,7 +390,8 @@ def test_alpha_one_equivalent_to_image_only() -> None:
 
         vectorstores = indexer.index(alpha_values=[1.0], rebuild=True, batch_size=10)
 
-        assert len(vectorstores) == 1
-        assert len(model.embed_calls) == 1
-        call = model.embed_calls[0]
+        assert len(vectorstores) == 2  # 0.0, 1.0
+        assert len(model.embed_calls) == 2
+        # Alphas indexed: 0.0, 1.0. Check alpha=1.0 (index 1)
+        call = model.embed_calls[1]
         assert call["alpha"] == 1.0

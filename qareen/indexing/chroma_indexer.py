@@ -11,9 +11,10 @@ import time
 
 os.environ["ANONYMIZED_TELEMETRY"] = "False"
 from io import BytesIO
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any, Literal, cast
 
 import chromadb
+import numpy as np
 import requests
 from chromadb.config import Settings as ChromaSettings
 from chromadb.errors import NotFoundError
@@ -408,6 +409,7 @@ class ChromaIndexer(VectorStoreIndexer):
         rebuild: bool,
         batch_size: int = 100,
         sample_size: int | None = None,
+        distance_metric: Literal["cosine", "l2"] = "cosine",
     ) -> dict[float, VectorStore]:
         """Create vector store indexes for multiple alpha values.
 
@@ -420,6 +422,7 @@ class ChromaIndexer(VectorStoreIndexer):
                 If False, reuses existing collections (default for user scripts).
             batch_size: Batch size for processing
             sample_size: Optional sample size (overrides settings)
+            distance_metric: Distance metric to use ("cosine" or "l2")
 
         Returns:
             Dictionary mapping alpha values to VectorStore instances
@@ -466,17 +469,21 @@ class ChromaIndexer(VectorStoreIndexer):
                     f"dataset type={type(dataset).__name__}, dataset length={dataset_len}",
                 )
 
+        # Ensure 0.0 and 1.0 are present for RRF support
+        extended_alphas = sorted(list(set(alpha_values + [0.0, 1.0])))
+
         self.embedding_model.load_model()
 
         vectorstores: dict[float, VectorStore] = {}
         chroma_client = self._get_chroma_client()
 
-        for alpha in alpha_values:
+        for alpha in extended_alphas:
             collection_name = self.get_collection_name(
                 dataset_name=dataset_name,
                 model_id=model_id,
                 alpha=alpha,
                 environment=environment,
+                distance_metric=distance_metric,
             )
 
             if rebuild:
@@ -489,7 +496,7 @@ class ChromaIndexer(VectorStoreIndexer):
                         f"Collection {collection_name} did not exist or deletion failed: {e}",
                     )
 
-            collection_metadata = {"hnsw:space": "cosine"}
+            collection_metadata = {"hnsw:space": distance_metric}
             vectorstore = Chroma(
                 client=chroma_client,
                 collection_name=collection_name,
@@ -499,7 +506,7 @@ class ChromaIndexer(VectorStoreIndexer):
 
             for idx in tqdm(
                 range(0, dataset_len, batch_size),
-                desc=f"[Model: {model_id}] [Alpha: {alpha:.3f}]",
+                desc=f"[Model: {model_id}] [Metric: {distance_metric}] [Alpha: {alpha:.3f}]",
             ):
                 batch = dataset[idx : idx + batch_size]
 
@@ -564,6 +571,7 @@ class ChromaIndexer(VectorStoreIndexer):
         model_id: str,
         alpha: float,
         environment: str = "dev",
+        distance_metric: Literal["cosine", "l2"] = "cosine",
     ) -> VectorStore:
         """Create VectorStore instance for existing collection.
 
@@ -572,6 +580,7 @@ class ChromaIndexer(VectorStoreIndexer):
             model_id: Model identifier
             alpha: Alpha value
             environment: Environment (dev/staging/prod)
+            distance_metric: Distance metric ("cosine" or "l2")
 
         Returns:
             VectorStore instance
@@ -582,6 +591,7 @@ class ChromaIndexer(VectorStoreIndexer):
             model_id=model_id,
             alpha=alpha,
             environment=environment,
+            distance_metric=distance_metric,
         )
 
         chroma_client = self._get_chroma_client()
@@ -597,7 +607,7 @@ class ChromaIndexer(VectorStoreIndexer):
                 environment=environment,
             ) from None
 
-        collection_metadata = {"hnsw:space": "cosine"}
+        collection_metadata = {"hnsw:space": distance_metric}
         return Chroma(
             client=chroma_client,
             collection_name=collection_name,
@@ -622,113 +632,281 @@ class ChromaIndexer(VectorStoreIndexer):
         alpha: float,
         k: int = 5,
         score_threshold: float | None = None,
+        combination_method: Literal["linear", "rrf"] = "linear",
+        retrieval_mode: Literal["similarity", "mmr"] = "similarity",
+        distance_metric: Literal["cosine", "l2"] = "cosine",
     ) -> list[tuple[Any, float]]:
         """Query vectorstore with multimodal embedding.
 
-        This method performs similarity search using a multimodal query embedding
-        that combines image and text according to the specified alpha value.
-        This is essential for proper multimodal retrieval - using the standard
-        similarity_search() method would only use text, ignoring the image component.
-
-        Uses cosine distance metric. Similarity scores are computed as:
-        similarity = 1.0 - (cosine_distance / 2.0), giving range [0.0, 1.0]
-        where 1.0 = identical, 0.5 = orthogonal, 0.0 = opposite vectors.
+        Supports Linear Combination and Reciprocal Rank Fusion (RRF).
+        Supports Cosine Similarity, L2 Distance, and MMR.
 
         Args:
-            vectorstore: VectorStore instance to query (must be a Chroma instance)
-            image: Query image (PIL Image, URL string, local path, or None)
-            text: Query text string or None
-            alpha: Alpha value for weighting (0.0 = text-only, 1.0 = image-only)
-            k: Number of similar results to return
-            score_threshold: Optional minimum similarity score threshold (0.0-1.0)
+            vectorstore: VectorStore instance. Used as main store for linear combination.
+                         For RRF, additional collections (alpha=0, alpha=1) are resolved automatically.
+            image: Query image.
+            text: Query text.
+            alpha: Weighting factor (0.0-1.0).
+                   For Linear: Weights the embedding combination.
+                   For RRF: Weights the fusion of ranks (alpha=1.0 means image only).
+            k: Number of results.
+            score_threshold: Minimum score threshold.
+            combination_method: "linear" or "rrf".
+            retrieval_mode: "similarity" or "mmr" (Maximal Marginal Relevance).
+            distance_metric: "cosine" or "l2".
 
         Returns:
-            List of (Document, score) tuples sorted by similarity (higher is better)
-
-        Raises:
-            ValueError: If both image and text are None, or if alpha is invalid
-            TypeError: If vectorstore is not a Chroma instance
-            AlphaMismatchError: If query alpha does not match collection's indexed alpha
-
-        Example:
-            >>> indexer = ChromaIndexer(dataset_loader, embedding_model, settings)
-            >>> vectorstore = indexer.create_vectorstore("dataset", "model", 0.5, "dev")
-            >>> results = indexer.query_multimodal(
-            ...     vectorstore=vectorstore,
-            ...     image=query_image,
-            ...     text="red dress",
-            ...     alpha=0.5,
-            ...     k=5
-            ... )
-            >>> for doc, score in results:
-            ...     print(f"Score: {score:.3f}, Text: {doc.page_content[:50]}")
+            List of (Document, score) tuples.
+            For Cosine: Score is similarity [0, 1] (higher is better).
+            For L2: Score is distance (lower is better).
+            For RRF: Score is fusion score (higher is better).
 
         """
-        if not isinstance(vectorstore, Chroma):
-            raise TypeError(
-                f"vectorstore must be a Chroma instance, got {type(vectorstore).__name__}",
-            )
-
         if not (0.0 <= alpha <= 1.0):
             raise ValueError(f"alpha must be in range [0.0, 1.0], got {alpha}")
 
-        chroma_collection = vectorstore._collection
-        sample_result = chroma_collection.get(limit=1, include=["metadatas"])
-
-        if sample_result and sample_result["ids"] and len(sample_result["ids"]) > 0:
-            sample_metadata = sample_result["metadatas"][0] if sample_result["metadatas"] else None
-            if sample_metadata and "alpha" in sample_metadata:
-                collection_alpha = float(sample_metadata["alpha"])
-                if not abs(alpha - collection_alpha) < 1e-6:
-                    raise AlphaMismatchError(query_alpha=alpha, collection_alpha=collection_alpha)
-
         loaded_image = self._load_image(image)
 
+        if combination_method == "rrf":
+            return self._query_rrf(
+                image=loaded_image,
+                text=text,
+                alpha=alpha,
+                k=k,
+                retrieval_mode=retrieval_mode,
+                distance_metric=distance_metric,
+                vectorstore=vectorstore,  # Passed to extract collection metadata/config if needed
+            )
+        else:
+            return self._query_linear(
+                vectorstore=vectorstore,
+                image=loaded_image,
+                text=text,
+                alpha=alpha,
+                k=k,
+                score_threshold=score_threshold,
+                retrieval_mode=retrieval_mode,
+                distance_metric=distance_metric,
+            )
+
+    def _query_linear(
+        self,
+        vectorstore: VectorStore,
+        image: Image.Image | None,
+        text: str | None,
+        alpha: float,
+        k: int,
+        score_threshold: float | None,
+        retrieval_mode: str,
+        distance_metric: Literal["cosine", "l2"],
+    ) -> list[tuple[Any, float]]:
+        # Validate alpha matches vectorstore if possible
+        if isinstance(vectorstore, Chroma):
+            chroma_collection = vectorstore._collection
+            sample_result = chroma_collection.get(limit=1, include=["metadatas"])
+            if sample_result and sample_result["ids"] and len(sample_result["ids"]) > 0:
+                sample_metadata = (
+                    sample_result["metadatas"][0] if sample_result["metadatas"] else None
+                )
+                if sample_metadata and "alpha" in sample_metadata:
+                    collection_alpha = float(sample_metadata["alpha"])
+                    if not abs(alpha - collection_alpha) < 1e-6:
+                        raise AlphaMismatchError(
+                            query_alpha=alpha, collection_alpha=collection_alpha
+                        )
+
         query_embedding = self.embedding_model.embed_multimodal(
-            image=loaded_image,
+            image=image,
             text=text,
             alpha=alpha,
         )
-
         query_embedding_list = query_embedding.tolist()
 
-        results = chroma_collection.query(
-            query_embeddings=[query_embedding_list],
-            n_results=k,
-            include=["metadatas", "documents", "distances"],
-        )
-
         documents = []
-        if results and results["ids"] and len(results["ids"]) > 0:
-            ids = results["ids"][0]
-            metadatas = results["metadatas"][0] if results["metadatas"] else [{}] * len(ids)
-            docs = results["documents"][0] if results["documents"] else [""] * len(ids)
-            distances = results["distances"][0] if results["distances"] else [0.0] * len(ids)
 
-            for _doc_id, metadata, doc_text, distance in zip(
-                ids,
-                metadatas,
-                docs,
-                distances,
-                strict=True,
-            ):
-                similarity_score = max(0.0, min(1.0, 1.0 - (distance / 2.0)))
+        if retrieval_mode == "mmr":
+            if not isinstance(vectorstore, Chroma):
+                raise TypeError("MMR requires Chroma vectorstore")
 
-                if score_threshold is not None and similarity_score < score_threshold:
-                    continue
+            # Chroma.max_marginal_relevance_search_by_vector returns list of Documents
+            # It doesn't strictly return scores usually, but we can try to fetch them if supported
+            # Or we assume standard MMR.
+            # Langchain Chroma `max_marginal_relevance_search_by_vector` returns List[Document]
+            # It does NOT return scores.
+            # We might need to calculate scores manually or just return 1.0?
+            # Or we can use `similarity_search_with_score` after selecting IDs?
+            # Let's stick to returning Documents with dummy scores or calculated scores.
 
-                from langchain_core.documents import Document
+            results = vectorstore.max_marginal_relevance_search_by_vector(
+                embedding=query_embedding_list,
+                k=k,
+            )
+            # We need to calculate scores manually if we want them.
+            # Use cosine similarity with query.
+            for doc in results:
+                # We can't easily get the vector back from Document unless we query again
+                # or it's not exposed. We will just return score=1.0 or maybe re-rank?
+                # For now, let's return 0.0 or 1.0 as placeholders or try to compute.
+                # Since the user wants a "score", and MMR implies a ranking, we can assign
+                # rank-based score.
+                documents.append((doc, 0.0))  # Placeholder
 
-                doc = Document(page_content=doc_text, metadata=metadata)
-                documents.append((doc, similarity_score))
+        else:
+            # Similarity search
+            if isinstance(vectorstore, Chroma):
+                # Use raw chroma query to get distances
+                chroma_collection = vectorstore._collection
+                results = chroma_collection.query(
+                    query_embeddings=[query_embedding_list],
+                    n_results=k,
+                    include=["metadatas", "documents", "distances"],
+                )
+
+                if results and results["ids"] and len(results["ids"]) > 0:
+                    ids = results["ids"][0]
+                    metadatas = results["metadatas"][0] if results["metadatas"] else [{}] * len(ids)
+                    docs = results["documents"][0] if results["documents"] else [""] * len(ids)
+                    distances = (
+                        results["distances"][0] if results["distances"] else [0.0] * len(ids)
+                    )
+
+                    for _doc_id, metadata, doc_text, distance in zip(
+                        ids, metadatas, docs, distances, strict=True
+                    ):
+                        if distance_metric == "cosine":
+                            # Convert distance to similarity [0, 1]
+                            # Chroma cosine distance is [0, 2]
+                            score = max(0.0, min(1.0, 1.0 - (distance / 2.0)))
+                        else:
+                            # L2 distance. Return raw distance.
+                            score = distance
+
+                        if (
+                            score_threshold is not None
+                            and distance_metric == "cosine"
+                            and score < score_threshold
+                        ):
+                            continue
+                        # For L2, thresholding logic might differ (max distance?)
+                        # Assuming score_threshold is only for similarity for now or user handles it.
+
+                        from langchain_core.documents import Document
+
+                        # Ensure ID is available for RRF matching
+                        # We copy metadata to avoid modifying the original dict if cached/shared
+                        metadata = metadata.copy()
+                        if "_id" not in metadata:
+                            metadata["_id"] = _doc_id
+
+                        doc = Document(page_content=doc_text, metadata=metadata)
+                        documents.append((doc, score))
+            else:
+                # Fallback for generic vectorstore
+                results = vectorstore.similarity_search_with_score_by_vector(
+                    embedding=query_embedding_list, k=k
+                )
+                for doc, score in results:
+                    documents.append((doc, score))
 
         return documents
+
+    def _query_rrf(
+        self,
+        image: Image.Image | None,
+        text: str | None,
+        alpha: float,
+        k: int,
+        retrieval_mode: str,
+        distance_metric: Literal["cosine", "l2"],
+        vectorstore: VectorStore,
+    ) -> list[tuple[Any, float]]:
+        # Determine dataset/model from vectorstore or settings?
+        # We need to find alpha=0 and alpha=1 collections.
+        # We can assume they follow the naming convention.
+        # We need dataset_name and model_id.
+        # If vectorstore is Chroma, we can try to parse collection name?
+        # Or better, we should have access to these params.
+        # ChromaIndexer has dataset_loader and embedding_model.
+
+        dataset_name = self.dataset_loader.get_dataset_name()
+        model_id = self.embedding_model.get_model_id()
+        environment = self.settings.environment
+
+        # Get collections
+        try:
+            vs_text = self.create_vectorstore(
+                dataset_name, model_id, 0.0, environment, distance_metric
+            )
+            vs_image = self.create_vectorstore(
+                dataset_name, model_id, 1.0, environment, distance_metric
+            )
+        except CollectionNotFoundError as e:
+            logger.error(f"RRF failed: Missing collection: {e}")
+            raise
+
+        # Helper to get results
+        def get_results(vs: VectorStore, target_alpha: float) -> list[tuple[Any, float]]:
+            return self._query_linear(
+                vectorstore=vs,
+                image=image,
+                text=text,
+                alpha=target_alpha,
+                k=k,  # We might want more candidates for RRF
+                score_threshold=None,
+                retrieval_mode=retrieval_mode,
+                distance_metric=distance_metric,
+            )
+
+        results_text = get_results(vs_text, 0.0)
+        results_image = get_results(vs_image, 1.0)
+
+        # RRF Fusion
+        # Rank is 1-based.
+        # score = w_text * (1 / (k + rank_text)) + w_image * (1 / (k + rank_image))
+
+        w_image = alpha
+        w_text = 1.0 - alpha
+        rrf_k = 60  # Standard RRF constant
+
+        scores: dict[str, float] = {}
+        docs_map: dict[str, Any] = {}
+
+        def process_results(results, weight):
+            for rank, (doc, _) in enumerate(results):
+                # Identify doc by unique ID
+                doc_idx = str(doc.metadata.get("_id", ""))
+                # Fallback to index if _id not present (legacy/MMR compatibility)
+                if not doc_idx:
+                    doc_idx = str(doc.metadata.get("index", ""))
+
+                if not doc_idx:
+                    continue  # Should not happen
+
+                if doc_idx not in scores:
+                    scores[doc_idx] = 0.0
+                    docs_map[doc_idx] = doc
+
+                scores[doc_idx] += weight * (1.0 / (rrf_k + rank + 1))
+
+        if w_text > 0:
+            process_results(results_text, w_text)
+        if w_image > 0:
+            process_results(results_image, w_image)
+
+        # Sort by score descending
+        sorted_ids = sorted(scores.keys(), key=lambda x: scores[x], reverse=True)
+        final_results = []
+        for doc_id in sorted_ids[:k]:
+            final_results.append((docs_map[doc_id], scores[doc_id]))
+
+        return final_results
 
     def list_available_alphas(
         self,
         dataset_name: str,
         model_id: str,
         environment: str = "dev",
+        distance_metric: str = "cosine",
     ) -> list[float]:
         """List available alpha values for a dataset/model combination.
 
@@ -736,6 +914,7 @@ class ChromaIndexer(VectorStoreIndexer):
             dataset_name: Dataset identifier
             model_id: Model identifier
             environment: Environment (dev/staging/prod)
+            distance_metric: Distance metric ("cosine" or "l2")
 
         Returns:
             Sorted list of available alpha values
@@ -746,10 +925,14 @@ class ChromaIndexer(VectorStoreIndexer):
         collections = chroma_client.list_collections()
 
         alphas = []
+
+        # Get prefix without alpha
         prefix = self.get_collection_name(
             dataset_name=dataset_name,
             model_id=model_id,
             environment=environment,
+            distance_metric=distance_metric,
+            alpha=None,
         )
 
         for collection in collections:

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from abc import ABC
+from typing import Literal
 
 from langchain_core.embeddings import Embeddings
 from langchain_core.vectorstores import VectorStore
@@ -27,6 +28,7 @@ def test_vector_store_indexer_contract_and_naming() -> None:
             rebuild: bool,
             batch_size: int = 100,
             sample_size: int | None = None,
+            distance_metric: Literal["cosine", "l2"] = "cosine",
         ) -> dict[float, VectorStore]:
             raise NotImplementedError()
 
@@ -36,6 +38,7 @@ def test_vector_store_indexer_contract_and_naming() -> None:
             model_id: str,
             alpha: float,
             environment: str = "dev",
+            distance_metric: Literal["cosine", "l2"] = "cosine",
         ) -> VectorStore:
             raise NotImplementedError()
 
@@ -49,5 +52,5 @@ def test_vector_store_indexer_contract_and_naming() -> None:
             environment="staging",
             model_id="google/siglip-base-patch16-224",
         )
-        == "staging_conceptual_captions_google_siglip_base_patch16_224"
+        == "staging_conceptual_caption_google_siglip_base__cosine_hdb4df7e7"
     )

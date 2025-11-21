@@ -1,9 +1,10 @@
-# Distance Metric
+# Distance Metrics
 
-`qareen` uses **cosine distance** for ChromaDB vector search.
+`qareen` supports **cosine distance** (default) and **L2 distance** for ChromaDB vector search.
 
-## Formula
+## Cosine Similarity (Default)
 
+Formula:
 ```python
 similarity_score = max(0.0, min(1.0, 1.0 - (cosine_distance / 2.0)))
 ```
@@ -18,6 +19,22 @@ All embedding models produce L2-normalized vectors. Cosine distance:
 - Aligns with vision-language model training objectives
 
 Previous L2 distance with quadratic penalty caused zero scores for image-only queries.
+
+## L2 Distance
+
+Optionally, you can use L2 (Euclidean) distance. This metric is strictly distance-based (lower is better).
+
+```python
+score = l2_distance
+```
+
+## Reciprocal Rank Fusion (RRF)
+
+For combining rankings from different modalities (text vs image) without linear embedding combination, `qareen` supports Weighted RRF:
+
+```python
+score = alpha * (1 / (k + rank_image)) + (1 - alpha) * (1 / (k + rank_text))
+```
 
 ## L2 Normalization Still Required
 

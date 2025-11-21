@@ -60,16 +60,18 @@ class VectorStoreIndexer(ABC):
         model_id: str,
         alpha: float | None = None,
         environment: str = "dev",
+        distance_metric: str = "cosine",
     ) -> str:
         """Generate sanitized collection name.
 
-        Format: {environment}_{dataset_name}_{model_id}_alpha{alpha_value}
+        Format: {environment}_{dataset_name}_{model_id}_{metric}_alpha{alpha_value}
 
         Args:
             dataset_name: Dataset identifier
             model_id: Model identifier
             alpha: Alpha value (optional, formatted to 3 decimals if provided)
             environment: Environment (dev/staging/prod)
+            distance_metric: Distance metric ("cosine" or "l2")
 
         Returns:
             Sanitized collection name
@@ -101,16 +103,19 @@ class VectorStoreIndexer(ABC):
 
         env_part, dataset_part, model_part = sanitized_parts
 
+        metric_part = distance_metric.lower().strip()
         alpha_suffix = f"_a{alpha:.3f}" if alpha is not None else ""
-        max_length = 512
+        max_length = 63  # ChromaDB limitation
 
-        available_length = max_length - len(env_part) - len(alpha_suffix) - 2
+        # Reserve space for separators and metric
+        # Separators: env_dataset, dataset_model, model_metric, metric_alpha -> 3 or 4 underscores
+        available_length = max_length - len(env_part) - len(alpha_suffix) - len(metric_part) - 3
 
         if len(dataset_part) + len(model_part) <= available_length:
-            base_name = f"{env_part}_{dataset_part}_{model_part}"
+            base_name = f"{env_part}_{dataset_part}_{model_part}_{metric_part}"
         else:
             hash_suffix_len = 10
-            hash_input = f"{dataset_part}_{model_part}"
+            hash_input = f"{dataset_part}_{model_part}_{metric_part}"
             hash_hex = hashlib.sha256(hash_input.encode()).hexdigest()[:8]
             hash_suffix = f"_h{hash_hex}"
 
@@ -118,7 +123,9 @@ class VectorStoreIndexer(ABC):
             half_available = available_for_parts // 2
             dataset_truncated = dataset_part[:half_available]
             model_truncated = model_part[: available_for_parts - len(dataset_truncated)]
-            base_name = f"{env_part}_{dataset_truncated}_{model_truncated}{hash_suffix}"
+            base_name = (
+                f"{env_part}_{dataset_truncated}_{model_truncated}_{metric_part}{hash_suffix}"
+            )
 
         name = f"{base_name}{alpha_suffix}"
 
@@ -136,6 +143,7 @@ class VectorStoreIndexer(ABC):
         dataset_name: str,
         model_id: str,
         environment: str = "dev",
+        distance_metric: str = "cosine",
     ) -> list[float]:
         """List available alpha values for a dataset/model combination.
 
@@ -154,6 +162,7 @@ class VectorStoreIndexer(ABC):
         dataset_name: str,
         model_id: str,
         environment: str = "dev",
+        distance_metric: str = "cosine",
     ) -> None:
         """Validate alpha value is available (has been indexed).
 
@@ -162,11 +171,12 @@ class VectorStoreIndexer(ABC):
             dataset_name: Dataset identifier
             model_id: Model identifier
             environment: Environment (dev/staging/prod)
+            distance_metric: Distance metric ("cosine" or "l2")
 
         Raises:
             AlphaNotAvailableError: If alpha has not been indexed
         """
-        available = self.list_available_alphas(dataset_name, model_id, environment)
+        available = self.list_available_alphas(dataset_name, model_id, environment, distance_metric)
 
         normalized_alpha = round(alpha, 3)
         normalized_available = [round(a, 3) for a in available]

@@ -253,7 +253,7 @@ def test_indexer_handles_text_only_samples() -> None:
 
         vectorstores = indexer.index(alpha_values=[0.5], rebuild=True, batch_size=10)
 
-        assert len(vectorstores) == 1
+        assert len(vectorstores) == 3
         vectorstore = vectorstores[0.5]
 
         results = vectorstore.similarity_search("text only", k=2)
@@ -279,7 +279,7 @@ def test_indexer_handles_image_only_samples() -> None:
 
         vectorstores = indexer.index(alpha_values=[0.5], rebuild=True, batch_size=10)
 
-        assert len(vectorstores) == 1
+        assert len(vectorstores) == 3
         vectorstore = vectorstores[0.5]
 
         results = vectorstore.similarity_search("query", k=2)
@@ -306,7 +306,7 @@ def test_indexer_handles_mixed_modality_samples() -> None:
 
         vectorstores = indexer.index(alpha_values=[0.5], rebuild=True, batch_size=10)
 
-        assert len(vectorstores) == 1
+        assert len(vectorstores) == 3
         vectorstore = vectorstores[0.5]
 
         results = vectorstore.similarity_search("query", k=3)

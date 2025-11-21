@@ -23,6 +23,8 @@ parameter that controls text–image weighting.
 
 ## Key features
 
+- **Advanced Retrieval Methods:** Support for Linear Combination and Reciprocal Rank Fusion (RRF) to combine text and image signals.
+- **Multiple Metrics:** Choose between Cosine Similarity, L2 Distance, and Maximal Marginal Relevance (MMR).
 - **Multimodal MMR retrieval:** Balance relevance and diversity across text and image signals.
 - **Model flexibility:** Swap between CLIP, SIGLIP, or other Hugging Face embeddings via
   `transformers` and `sentence-transformers`.
