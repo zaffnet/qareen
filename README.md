@@ -7,7 +7,6 @@
 [![LangChain](https://img.shields.io/badge/LangChain-Integration-1C3C3C?logo=langchain&logoColor=white&style=flat-square)](https://www.langchain.com/)
 [![ChromaDB](https://img.shields.io/badge/ChromaDB-Vector%20Store-orange?style=flat-square)](https://www.trychroma.com/)
 [![Pydantic](https://img.shields.io/badge/Pydantic-Validation-E92063?logo=pydantic&logoColor=white&style=flat-square)](https://docs.pydantic.dev/)
-[![CodeRabbit](https://img.shields.io/badge/CodeRabbit-AI%20Review-blue?style=flat-square)](https://coderabbit.ai/)
 
 ## Overview
 
