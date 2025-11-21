@@ -17,10 +17,10 @@ else
     exit 1
 fi
 
-DATASET_PATH="data/marqo_3k"
-SAMPLE_SIZE=3000
+DATASET_PATH="data/marqo_30k"
+SAMPLE_SIZE=30000
 SEED=42
-ENVIRONMENT="dev"
+ENVIRONMENT="prod"
 BATCH_SIZE=100
 REBUILD=false
 
@@ -160,7 +160,8 @@ if [[ "$STEP" == "all" ]] || [[ "$STEP" == "visualize" ]]; then
         --environment "$ENVIRONMENT" \
         --k 5 \
         --output "data/marqo_comparison.md" \
-        --seed "$SEED"; then
+        --sample-index 25 \
+        --seed "$SEED" ; then
         echo "ERROR: Visualization generation failed"
         exit 1
     fi

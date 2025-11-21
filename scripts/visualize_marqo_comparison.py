@@ -14,7 +14,7 @@ from typing import Annotated
 
 import requests
 import typer
-from datasets import load_from_disk
+from datasets import DatasetDict, load_from_disk
 from PIL import Image
 from rich.logging import RichHandler
 
@@ -132,6 +132,18 @@ def main(
 
         logger.info(f"Loading dataset from: {dataset_path}")
         dataset = load_from_disk(dataset_path)
+
+        if isinstance(dataset, DatasetDict):
+            if "train" in dataset:
+                dataset = dataset["train"]
+                logger.info("Selected 'train' split from DatasetDict")
+            else:
+                first_split = next(iter(dataset.keys()))
+                dataset = dataset[first_split]
+                logger.info(
+                    f"Selected '{first_split}' split from DatasetDict (no 'train' split available)",
+                )
+
         dataset_len = len(dataset)
         logger.info(f"Dataset size: {dataset_len}")
 
