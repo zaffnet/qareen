@@ -1,15 +1,16 @@
-import os
 import logging
+import os
 import shutil
-from typing import Any, Literal, cast
 from pathlib import Path
+from typing import Any, Literal, cast
+
 from datasets import Dataset
 from PIL import Image
 
-from qareen.indexing.chroma_indexer import ChromaIndexer, setup_logging
-from qareen.indexing.siglip_model import SIGLIPEmbeddingModel
 from qareen.config.settings import Settings
 from qareen.dataset.base import DatasetLoader
+from qareen.indexing.chroma_indexer import ChromaIndexer, setup_logging
+from qareen.indexing.siglip_model import SIGLIPEmbeddingModel
 
 # Setup logging
 setup_logging()

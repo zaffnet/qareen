@@ -1,8 +1,10 @@
 import unittest
 from unittest.mock import MagicMock, patch
-from qareen.indexing.chroma_indexer import ChromaIndexer, Chroma
+
 from langchain_core.documents import Document
+
 from qareen.config.settings import Settings
+from qareen.indexing.chroma_indexer import Chroma, ChromaIndexer
 from qareen.indexing.models import EmbeddingModel
 
 
