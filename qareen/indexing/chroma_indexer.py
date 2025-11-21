@@ -14,7 +14,6 @@ from io import BytesIO
 from typing import TYPE_CHECKING, Any, Literal, cast
 
 import chromadb
-import numpy as np
 import requests
 from chromadb.config import Settings as ChromaSettings
 from chromadb.errors import NotFoundError
@@ -643,7 +642,8 @@ class ChromaIndexer(VectorStoreIndexer):
 
         Args:
             vectorstore: VectorStore instance. Used as main store for linear combination.
-                         For RRF, additional collections (alpha=0, alpha=1) are resolved automatically.
+                For RRF, additional collections (alpha=0, alpha=1) are resolved
+                automatically.
             image: Query image.
             text: Query text.
             alpha: Weighting factor (0.0-1.0).
@@ -788,7 +788,8 @@ class ChromaIndexer(VectorStoreIndexer):
                         ):
                             continue
                         # For L2, thresholding logic might differ (max distance?)
-                        # Assuming score_threshold is only for similarity for now or user handles it.
+                        # Assuming score_threshold is only for similarity for now or
+                        # user handles it.
 
                         from langchain_core.documents import Document
 

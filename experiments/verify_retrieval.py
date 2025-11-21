@@ -1,7 +1,8 @@
 import os
 import logging
 import shutil
-from typing import Any
+from typing import Any, Literal, cast
+from pathlib import Path
 from datasets import Dataset
 from PIL import Image
 
@@ -13,6 +14,7 @@ from qareen.dataset.base import DatasetLoader
 # Setup logging
 setup_logging()
 logger = logging.getLogger(__name__)
+
 
 class SimpleDatasetLoader(DatasetLoader):
     def __init__(self, data):
@@ -30,18 +32,20 @@ class SimpleDatasetLoader(DatasetLoader):
     def get_dataset_info(self) -> dict[str, Any]:
         return {"dataset_name": "verify_fusion", "num_rows": len(self.data["text"])}
 
+
 def create_image(color):
-    return Image.new('RGB', (224, 224), color=color)
+    return Image.new("RGB", (224, 224), color=color)
+
 
 def main():
     # Create dummy data
-    img_red = create_image('red')
-    img_blue = create_image('blue')
-    img_green = create_image('green')
+    img_red = create_image("red")
+    img_blue = create_image("blue")
+    img_green = create_image("green")
 
     data = {
         "text": ["Red circle", "Blue square", "Green triangle"],
-        "image": [img_red, img_blue, img_green]
+        "image": [img_red, img_blue, img_green],
     }
 
     loader = SimpleDatasetLoader(data)
@@ -51,7 +55,7 @@ def main():
 
     # Settings
     settings = Settings()
-    settings.chroma_db_dir = "experiments_chroma_db"
+    settings.chroma_db_dir = Path("experiments_chroma_db")
     settings.environment = "dev"
 
     # Clean up
@@ -68,8 +72,8 @@ def main():
 
     # Queries
     queries = [
-        ("Red", None), # Text only
-        (None, img_blue), # Image only
+        ("Red", None),  # Text only
+        (None, img_blue),  # Image only
     ]
 
     configs = [
@@ -85,29 +89,31 @@ def main():
         for config in configs:
             logger.info(f"  Config: {config}")
             try:
+                metric_val = cast(Literal["cosine", "l2"], config["metric"])
+                alpha_val = cast(float, config["alpha"])
+                method_val = cast(Literal["linear", "rrf"], config["method"])
+                mode_val = cast(Literal["similarity", "mmr"], config["mode"])
+
                 vs = indexer.create_vectorstore(
-                    "verify_fusion",
-                    embedding_model.get_model_id(),
-                    config["alpha"],
-                    "dev",
-                    config["metric"]
+                    "verify_fusion", embedding_model.get_model_id(), alpha_val, "dev", metric_val
                 )
 
                 results = indexer.query_multimodal(
                     vectorstore=vs,
                     image=q_img,
                     text=q_text,
-                    alpha=config["alpha"],
+                    alpha=alpha_val,
                     k=2,
-                    combination_method=config["method"],
-                    retrieval_mode=config["mode"],
-                    distance_metric=config["metric"]
+                    combination_method=method_val,
+                    retrieval_mode=mode_val,
+                    distance_metric=metric_val,
                 )
 
                 for doc, score in results:
                     logger.info(f"    Result: {doc.page_content}, Score: {score:.4f}")
             except Exception as e:
                 logger.error(f"    Failed: {e}", exc_info=True)
+
 
 if __name__ == "__main__":
     main()
