@@ -23,7 +23,10 @@ parameter that controls text–image weighting.
 
 ## Key features
 
-- **Multimodal MMR retrieval:** Balance relevance and diversity across text and image signals.
+- **Multimodal retrieval with fusion controls:** Choose linear combination or reciprocal rank
+  fusion (RRF) to mix text and image evidence with tunable `alpha` weights.
+- **MMR, cosine, or L2 scoring:** Apply cosine similarity, Maximal Marginal Relevance, or
+  L2-based scoring on fused embeddings to match your evaluation setup.
 - **Model flexibility:** Swap between CLIP, SIGLIP, or other Hugging Face embeddings via
   `transformers` and `sentence-transformers`.
 - **Interactive exploration:** Adjust modality weights live through a Gradio UI to see how
