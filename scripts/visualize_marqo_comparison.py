@@ -13,7 +13,7 @@ from pathlib import Path
 from typing import Annotated, Any
 
 import typer
-from datasets import DatasetDict, load_from_disk
+from datasets import load_from_disk
 from PIL import Image
 
 from qareen.dataset.local_dataset import LocalDatasetLoader
