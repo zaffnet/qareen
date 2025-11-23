@@ -7,18 +7,12 @@ from qareen.config import Settings
 from qareen.dataset import (
     DatasetItem,
     DatasetLoader,
-    DatasetSchema,
     HuggingFaceDatasetLoader,
     LocalDatasetLoader,
 )
 from qareen.indexing import (
-    AlphaMismatchError,
-    AlphaNotAvailableError,
     ChromaIndexer,
-    CollectionNameTooLongError,
     EmbeddingModel,
-    InvalidAlphaError,
-    InvalidCollectionNameError,
     SIGLIPEmbeddingModel,
     VectorStoreIndexer,
 )
@@ -26,17 +20,11 @@ from qareen.indexing import (
 __version__ = "0.1.0"
 
 __all__ = [
-    "AlphaMismatchError",
-    "AlphaNotAvailableError",
     "ChromaIndexer",
-    "CollectionNameTooLongError",
     "DatasetItem",
     "DatasetLoader",
-    "DatasetSchema",
     "EmbeddingModel",
     "HuggingFaceDatasetLoader",
-    "InvalidAlphaError",
-    "InvalidCollectionNameError",
     "LocalDatasetLoader",
     "SIGLIPEmbeddingModel",
     "Settings",

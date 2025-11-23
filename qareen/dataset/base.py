@@ -8,7 +8,7 @@ from typing import Any
 from datasets import Dataset as HFDataset
 from datasets import DatasetDict
 
-from qareen.dataset.schema import DatasetSchema
+from qareen.models import DatasetItem
 
 DATASETDICT_NO_SPLITS_ERROR = "DatasetDict has no splits"
 NO_NON_EMPTY_SPLITS_ERROR = "Dataset contains no non-empty splits"
@@ -64,7 +64,7 @@ def validate_dataset_schema(
         else:
             raise ValueError(EMPTY_DATASET_ERROR)
 
-    DatasetSchema(**sample)
+    DatasetItem(**sample)
 
 
 def extract_dataset_info(
@@ -114,36 +114,20 @@ class DatasetLoader(ABC):
 
     @abstractmethod
     def load(self) -> Any:
-        """Load dataset and return in standardized format.
-
-        Returns:
-            Dataset in standardized format (implementation-specific)
-        """
+        """Load dataset and return in standardized format."""
         pass
 
     @abstractmethod
     def validate_schema(self) -> None:
-        """Validate dataset has required fields (text, image).
-
-        Raises:
-            ValueError: If required fields are missing
-        """
+        """Validate dataset has required fields (text, image)."""
         pass
 
     @abstractmethod
     def get_dataset_name(self) -> str:
-        """Return dataset identifier.
-
-        Returns:
-            Dataset name/identifier
-        """
+        """Return dataset identifier."""
         pass
 
     @abstractmethod
     def get_dataset_info(self) -> dict[str, Any]:
-        """Return dataset metadata.
-
-        Returns:
-            Dictionary containing dataset metadata (size, splits, etc.)
-        """
+        """Return dataset metadata."""
         pass

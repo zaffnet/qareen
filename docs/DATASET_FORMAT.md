@@ -1,16 +1,13 @@
 # Dataset Format
 
-## Required Fields
-
-At least one of `text` or `image` must be provided. Each field may be `None` individually, but not both simultaneously.
+## Fields
 
 - `text`: Non-empty string or `None`
 - `image`: PIL Image, path string, or `None`
+- `metadata`: Dict (optional)
+- `dataset_name`: String (optional)
 
-## Optional Fields
-
-- `metadata`: Dict
-- `dataset_name`: String
+At least one of `text` or `image` must be provided.
 
 ## Examples
 

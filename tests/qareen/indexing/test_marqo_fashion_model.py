@@ -7,7 +7,6 @@ from unittest.mock import Mock, patch
 import numpy as np
 import pytest
 
-from qareen.indexing.exceptions import InvalidAlphaError
 from qareen.indexing.marqo_fashion_model import MarqoFashionSigLIPModel
 
 
@@ -86,10 +85,10 @@ def test_embed_image_invalid_path():
 def test_embed_multimodal_invalid_alpha():
     model = MarqoFashionSigLIPModel()
 
-    with pytest.raises(InvalidAlphaError):
+    with pytest.raises(ValueError, match="Alpha must be in range"):
         model.embed_multimodal(image=None, text="test", alpha=1.5)
 
-    with pytest.raises(InvalidAlphaError):
+    with pytest.raises(ValueError, match="Alpha must be in range"):
         model.embed_multimodal(image=None, text="test", alpha=-0.1)
 
 
@@ -166,12 +165,12 @@ def test_embedding_dim_caching(mock_open_clip):
     model = MarqoFashionSigLIPModel()
 
     with patch.object(model, "embed_text") as mock_embed:
-        mock_embed.return_value = np.zeros(512)
+        mock_embed.return_value = np.zeros(63)
         dim1 = model.embedding_dim
         dim2 = model.embedding_dim
 
-        assert dim1 == 512
-        assert dim2 == 512
+        assert dim1 == 63
+        assert dim2 == 63
         mock_embed.assert_called_once()
 
 

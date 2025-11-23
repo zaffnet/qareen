@@ -13,8 +13,7 @@ import open_clip
 import torch
 from PIL import Image, UnidentifiedImageError
 
-from qareen.indexing.exceptions import InvalidAlphaError
-from qareen.indexing.models import EmbeddingModel
+from qareen.indexing.embedding_model import EmbeddingModel
 
 warnings.filterwarnings("ignore", category=FutureWarning, module="timm.models.layers")
 warnings.filterwarnings("ignore", message=".*timm.*deprecated.*", category=FutureWarning)
@@ -31,7 +30,6 @@ class MarqoFashionSigLIPModel(EmbeddingModel):
         model: Loaded model instance
         preprocess_val: Preprocessing function for validation transforms
         tokenizer: Tokenizer instance for text encoding
-
     """
 
     IMAGE_TYPE_ERROR: str = "Image must be PIL Image or path string"
@@ -41,7 +39,6 @@ class MarqoFashionSigLIPModel(EmbeddingModel):
 
         Args:
             model_id: HuggingFace model identifier
-
         """
         self.model_id = model_id
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -62,13 +59,7 @@ class MarqoFashionSigLIPModel(EmbeddingModel):
                 self.model.eval()
                 if self.device == "cuda":
                     self.model = self.model.to(self.device)
-                logger.info(
-                    "Successfully loaded model: model_id=%s, device=%s",
-                    self.model_id,
-                    self.device,
-                )
             except Exception as e:
-                logger.exception("Failed to load model '%s'", self.model_id)
                 raise RuntimeError(
                     f"Failed to load Marqo Fashion SIGLIP model '{self.model_id}': {e}",
                 ) from e
@@ -76,23 +67,13 @@ class MarqoFashionSigLIPModel(EmbeddingModel):
         if self.tokenizer is None:
             try:
                 self.tokenizer = open_clip.get_tokenizer(model_name)
-                logger.info("Successfully loaded tokenizer: model_id=%s", self.model_id)
             except Exception as e:
-                logger.exception("Failed to load tokenizer for model '%s'", self.model_id)
                 raise RuntimeError(
                     f"Failed to load tokenizer for model '{self.model_id}': {e}",
                 ) from e
 
     def embed_text(self, text: str | None) -> np.ndarray | None:
-        """Generate L2-normalized text embedding.
-
-        Args:
-            text: Input text string or None
-
-        Returns:
-            L2-normalized text embedding vector or None if text is None
-
-        """
+        """Generate L2-normalized text embedding."""
         if text is None:
             return None
 
@@ -115,15 +96,7 @@ class MarqoFashionSigLIPModel(EmbeddingModel):
         return embedding
 
     def embed_image(self, image: Image.Image | str | Path | None) -> np.ndarray | None:
-        """Generate L2-normalized image embedding.
-
-        Args:
-            image: PIL Image object, path to image file, or None
-
-        Returns:
-            L2-normalized image embedding vector or None if image is None
-
-        """
+        """Generate L2-normalized image embedding."""
         if image is None:
             return None
 
@@ -171,10 +144,9 @@ class MarqoFashionSigLIPModel(EmbeddingModel):
 
         Returns:
             L2-normalized combined embedding vector
-
         """
         if not (0.0 <= alpha <= 1.0):
-            raise InvalidAlphaError(alpha)
+            raise ValueError(f"Alpha must be in range [0.0, 1.0], got {alpha}")
 
         image_embedding = self.embed_image(image)
         text_embedding = self.embed_text(text)
@@ -192,24 +164,14 @@ class MarqoFashionSigLIPModel(EmbeddingModel):
         return self.normalize_l2(combined)
 
     def get_model_id(self) -> str:
-        """Return normalized model identifier.
-
-        Returns:
-            Normalized model identifier
-
-        """
+        """Return normalized model identifier."""
         normalized = self.model_id.lower()
         normalized = re.sub(r"[^a-z0-9_\-/]+", "_", normalized)
         return normalized
 
     @property
     def embedding_dim(self) -> int:
-        """Return the embedding dimension.
-
-        Returns:
-            Embedding dimension as integer
-
-        """
+        """Return the embedding dimension."""
         if self._cached_embedding_dim is not None:
             return self._cached_embedding_dim
 

@@ -14,10 +14,11 @@ import numpy as np
 from datasets import Dataset
 from PIL import Image
 
-from qareen.config.settings import Settings
+from conftest import create_test_settings
 from qareen.dataset.base import DatasetLoader
 from qareen.indexing.chroma_indexer import ChromaIndexer
-from qareen.indexing.models import EmbeddingModel
+from qareen.indexing.embedding_model import EmbeddingModel
+from qareen.retrieving.chroma_retriever import ChromaRetriever
 
 
 class DeterministicEmbeddingModel(EmbeddingModel):
@@ -186,7 +187,7 @@ def test_alpha_spectrum_produces_different_results() -> None:
     which items are retrieved.
     """
     with tempfile.TemporaryDirectory() as tmpdir:
-        settings = Settings(environment="dev", chroma_db_dir=Path(tmpdir))
+        settings = create_test_settings(environment="dev", chroma_db_dir=Path(tmpdir))
         model = DeterministicEmbeddingModel(embedding_dim=256)
 
         img_red = Image.new("RGB", (100, 100), color=(255, 0, 0))
@@ -212,13 +213,15 @@ def test_alpha_spectrum_produces_different_results() -> None:
         alpha_values = [0.0, 0.5, 1.0]
         vectorstores = indexer.index(alpha_values=alpha_values, rebuild=True, batch_size=10)
 
+        retriever = ChromaRetriever(model, settings)
+
         query_image = Image.new("RGB", (100, 100), color=(255, 0, 0))
         query_text = "category_A"
 
         results_by_alpha = {}
         for alpha in alpha_values:
             vectorstore = vectorstores[alpha]
-            results = indexer.query_multimodal(
+            results = retriever.query_multimodal(
                 vectorstore=vectorstore,
                 image=query_image,
                 text=query_text,
@@ -253,7 +256,7 @@ def test_alpha_spectrum_produces_different_results() -> None:
 def test_alpha_affects_score_distribution() -> None:
     """Test that different alpha values produce different score distributions."""
     with tempfile.TemporaryDirectory() as tmpdir:
-        settings = Settings(environment="dev", chroma_db_dir=Path(tmpdir))
+        settings = create_test_settings(environment="dev", chroma_db_dir=Path(tmpdir))
         model = DeterministicEmbeddingModel(embedding_dim=128)
 
         img1 = Image.new("RGB", (50, 50), color=(200, 50, 50))
@@ -279,13 +282,15 @@ def test_alpha_affects_score_distribution() -> None:
         alpha_values = [0.0, 0.25, 0.5, 0.75, 1.0]
         vectorstores = indexer.index(alpha_values=alpha_values, rebuild=True, batch_size=10)
 
+        retriever = ChromaRetriever(model, settings)
+
         query_image = Image.new("RGB", (50, 50), color=(200, 50, 50))
         query_text = "red object"
 
         scores_by_alpha = {}
         for alpha in alpha_values:
             vectorstore = vectorstores[alpha]
-            results = indexer.query_multimodal(
+            results = retriever.query_multimodal(
                 vectorstore=vectorstore,
                 image=query_image,
                 text=query_text,
@@ -316,7 +321,7 @@ def test_extreme_alphas_behave_differently() -> None:
     Alpha 0.0 should rely purely on text, alpha 1.0 purely on image.
     """
     with tempfile.TemporaryDirectory() as tmpdir:
-        settings = Settings(environment="dev", chroma_db_dir=Path(tmpdir))
+        settings = create_test_settings(environment="dev", chroma_db_dir=Path(tmpdir))
         model = DeterministicEmbeddingModel(embedding_dim=256)
 
         img_similar_to_query = Image.new("RGB", (100, 100), color=(255, 0, 0))
@@ -338,10 +343,12 @@ def test_extreme_alphas_behave_differently() -> None:
 
         vectorstores = indexer.index(alpha_values=[0.0, 1.0], rebuild=True, batch_size=10)
 
+        retriever = ChromaRetriever(model, settings)
+
         query_image = Image.new("RGB", (100, 100), color=(255, 0, 0))
         query_text = "matching text content"
 
-        results_text_only = indexer.query_multimodal(
+        results_text_only = retriever.query_multimodal(
             vectorstore=vectorstores[0.0],
             image=query_image,
             text=query_text,
@@ -349,7 +356,7 @@ def test_extreme_alphas_behave_differently() -> None:
             k=3,
         )
 
-        results_image_only = indexer.query_multimodal(
+        results_image_only = retriever.query_multimodal(
             vectorstore=vectorstores[1.0],
             image=query_image,
             text=query_text,
@@ -375,7 +382,7 @@ def test_extreme_alphas_behave_differently() -> None:
 def test_mid_range_alpha_balances_modalities() -> None:
     """Test that mid-range alpha values balance text and image influence."""
     with tempfile.TemporaryDirectory() as tmpdir:
-        settings = Settings(environment="dev", chroma_db_dir=Path(tmpdir))
+        settings = create_test_settings(environment="dev", chroma_db_dir=Path(tmpdir))
         model = DeterministicEmbeddingModel(embedding_dim=256)
 
         img1 = Image.new("RGB", (80, 80), color=(100, 0, 0))
@@ -398,10 +405,12 @@ def test_mid_range_alpha_balances_modalities() -> None:
 
         vectorstores = indexer.index(alpha_values=[0.0, 0.5, 1.0], rebuild=True, batch_size=10)
 
+        retriever = ChromaRetriever(model, settings)
+
         query_image = Image.new("RGB", (80, 80), color=(100, 0, 0))
         query_text = "text_A"
 
-        results_0 = indexer.query_multimodal(
+        results_0 = retriever.query_multimodal(
             vectorstore=vectorstores[0.0],
             image=query_image,
             text=query_text,
@@ -409,7 +418,7 @@ def test_mid_range_alpha_balances_modalities() -> None:
             k=1,
         )
 
-        results_05 = indexer.query_multimodal(
+        results_05 = retriever.query_multimodal(
             vectorstore=vectorstores[0.5],
             image=query_image,
             text=query_text,
@@ -417,7 +426,7 @@ def test_mid_range_alpha_balances_modalities() -> None:
             k=1,
         )
 
-        results_1 = indexer.query_multimodal(
+        results_1 = retriever.query_multimodal(
             vectorstore=vectorstores[1.0],
             image=query_image,
             text=query_text,

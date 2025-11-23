@@ -12,8 +12,7 @@ import torch
 from PIL import Image, UnidentifiedImageError
 from transformers import AutoModel, AutoProcessor
 
-from qareen.indexing.exceptions import InvalidAlphaError
-from qareen.indexing.models import EmbeddingModel
+from qareen.indexing.embedding_model import EmbeddingModel
 
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
@@ -21,8 +20,6 @@ logger.addHandler(logging.NullHandler())
 
 class SIGLIPEmbeddingModel(EmbeddingModel):
     """SIGLIP model for multimodal embeddings.
-
-    Uses HuggingFace transformers to load and run SIGLIP models.
 
     Attributes:
         model_id: HuggingFace model identifier
@@ -55,7 +52,6 @@ class SIGLIPEmbeddingModel(EmbeddingModel):
                 error_msg = (
                     f"Failed to load SIGLIP model '{self.model_id}' on device '{self.device}': {e}"
                 )
-                logger.exception(error_msg)
                 raise RuntimeError(error_msg) from e
 
         if self.processor is None:
@@ -65,18 +61,10 @@ class SIGLIPEmbeddingModel(EmbeddingModel):
                 )
             except Exception as e:
                 error_msg = f"Failed to load SIGLIP processor for model '{self.model_id}': {e}"
-                logger.exception(error_msg)
                 raise RuntimeError(error_msg) from e
 
     def embed_text(self, text: str | None) -> np.ndarray | None:
-        """Generate L2-normalized text embedding.
-
-        Args:
-            text: Input text string or None
-
-        Returns:
-            L2-normalized text embedding vector or None if text is None
-        """
+        """Generate L2-normalized text embedding."""
         if text is None:
             return None
 
@@ -96,14 +84,7 @@ class SIGLIPEmbeddingModel(EmbeddingModel):
         return self.normalize_l2(embedding)
 
     def embed_image(self, image: Image.Image | str | Path | None) -> np.ndarray | None:
-        """Generate L2-normalized image embedding.
-
-        Args:
-            image: PIL Image object, path to image file, or None
-
-        Returns:
-            L2-normalized image embedding vector or None if image is None
-        """
+        """Generate L2-normalized image embedding."""
         if image is None:
             return None
 
@@ -139,14 +120,6 @@ class SIGLIPEmbeddingModel(EmbeddingModel):
     ) -> np.ndarray:
         """Generate combined multimodal embedding with alpha weighting.
 
-        Formula: V_combined = Normalize(alpha * V_image + (1 - alpha) * V_text)
-        Both V_image and V_text are L2-normalized before combination.
-
-        Handles missing modalities:
-        - If image is None: returns text embedding
-        - If text is None: returns image embedding
-        - If both are None: raises ValueError
-
         Args:
             image: PIL Image object, path to image file, or None
             text: Input text string or None
@@ -154,13 +127,9 @@ class SIGLIPEmbeddingModel(EmbeddingModel):
 
         Returns:
             L2-normalized combined embedding vector
-
-        Raises:
-            ValueError: If both image and text are None
-            InvalidAlphaError: If alpha is not in range [0.0, 1.0]
         """
         if not (0.0 <= alpha <= 1.0):
-            raise InvalidAlphaError(alpha)
+            raise ValueError(f"Alpha must be in range [0.0, 1.0], got {alpha}")
 
         image_embedding = self.embed_image(image)
         text_embedding = self.embed_text(text)
@@ -178,11 +147,7 @@ class SIGLIPEmbeddingModel(EmbeddingModel):
         return self.normalize_l2(combined)
 
     def get_model_id(self) -> str:
-        """Return normalized model identifier.
-
-        Returns:
-            Normalized model identifier
-        """
+        """Return normalized model identifier."""
         normalized = self.model_id.lower()
         normalized = re.sub(r"[^a-z0-9_\-/]+", "_", normalized)
         return normalized
@@ -191,13 +156,7 @@ class SIGLIPEmbeddingModel(EmbeddingModel):
     def embedding_dim(self) -> int:
         """Return the embedding dimension.
 
-        Note: Accessing this property may trigger model loading (download and initialization)
-        if the model is not already loaded, which can cause significant delays on first access.
-        To avoid blocking behavior, call load_model() explicitly before accessing this property,
-        or ensure the model has already been loaded through other operations.
-
-        Returns:
-            Embedding dimension as integer
+        Note: Accessing this property may trigger model loading.
         """
         if self.model is None:
             self.load_model()
@@ -208,18 +167,8 @@ class SIGLIPEmbeddingModel(EmbeddingModel):
                 return int(config.projection_dim)
             if hasattr(config, "text_config") and hasattr(config.text_config, "hidden_size"):
                 return int(config.text_config.hidden_size)
-        except AttributeError as e:
-            config_state = (
-                f"config={getattr(self.model, 'config', None)}, "
-                f"has_config={hasattr(self.model, 'config')}"
-            )
-            logger.warning(
-                "Failed to infer embedding_dim from config for model '%s'. %s. "
-                "AttributeError: %s. Falling back to sampling with embed_text('dummy').",
-                self.model_id,
-                config_state,
-                e,
-            )
+        except AttributeError:
+            pass
 
         try:
             embedding = self.embed_text("dummy")

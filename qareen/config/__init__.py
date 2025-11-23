@@ -1,5 +1,5 @@
 """Configuration management for qareen."""
 
-from qareen.config.settings import Settings
+from qareen.models import Settings
 
 __all__ = ["Settings"]

@@ -5,7 +5,7 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from qareen.indexing.models import EmbeddingModel
+from qareen.indexing.embedding_model import EmbeddingModel
 
 
 def test_normalize_l2_valid_vector():
