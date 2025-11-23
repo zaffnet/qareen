@@ -131,6 +131,8 @@ class ChromaIndexer(VectorStoreIndexer):
                     dataset = selected
                     dataset_len = len(dataset)
             except (AttributeError, TypeError):
+                # If the dataset does not support .select() or is of an incompatible type,
+                # proceed with the original dataset (safe to ignore in this context).
                 pass
 
         self.embedding_model.load_model()

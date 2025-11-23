@@ -174,6 +174,7 @@ def generate_markdown(
                                     f'alt="Result {i}"><br>\n'
                                 )
                         except (ValueError, IndexError, KeyError):
+                            # If image file cannot be found or copied, skip image display for this result.
                             pass
 
                     f.write(

@@ -168,6 +168,7 @@ class SIGLIPEmbeddingModel(EmbeddingModel):
             if hasattr(config, "text_config") and hasattr(config.text_config, "hidden_size"):
                 return int(config.text_config.hidden_size)
         except AttributeError:
+            # Attribute(s) not found in config; fallback to computing embedding dimension from dummy input below.
             pass
 
         try:
