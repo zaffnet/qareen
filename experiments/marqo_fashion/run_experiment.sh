@@ -7,7 +7,7 @@ PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 
 cd "$PROJECT_ROOT"
 
-if [ -n "$VIRTUAL_ENV" ]; then
+if [ -n "${VIRTUAL_ENV:-}" ]; then
     echo "Virtual environment already active: $VIRTUAL_ENV"
 elif [ -f ".venv/bin/activate" ] && [ -r ".venv/bin/activate" ]; then
     source .venv/bin/activate
@@ -18,7 +18,7 @@ else
 fi
 
 DATASET_PATH="data/marqo_30k"
-SAMPLE_SIZE=30000
+SAMPLE_SIZE=30
 SEED=42
 ENVIRONMENT="prod"
 BATCH_SIZE=100
@@ -85,7 +85,21 @@ if [[ "$STEP" == "all" ]] || [[ "$STEP" == "prepare" ]]; then
     if [ -d "$DATASET_PATH" ]; then
         echo "Dataset already exists at $DATASET_PATH, skipping preparation..."
     else
-        if ! python scripts/prepare_marqo_dataset.py --output-dir "$DATASET_PATH"; then
+        export QAREEN_ENVIRONMENT="$ENVIRONMENT"
+        export QAREEN_EMBEDDING_MODELS='["google/siglip-base-patch16-224"]'
+        export QAREEN_ALPHA_VALUES='[0.5]'
+        export QAREEN_DATA_DIR="data"
+        export QAREEN_CHROMA_DB_DIR="chroma_db"
+        export QAREEN_DATASET_PATH=""
+        export QAREEN_DEV_SAMPLE_SIZE="$SAMPLE_SIZE"
+        export QAREEN_BATCH_SIZE="$BATCH_SIZE"
+        export QAREEN_REBUILD_COLLECTIONS="$REBUILD"
+        export QAREEN_K_NEIGHBORS="5"
+        export QAREEN_RANDOM_SEED="$SEED"
+        export QAREEN_DATASET_PREP_SAMPLE_SIZE="$SAMPLE_SIZE"
+        export QAREEN_PREPARED_DATASET_DIR="$DATASET_PATH"
+        export QAREEN_VIZ_OUTPUT_FILE="data/marqo_comparison.md"
+        if ! python3 scripts/prepare_marqo_dataset.py; then
             echo "ERROR: Dataset preparation failed"
             exit 1
         fi
@@ -108,28 +122,23 @@ if [[ "$STEP" == "all" ]] || [[ "$STEP" == "index" ]]; then
         echo "Building indexes for model: $MODEL"
         echo "-------------------------------------------------------------------"
 
-        declare -a ALPHA_FLAGS
-        ALPHA_FLAGS=()
-        for ALPHA in "${ALPHA_VALUES[@]}"; do
-            ALPHA_FLAGS+=("--alpha-values" "$ALPHA")
-        done
-
-        declare -a BUILD_CMD
-        BUILD_CMD=(
-            "python" "scripts/build_index.py"
-            "--dataset-name" "$DATASET_PATH"
-            "--models" "$MODEL"
-            "${ALPHA_FLAGS[@]}"
-            "--environment" "$ENVIRONMENT"
-            "--sample-size" "$SAMPLE_SIZE"
-            "--batch-size" "$BATCH_SIZE"
-        )
-
-        if [[ "$REBUILD" == "true" ]]; then
-            BUILD_CMD+=("--rebuild")
-        fi
-
-        if ! "${BUILD_CMD[@]}"; then
+        # Set environment variables for Settings
+        export QAREEN_ENVIRONMENT="$ENVIRONMENT"
+        export QAREEN_DATA_DIR="data"
+        export QAREEN_CHROMA_DB_DIR="chroma_db"
+        export QAREEN_DATASET_PATH=""
+        export QAREEN_DEV_SAMPLE_SIZE="$SAMPLE_SIZE"
+        export QAREEN_BATCH_SIZE="$BATCH_SIZE"
+        export QAREEN_REBUILD_COLLECTIONS="$REBUILD"
+        export QAREEN_K_NEIGHBORS="5"
+        export QAREEN_RANDOM_SEED="$SEED"
+        export QAREEN_DATASET_PREP_SAMPLE_SIZE="$SAMPLE_SIZE"
+        export QAREEN_PREPARED_DATASET_DIR="$DATASET_PATH"
+        export QAREEN_VIZ_OUTPUT_FILE="data/marqo_comparison.md"
+        export QAREEN_EMBEDDING_MODELS='["'$MODEL'"]'
+        export QAREEN_ALPHA_VALUES='['$(IFS=,; echo "${ALPHA_VALUES[*]}")']'
+        # Build indexes using settings; models and alpha values are read from Settings
+        if ! python3 scripts/build_index.py --dataset-name "$DATASET_PATH"; then
             echo "ERROR: Index building failed for model $MODEL"
             exit 1
         fi
@@ -141,27 +150,40 @@ if [[ "$STEP" == "all" ]] || [[ "$STEP" == "visualize" ]]; then
     echo "Step 3: Generating Comparison Visualization"
     echo "-------------------------------------------------------------------"
 
-    declare -a MODEL_FLAGS_ARRAY
-    MODEL_FLAGS_ARRAY=()
-    for MODEL in "${MODELS[@]}"; do
-        MODEL_FLAGS_ARRAY+=("--models" "$MODEL")
+    ALL_MODELS_JSON='['
+    for i in "${!MODELS[@]}"; do
+        if [ $i -gt 0 ]; then
+            ALL_MODELS_JSON+=","
+        fi
+        ALL_MODELS_JSON+='"'"${MODELS[$i]}"'"'
     done
+    ALL_MODELS_JSON+=']'
 
-    declare -a ALPHA_FLAGS_ARRAY
-    ALPHA_FLAGS_ARRAY=()
-    for ALPHA in "${ALPHA_VALUES[@]}"; do
-        ALPHA_FLAGS_ARRAY+=("--alpha-values" "$ALPHA")
+    ALL_ALPHAS_JSON='['
+    for i in "${!ALPHA_VALUES[@]}"; do
+        if [ $i -gt 0 ]; then
+            ALL_ALPHAS_JSON+=","
+        fi
+        ALL_ALPHAS_JSON+="${ALPHA_VALUES[$i]}"
     done
+    ALL_ALPHAS_JSON+=']'
 
-    if ! python scripts/visualize_marqo_comparison.py \
-        --dataset-path "$DATASET_PATH" \
-        "${MODEL_FLAGS_ARRAY[@]}" \
-        "${ALPHA_FLAGS_ARRAY[@]}" \
-        --environment "$ENVIRONMENT" \
-        --k 5 \
-        --output "data/marqo_comparison.md" \
-        --sample-index 25 \
-        --seed "$SEED" ; then
+    export QAREEN_ENVIRONMENT="$ENVIRONMENT"
+    export QAREEN_DATA_DIR="data"
+    export QAREEN_CHROMA_DB_DIR="chroma_db"
+    export QAREEN_DATASET_PATH=""
+    export QAREEN_DEV_SAMPLE_SIZE="$SAMPLE_SIZE"
+    export QAREEN_BATCH_SIZE="$BATCH_SIZE"
+    export QAREEN_REBUILD_COLLECTIONS="$REBUILD"
+    export QAREEN_K_NEIGHBORS="5"
+    export QAREEN_RANDOM_SEED="$SEED"
+    export QAREEN_DATASET_PREP_SAMPLE_SIZE="$SAMPLE_SIZE"
+    export QAREEN_PREPARED_DATASET_DIR="$DATASET_PATH"
+    export QAREEN_EMBEDDING_MODELS="$ALL_MODELS_JSON"
+    export QAREEN_ALPHA_VALUES="$ALL_ALPHAS_JSON"
+    export QAREEN_VIZ_OUTPUT_FILE="data/marqo_comparison.md"
+
+    if ! python scripts/visualize_marqo_comparison.py --dataset-path "$DATASET_PATH"; then
         echo "ERROR: Visualization generation failed"
         exit 1
     fi

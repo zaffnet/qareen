@@ -10,10 +10,10 @@ import numpy as np
 import pytest
 from PIL import Image
 
-from qareen.config.settings import Settings
+from conftest import create_test_settings
 from qareen.dataset.base import DatasetLoader
 from qareen.indexing.chroma_indexer import ChromaIndexer
-from qareen.indexing.models import EmbeddingModel
+from qareen.indexing.embedding_model import EmbeddingModel
 
 MISSING_MODALITY_ERROR = "At least one modality must be present"
 
@@ -237,7 +237,7 @@ def test_embedding_model_rejects_both_none() -> None:
 def test_indexer_handles_text_only_samples() -> None:
     """Indexer must successfully index text-only samples."""
     with tempfile.TemporaryDirectory() as tmpdir:
-        settings = Settings(environment="dev", chroma_db_dir=Path(tmpdir))
+        settings = create_test_settings(environment="dev", chroma_db_dir=Path(tmpdir))
         model = SingleModalityEmbeddingModel(embedding_dim=128)
         samples: list[dict[str, object]] = [
             {"text": "text only sample 1", "image": None},
@@ -263,7 +263,7 @@ def test_indexer_handles_text_only_samples() -> None:
 def test_indexer_handles_image_only_samples() -> None:
     """Indexer must successfully index image-only samples."""
     with tempfile.TemporaryDirectory() as tmpdir:
-        settings = Settings(environment="dev", chroma_db_dir=Path(tmpdir))
+        settings = create_test_settings(environment="dev", chroma_db_dir=Path(tmpdir))
         model = SingleModalityEmbeddingModel(embedding_dim=128)
         samples = [
             {"text": None, "image": Image.new("RGB", (224, 224), color="red")},
@@ -289,7 +289,7 @@ def test_indexer_handles_image_only_samples() -> None:
 def test_indexer_handles_mixed_modality_samples() -> None:
     """Indexer must handle dataset with mixed single/dual modality samples."""
     with tempfile.TemporaryDirectory() as tmpdir:
-        settings = Settings(environment="dev", chroma_db_dir=Path(tmpdir))
+        settings = create_test_settings(environment="dev", chroma_db_dir=Path(tmpdir))
         model = SingleModalityEmbeddingModel(embedding_dim=128)
         samples = [
             {"text": "both modalities", "image": Image.new("RGB", (224, 224), color="red")},

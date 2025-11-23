@@ -14,10 +14,11 @@ import numpy as np
 from datasets import Dataset
 from PIL import Image
 
-from qareen.config.settings import Settings
+from conftest import create_test_settings
 from qareen.dataset.base import DatasetLoader
 from qareen.indexing.chroma_indexer import ChromaIndexer
-from qareen.indexing.models import EmbeddingModel
+from qareen.indexing.embedding_model import EmbeddingModel
+from qareen.retrieving.chroma_retriever import ChromaRetriever
 
 
 class FixedEmbeddingModel(EmbeddingModel):
@@ -219,7 +220,7 @@ def test_regression_text_heavy_query() -> None:
     This test freezes expected behavior for a specific query configuration.
     """
     with tempfile.TemporaryDirectory() as tmpdir:
-        settings = Settings(environment="dev", chroma_db_dir=Path(tmpdir))
+        settings = create_test_settings(environment="dev", chroma_db_dir=Path(tmpdir))
         model = FixedEmbeddingModel(embedding_dim=64)
 
         samples = create_fixed_test_dataset()
@@ -231,13 +232,20 @@ def test_regression_text_heavy_query() -> None:
             settings=settings,
         )
 
-        vectorstores = indexer.index(alpha_values=[0.2], rebuild=True, batch_size=10)
-        vectorstore = vectorstores[0.2]
+        indexer.index(alpha_values=[0.2], rebuild=True, batch_size=10)
+
+        retriever = ChromaRetriever(model, settings)
+        vectorstore = retriever.get_vectorstore(
+            dataset_name="regression_test_dataset",
+            model_id="fixed_regression_model",
+            alpha=0.2,
+            environment="dev",
+        )
 
         query_image = Image.new("RGB", (50, 50), color=(255, 0, 0))
         query_text = "red square"
 
-        results = indexer.query_multimodal(
+        results = retriever.query_multimodal(
             vectorstore=vectorstore,
             image=query_image,
             text=query_text,
@@ -266,7 +274,7 @@ def test_regression_image_heavy_query() -> None:
     This test freezes expected behavior for image-focused retrieval.
     """
     with tempfile.TemporaryDirectory() as tmpdir:
-        settings = Settings(environment="dev", chroma_db_dir=Path(tmpdir))
+        settings = create_test_settings(environment="dev", chroma_db_dir=Path(tmpdir))
         model = FixedEmbeddingModel(embedding_dim=64)
 
         samples = create_fixed_test_dataset()
@@ -278,13 +286,20 @@ def test_regression_image_heavy_query() -> None:
             settings=settings,
         )
 
-        vectorstores = indexer.index(alpha_values=[0.8], rebuild=True, batch_size=10)
-        vectorstore = vectorstores[0.8]
+        indexer.index(alpha_values=[0.8], rebuild=True, batch_size=10)
+
+        retriever = ChromaRetriever(model, settings)
+        vectorstore = retriever.get_vectorstore(
+            dataset_name="regression_test_dataset",
+            model_id="fixed_regression_model",
+            alpha=0.8,
+            environment="dev",
+        )
 
         query_image = Image.new("RGB", (50, 50), color=(0, 0, 255))
         query_text = "unrelated query text"
 
-        results = indexer.query_multimodal(
+        results = retriever.query_multimodal(
             vectorstore=vectorstore,
             image=query_image,
             text=query_text,
@@ -314,7 +329,7 @@ def test_regression_balanced_query() -> None:
     This test verifies that alpha=0.5 properly balances both modalities.
     """
     with tempfile.TemporaryDirectory() as tmpdir:
-        settings = Settings(environment="dev", chroma_db_dir=Path(tmpdir))
+        settings = create_test_settings(environment="dev", chroma_db_dir=Path(tmpdir))
         model = FixedEmbeddingModel(embedding_dim=64)
 
         samples = create_fixed_test_dataset()
@@ -326,13 +341,20 @@ def test_regression_balanced_query() -> None:
             settings=settings,
         )
 
-        vectorstores = indexer.index(alpha_values=[0.5], rebuild=True, batch_size=10)
-        vectorstore = vectorstores[0.5]
+        indexer.index(alpha_values=[0.5], rebuild=True, batch_size=10)
+
+        retriever = ChromaRetriever(model, settings)
+        vectorstore = retriever.get_vectorstore(
+            dataset_name="regression_test_dataset",
+            model_id="fixed_regression_model",
+            alpha=0.5,
+            environment="dev",
+        )
 
         query_image = Image.new("RGB", (50, 50), color=(0, 255, 0))
         query_text = "green square"
 
-        results = indexer.query_multimodal(
+        results = retriever.query_multimodal(
             vectorstore=vectorstore,
             image=query_image,
             text=query_text,
@@ -360,7 +382,7 @@ def test_regression_score_ranges_across_alphas() -> None:
     Ensures that the same query with different alphas produces different score distributions.
     """
     with tempfile.TemporaryDirectory() as tmpdir:
-        settings = Settings(environment="dev", chroma_db_dir=Path(tmpdir))
+        settings = create_test_settings(environment="dev", chroma_db_dir=Path(tmpdir))
         model = FixedEmbeddingModel(embedding_dim=64)
 
         samples = create_fixed_test_dataset()
@@ -375,13 +397,15 @@ def test_regression_score_ranges_across_alphas() -> None:
         alpha_values = [0.0, 0.5, 1.0]
         vectorstores = indexer.index(alpha_values=alpha_values, rebuild=True, batch_size=10)
 
+        retriever = ChromaRetriever(model, settings)
+
         query_image = Image.new("RGB", (50, 50), color=(255, 0, 0))
         query_text = "red square"
 
         scores_by_alpha = {}
         for alpha in alpha_values:
             vectorstore = vectorstores[alpha]
-            results = indexer.query_multimodal(
+            results = retriever.query_multimodal(
                 vectorstore=vectorstore,
                 image=query_image,
                 text=query_text,
@@ -418,7 +442,7 @@ def test_regression_top_k_consistency() -> None:
     Verifies that retrieving top-k results is stable across multiple calls.
     """
     with tempfile.TemporaryDirectory() as tmpdir:
-        settings = Settings(environment="dev", chroma_db_dir=Path(tmpdir))
+        settings = create_test_settings(environment="dev", chroma_db_dir=Path(tmpdir))
         model = FixedEmbeddingModel(embedding_dim=64)
 
         samples = create_fixed_test_dataset()
@@ -430,13 +454,20 @@ def test_regression_top_k_consistency() -> None:
             settings=settings,
         )
 
-        vectorstores = indexer.index(alpha_values=[0.5], rebuild=True, batch_size=10)
-        vectorstore = vectorstores[0.5]
+        indexer.index(alpha_values=[0.5], rebuild=True, batch_size=10)
+
+        retriever = ChromaRetriever(model, settings)
+        vectorstore = retriever.get_vectorstore(
+            dataset_name="regression_test_dataset",
+            model_id="fixed_regression_model",
+            alpha=0.5,
+            environment="dev",
+        )
 
         query_image = Image.new("RGB", (50, 50), color=(0, 255, 0))
         query_text = "green square"
 
-        results_1 = indexer.query_multimodal(
+        results_1 = retriever.query_multimodal(
             vectorstore=vectorstore,
             image=query_image,
             text=query_text,
@@ -444,7 +475,7 @@ def test_regression_top_k_consistency() -> None:
             k=3,
         )
 
-        results_2 = indexer.query_multimodal(
+        results_2 = retriever.query_multimodal(
             vectorstore=vectorstore,
             image=query_image,
             text=query_text,
@@ -462,7 +493,7 @@ def test_regression_top_k_consistency() -> None:
 def test_regression_metadata_preservation() -> None:
     """Regression test that metadata is preserved in query results."""
     with tempfile.TemporaryDirectory() as tmpdir:
-        settings = Settings(environment="dev", chroma_db_dir=Path(tmpdir))
+        settings = create_test_settings(environment="dev", chroma_db_dir=Path(tmpdir))
         model = FixedEmbeddingModel(embedding_dim=64)
 
         samples = create_fixed_test_dataset()
@@ -474,13 +505,20 @@ def test_regression_metadata_preservation() -> None:
             settings=settings,
         )
 
-        vectorstores = indexer.index(alpha_values=[0.5], rebuild=True, batch_size=10)
-        vectorstore = vectorstores[0.5]
+        indexer.index(alpha_values=[0.5], rebuild=True, batch_size=10)
+
+        retriever = ChromaRetriever(model, settings)
+        vectorstore = retriever.get_vectorstore(
+            dataset_name="regression_test_dataset",
+            model_id="fixed_regression_model",
+            alpha=0.5,
+            environment="dev",
+        )
 
         query_image = Image.new("RGB", (50, 50), color=(255, 0, 0))
         query_text = "red"
 
-        results = indexer.query_multimodal(
+        results = retriever.query_multimodal(
             vectorstore=vectorstore,
             image=query_image,
             text=query_text,

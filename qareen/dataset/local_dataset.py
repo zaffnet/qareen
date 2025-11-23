@@ -24,7 +24,6 @@ class LocalDatasetLoader(DatasetLoader):
     Attributes:
         dataset_path: Path to saved dataset directory
         dataset: Loaded dataset instance
-
     """
 
     def __init__(self, dataset_path: str | Path) -> None:
@@ -35,7 +34,6 @@ class LocalDatasetLoader(DatasetLoader):
 
         Raises:
             ValueError: If path does not exist or is not a directory
-
         """
         if not dataset_path or str(dataset_path).strip() == "":
             msg = "Dataset path is empty"
@@ -51,41 +49,21 @@ class LocalDatasetLoader(DatasetLoader):
         self._dataset: HFDataset | DatasetDict | None = None
 
     def load(self) -> HFDataset | DatasetDict:
-        """Load dataset from disk.
-
-        Returns:
-            Loaded HuggingFace dataset
-
-        """
+        """Load dataset from disk."""
         if self._dataset is None:
             self._dataset = load_from_disk(str(self.dataset_path))
         return self._dataset
 
     def validate_schema(self) -> None:
-        """Validate dataset has required text and image fields.
-
-        Raises:
-            ValueError: If required fields are missing
-
-        """
+        """Validate dataset has required text and image fields."""
         dataset = self.load()
         validate_dataset_schema(dataset, MISSING_FIELDS_ERROR)
 
     def get_dataset_name(self) -> str:
-        """Return dataset identifier.
-
-        Returns:
-            Dataset name (directory name)
-
-        """
+        """Return dataset identifier."""
         return self.dataset_path.name
 
     def get_dataset_info(self) -> dict[str, Any]:
-        """Return dataset metadata.
-
-        Returns:
-            Dictionary with dataset size, features, and splits
-
-        """
+        """Return dataset metadata."""
         dataset = self.load()
         return extract_dataset_info(dataset, self.get_dataset_name())

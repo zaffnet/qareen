@@ -24,7 +24,7 @@ dataset.save_to_disk("data/my_products")
 - `text`: string or `None`
 - `image`: PIL Image, path string, or `None`
 
-At least one modality (text or image) must be non-`None`. See [DATASET_FORMAT.md](DATASET_FORMAT.md) for full schema.
+At least one modality must be present. See [DATASET_FORMAT.md](DATASET_FORMAT.md).
 
 ## Indexing Data
 
@@ -86,7 +86,7 @@ indexer = ChromaIndexer(
 )
 
 # Load the vectorstore for a specific alpha
-vectorstore = indexer.create_vectorstore(
+vectorstore = indexer.get_vectorstore(
     dataset_name="my_products",
     model_id="google/siglip-base-patch16-224",
     alpha=0.5,
@@ -144,24 +144,11 @@ results = indexer.query_multimodal(
 )
 ```
 
-## Quick Start Pipeline
+## Quick Start
 
-Complete workflow from data to retrieval:
-
-```bash
-# 1. Prepare dataset (Python script)
-python prepare_data.py  # Creates data/my_products/
-
-# 2. Index dataset
-uv run python scripts/build_index.py \
-  --dataset-name data/my_products \
-  --models google/siglip-base-patch16-224 \
-  --alpha-values 0.0 0.5 1.0 \
-  --environment dev
-
-# 3. Query (Python script)
-python query_data.py  # Uses ChromaIndexer.query_multimodal()
-```
+1. **Prepare**: Create dataset with `text`/`image` columns and save to disk.
+2. **Index**: Run `uv run python scripts/build_index.py --dataset-name <path> ...`
+3. **Query**: Use `ChromaIndexer.query_multimodal()` in your application.
 
 ## Configuration
 
