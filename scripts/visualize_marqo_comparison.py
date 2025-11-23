@@ -134,6 +134,9 @@ def main(
         dataset = load_from_disk(dataset_path)
 
         if isinstance(dataset, DatasetDict):
+            if not dataset:
+                logger.error("DatasetDict is empty. Cannot proceed with visualization.")
+                raise typer.Exit(code=1)
             if "train" in dataset:
                 dataset = dataset["train"]
                 logger.info("Selected 'train' split from DatasetDict")
