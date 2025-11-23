@@ -7,7 +7,6 @@ from unittest.mock import Mock, patch
 import numpy as np
 import pytest
 
-from qareen.indexing.exceptions import InvalidAlphaError
 from qareen.indexing.siglip_model import SIGLIPEmbeddingModel
 
 
@@ -87,10 +86,10 @@ def test_embed_image_invalid_path():
 def test_embed_multimodal_invalid_alpha():
     model = SIGLIPEmbeddingModel()
 
-    with pytest.raises(InvalidAlphaError):
+    with pytest.raises(ValueError, match="Alpha must be in range"):
         model.embed_multimodal(image=None, text="test", alpha=1.5)
 
-    with pytest.raises(InvalidAlphaError):
+    with pytest.raises(ValueError, match="Alpha must be in range"):
         model.embed_multimodal(image=None, text="test", alpha=-0.1)
 
 
@@ -163,12 +162,12 @@ def test_get_model_id_special_chars():
 @patch("qareen.indexing.siglip_model.AutoProcessor")
 def test_embedding_dim_from_config(mock_processor_cls, mock_model_cls):
     mock_model = Mock()
-    mock_model.config.projection_dim = 512
+    mock_model.config.projection_dim = 63
     mock_model_cls.from_pretrained.return_value = mock_model
     mock_processor_cls.from_pretrained.return_value = Mock()
 
     model = SIGLIPEmbeddingModel()
-    assert model.embedding_dim == 512
+    assert model.embedding_dim == 63
 
 
 @patch("qareen.indexing.siglip_model.AutoModel")

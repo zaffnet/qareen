@@ -68,14 +68,13 @@ See [docs/DISTANCE_METRIC.md](docs/DISTANCE_METRIC.md) for details on the cosine
 
 ## References
 
-Run the end-to-end example (requires SQID dataset – see docs/QUICKSTART.md for data preparation):
+Run the end-to-end example (requires SQID dataset):
 
 ```bash
-./scripts/build_index.sh <data_dir>
-./scripts/run_gradio.sh
+uv run python scripts/build_index.py --dataset-name <data_dir>
 ```
 
-See [docs/QUICKSTART.md](docs/QUICKSTART.md) for detailed steps.
+See [docs/LOCAL_DATA_GUIDE.md](docs/LOCAL_DATA_GUIDE.md) for detailed steps.
 
 ## References
 

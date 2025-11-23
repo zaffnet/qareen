@@ -8,26 +8,29 @@ from typing import Annotated
 
 import typer
 from datasets import load_dataset
-from rich.logging import RichHandler
+
+from qareen.models import Settings
+
+logging.basicConfig(level=logging.INFO, format="%(message)s")
+logger = logging.getLogger(__name__)
 
 app = typer.Typer()
-
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(message)s",
-    handlers=[RichHandler(rich_tracebacks=True, show_path=False)],
-)
-logger = logging.getLogger(__name__)
 
 
 @app.command()
 def main(
-    output_dir: Annotated[str, typer.Option(help="Output directory for sampled dataset")],
-    sample_size: Annotated[int, typer.Option(help="Number of samples to select")] = 3000,
-    seed: Annotated[int, typer.Option(help="Random seed for sampling")] = 42,
+    config_file: Annotated[
+        Path | None,
+        typer.Option(help="Path to configuration file (.env format)"),
+    ] = None,
 ) -> None:
-    """Prepare Marqo fashion dataset: load, rename columns, sample, and save."""
+    """Prepare Marqo fashion dataset: load, rename columns, sample, and save.
+
+    Uses configuration from Settings for sample size, seed, and output directory.
+    """
     try:
+        settings = Settings(_env_file=str(config_file)) if config_file else Settings()
+
         logger.info("Loading Marqo/marqo-gs-woman-fashion dataset from HuggingFace...")
         dataset = load_dataset("Marqo/marqo-gs-woman-fashion", split="zero_shot")
 
@@ -35,24 +38,22 @@ def main(
         logger.info("Original columns: %s", dataset.column_names)
 
         if "query" not in dataset.column_names:
-            msg = "Dataset missing 'query' column"
-            raise ValueError(msg)
-
+            raise ValueError("Dataset missing 'query' column")
         if "image" not in dataset.column_names:
-            msg = "Dataset missing 'image' column"
-            raise ValueError(msg)
+            raise ValueError("Dataset missing 'image' column")
 
         logger.info("Renaming 'query' column to 'text'...")
         dataset = dataset.rename_column("query", "text")
 
-        logger.info("Shuffling dataset with seed=%s...", seed)
-        dataset = dataset.shuffle(seed=seed)
+        logger.info("Shuffling dataset with seed=%s...", settings.random_seed)
+        dataset = dataset.shuffle(seed=settings.random_seed)
 
+        sample_size = settings.marqo_sample_size
         logger.info("Selecting %s samples...", sample_size)
+
         if len(dataset) < sample_size:
             logger.warning(
-                "Dataset has only %s samples, which is less than requested %s. "
-                "Using all available samples.",
+                "Dataset has only %s samples (less than requested %s). Using all samples.",
                 len(dataset),
                 sample_size,
             )
@@ -63,25 +64,20 @@ def main(
         logger.info("Final dataset size: %s", len(dataset))
         logger.info("Final columns: %s", dataset.column_names)
 
+        save_path = str(settings.marqo_output_dir)
+        logger.info("Saving dataset to %s...", save_path)
+
+        dataset.save_to_disk(save_path)
+
+        logger.info("✅ Dataset successfully prepared and saved")
+        logger.info("  - Path: %s", save_path)
+        logger.info("  - Size: %s samples", len(dataset))
+        logger.info("  - Columns: %s", dataset.column_names)
+        logger.info("  - Seed: %s", settings.random_seed)
+
     except Exception:
         logger.exception("Error preparing Marqo dataset")
         raise typer.Exit(code=1) from None
-    else:
-        output_path = Path(output_dir)
-        output_path.mkdir(parents=True, exist_ok=True)
-        save_path = str(output_path)
-
-        logger.info("Saving dataset to %s...", save_path)
-        try:
-            dataset.save_to_disk(save_path)
-        except Exception:
-            logger.exception("Failed to save dataset to disk: %s", save_path)
-            raise typer.Exit(code=1) from None
-
-        logger.info("✓ Dataset successfully prepared and saved to %s", save_path)
-        logger.info("  - Size: %s samples", len(dataset))
-        logger.info("  - Columns: %s", dataset.column_names)
-        logger.info("  - Seed: %s", seed)
 
 
 if __name__ == "__main__":

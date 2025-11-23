@@ -9,10 +9,11 @@ from unittest.mock import MagicMock
 import numpy as np
 from PIL import Image
 
-from qareen.config.settings import Settings
 from qareen.dataset.base import DatasetLoader
 from qareen.indexing.chroma_indexer import ChromaIndexer
-from qareen.indexing.models import EmbeddingModel
+from qareen.indexing.embedding_model import EmbeddingModel
+from qareen.models import Settings
+from qareen.retrieving.chroma_retriever import ChromaRetriever
 
 
 class MissingModalityError(ValueError):
@@ -222,7 +223,13 @@ def test_similarity_search_works_with_embedding_wrapper() -> None:
         vectorstores = indexer.index(alpha_values=[0.5], rebuild=True, batch_size=10)
 
         assert len(vectorstores) == 1
-        vectorstore = vectorstores[0.5]
+        retriever = ChromaRetriever(embedding_model, settings)
+        vectorstore = retriever.get_vectorstore(
+            dataset_name="test_dataset",
+            model_id="mock_model",
+            alpha=0.5,
+            environment="dev",
+        )
 
         results = vectorstore.similarity_search("apple", k=1)
 
@@ -230,8 +237,8 @@ def test_similarity_search_works_with_embedding_wrapper() -> None:
         assert results[0].page_content in ["text_0", "text_1", "text_2"]
 
 
-def test_create_vectorstore_similarity_search_works() -> None:
-    """Test that create_vectorstore returns a usable vectorstore for similarity_search."""
+def test_get_vectorstore_similarity_search_works() -> None:
+    """Test that get_vectorstore returns a usable vectorstore for similarity_search."""
     with tempfile.TemporaryDirectory() as tmpdir:
         settings = Settings(environment="dev", chroma_db_dir=Path(tmpdir))
         embedding_model = MockEmbeddingModel(embedding_dim=128)
@@ -245,7 +252,8 @@ def test_create_vectorstore_similarity_search_works() -> None:
 
         indexer.index(alpha_values=[0.5], rebuild=True, batch_size=10)
 
-        vectorstore = indexer.create_vectorstore(
+        retriever = ChromaRetriever(embedding_model, settings)
+        vectorstore = retriever.get_vectorstore(
             dataset_name="test_dataset",
             model_id="mock_model",
             alpha=0.5,
@@ -351,7 +359,13 @@ def test_no_limit_in_non_dev_when_sample_size_none() -> None:
             settings=settings,
         )
 
-        indexer.index(alpha_values=[0.5], rebuild=True, batch_size=10, sample_size=None)
+        indexer.index(
+            alpha_values=[0.5],
+            rebuild=True,
+            batch_size=10,
+            sample_size=None,
+            environment="prod",
+        )
 
         assert len(dataset_loader.select_calls) == 0
 
@@ -359,8 +373,6 @@ def test_no_limit_in_non_dev_when_sample_size_none() -> None:
 def test_query_multimodal_alpha_mismatch() -> None:
     """Test that query_multimodal raises error when alpha doesn't match collection alpha."""
     import pytest
-
-    from qareen.indexing.exceptions import AlphaMismatchError
 
     with tempfile.TemporaryDirectory() as tmp_dir:
         settings = Settings(
@@ -378,7 +390,8 @@ def test_query_multimodal_alpha_mismatch() -> None:
 
         indexer.index(alpha_values=[0.5], rebuild=True, batch_size=10, sample_size=None)
 
-        vectorstore = indexer.create_vectorstore(
+        retriever = ChromaRetriever(embedding_model, settings)
+        vectorstore = retriever.get_vectorstore(
             dataset_name=dataset_loader.get_dataset_name(),
             model_id=embedding_model.get_model_id(),
             alpha=0.5,
@@ -387,8 +400,8 @@ def test_query_multimodal_alpha_mismatch() -> None:
 
         test_image = Image.new("RGB", (100, 100), color="red")
 
-        with pytest.raises(AlphaMismatchError) as exc_info:
-            indexer.query_multimodal(
+        with pytest.raises(ValueError) as exc_info:
+            retriever.query_multimodal(
                 vectorstore=vectorstore,
                 image=test_image,
                 text="test query",
@@ -396,8 +409,6 @@ def test_query_multimodal_alpha_mismatch() -> None:
                 k=5,
             )
 
-        assert exc_info.value.query_alpha == 0.3
-        assert exc_info.value.collection_alpha == 0.5
         assert "0.300" in str(exc_info.value)
         assert "0.500" in str(exc_info.value)
 
@@ -420,7 +431,8 @@ def test_query_multimodal_alpha_match() -> None:
 
         indexer.index(alpha_values=[0.5], rebuild=True, batch_size=10, sample_size=None)
 
-        vectorstore = indexer.create_vectorstore(
+        retriever = ChromaRetriever(embedding_model, settings)
+        vectorstore = retriever.get_vectorstore(
             dataset_name=dataset_loader.get_dataset_name(),
             model_id=embedding_model.get_model_id(),
             alpha=0.5,
@@ -429,7 +441,7 @@ def test_query_multimodal_alpha_match() -> None:
 
         test_image = Image.new("RGB", (100, 100), color="red")
 
-        results = indexer.query_multimodal(
+        results = retriever.query_multimodal(
             vectorstore=vectorstore,
             image=test_image,
             text="test query",

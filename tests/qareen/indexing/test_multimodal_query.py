@@ -11,10 +11,11 @@ import pytest
 from datasets import Dataset
 from PIL import Image
 
-from qareen.config.settings import Settings
 from qareen.dataset.base import DatasetLoader
 from qareen.indexing.chroma_indexer import ChromaIndexer
-from qareen.indexing.models import EmbeddingModel
+from qareen.indexing.embedding_model import EmbeddingModel
+from qareen.models import Settings
+from qareen.retrieving.chroma_retriever import ChromaRetriever
 
 
 class MockEmbeddingModel(EmbeddingModel):
@@ -205,10 +206,17 @@ def test_query_multimodal_with_text_only() -> None:
             settings=settings,
         )
 
-        vectorstores = indexer.index(alpha_values=[0.5], rebuild=True, batch_size=10)
-        vectorstore = vectorstores[0.5]
+        indexer.index(alpha_values=[0.5], rebuild=True, batch_size=10)
 
-        results = indexer.query_multimodal(
+        retriever = ChromaRetriever(model, settings)
+        vectorstore = retriever.get_vectorstore(
+            dataset_name="test_dataset",
+            model_id="mock_model",
+            alpha=0.5,
+            environment="dev",
+        )
+
+        results = retriever.query_multimodal(
             vectorstore=vectorstore,
             image=None,
             text="apple",
@@ -244,11 +252,18 @@ def test_query_multimodal_with_image_only() -> None:
             settings=settings,
         )
 
-        vectorstores = indexer.index(alpha_values=[1.0], rebuild=True, batch_size=10)
-        vectorstore = vectorstores[1.0]
+        indexer.index(alpha_values=[1.0], rebuild=True, batch_size=10)
+
+        retriever = ChromaRetriever(model, settings)
+        vectorstore = retriever.get_vectorstore(
+            dataset_name="test_dataset",
+            model_id="mock_model",
+            alpha=1.0,
+            environment="dev",
+        )
 
         query_image = Image.new("RGB", (100, 100), color="red")
-        results = indexer.query_multimodal(
+        results = retriever.query_multimodal(
             vectorstore=vectorstore,
             image=query_image,
             text=None,
@@ -281,11 +296,18 @@ def test_query_multimodal_with_both_modalities() -> None:
             settings=settings,
         )
 
-        vectorstores = indexer.index(alpha_values=[0.5], rebuild=True, batch_size=10)
-        vectorstore = vectorstores[0.5]
+        indexer.index(alpha_values=[0.5], rebuild=True, batch_size=10)
+
+        retriever = ChromaRetriever(model, settings)
+        vectorstore = retriever.get_vectorstore(
+            dataset_name="test_dataset",
+            model_id="mock_model",
+            alpha=0.5,
+            environment="dev",
+        )
 
         query_image = Image.new("RGB", (100, 100), color="red")
-        results = indexer.query_multimodal(
+        results = retriever.query_multimodal(
             vectorstore=vectorstore,
             image=query_image,
             text="red apple",
@@ -326,15 +348,21 @@ def test_query_multimodal_different_alphas_different_results() -> None:
         )
 
         alpha_values = [0.0, 0.5, 1.0]
-        vectorstores = indexer.index(alpha_values=alpha_values, rebuild=True, batch_size=10)
+        indexer.index(alpha_values=alpha_values, rebuild=True, batch_size=10)
 
+        retriever = ChromaRetriever(model, settings)
         query_image = Image.new("RGB", (100, 100), color=(255, 0, 0))
         query_text = "text_alpha"
 
         all_results = {}
         for alpha in alpha_values:
-            vectorstore = vectorstores[alpha]
-            results = indexer.query_multimodal(
+            vectorstore = retriever.get_vectorstore(
+                dataset_name="test_dataset",
+                model_id="mock_model",
+                alpha=alpha,
+                environment="dev",
+            )
+            results = retriever.query_multimodal(
                 vectorstore=vectorstore,
                 image=query_image,
                 text=query_text,
@@ -385,11 +413,18 @@ def test_query_multimodal_validates_alpha() -> None:
             settings=settings,
         )
 
-        vectorstores = indexer.index(alpha_values=[0.5], rebuild=True, batch_size=10)
-        vectorstore = vectorstores[0.5]
+        indexer.index(alpha_values=[0.5], rebuild=True, batch_size=10)
+
+        retriever = ChromaRetriever(model, settings)
+        vectorstore = retriever.get_vectorstore(
+            dataset_name="test_dataset",
+            model_id="mock_model",
+            alpha=0.5,
+            environment="dev",
+        )
 
         with pytest.raises(ValueError) as exc:
-            indexer.query_multimodal(
+            retriever.query_multimodal(
                 vectorstore=vectorstore,
                 image=None,
                 text="query",
@@ -399,7 +434,7 @@ def test_query_multimodal_validates_alpha() -> None:
         assert "alpha must be in range" in str(exc.value)
 
         with pytest.raises(ValueError) as exc:
-            indexer.query_multimodal(
+            retriever.query_multimodal(
                 vectorstore=vectorstore,
                 image=None,
                 text="query",
@@ -428,10 +463,17 @@ def test_query_multimodal_with_score_threshold() -> None:
             settings=settings,
         )
 
-        vectorstores = indexer.index(alpha_values=[0.5], rebuild=True, batch_size=10)
-        vectorstore = vectorstores[0.5]
+        indexer.index(alpha_values=[0.5], rebuild=True, batch_size=10)
 
-        results_no_threshold = indexer.query_multimodal(
+        retriever = ChromaRetriever(model, settings)
+        vectorstore = retriever.get_vectorstore(
+            dataset_name="test_dataset",
+            model_id="mock_model",
+            alpha=0.5,
+            environment="dev",
+        )
+
+        results_no_threshold = retriever.query_multimodal(
             vectorstore=vectorstore,
             image=None,
             text="apple",
@@ -439,7 +481,7 @@ def test_query_multimodal_with_score_threshold() -> None:
             k=3,
         )
 
-        results_with_threshold = indexer.query_multimodal(
+        results_with_threshold = retriever.query_multimodal(
             vectorstore=vectorstore,
             image=None,
             text="apple",
@@ -468,12 +510,19 @@ def test_query_multimodal_calls_embed_multimodal() -> None:
             settings=settings,
         )
 
-        vectorstores = indexer.index(alpha_values=[0.5], rebuild=True, batch_size=10)
-        vectorstore = vectorstores[0.5]
+        indexer.index(alpha_values=[0.5], rebuild=True, batch_size=10)
+
+        retriever = ChromaRetriever(model, settings)
+        vectorstore = retriever.get_vectorstore(
+            dataset_name="test_dataset",
+            model_id="mock_model",
+            alpha=0.5,
+            environment="dev",
+        )
 
         initial_call_count = len(model.embed_multimodal_calls)
 
-        indexer.query_multimodal(
+        retriever.query_multimodal(
             vectorstore=vectorstore,
             image=None,
             text="query text",

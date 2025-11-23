@@ -6,7 +6,7 @@ from pathlib import Path
 
 from pydantic_settings import BaseSettings
 
-from qareen.config.settings import Settings
+from qareen.models import Settings
 
 
 def test_settings_defaults_match_plan() -> None:

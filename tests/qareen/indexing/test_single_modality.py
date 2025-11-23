@@ -10,10 +10,10 @@ import numpy as np
 import pytest
 from PIL import Image
 
-from qareen.config.settings import Settings
 from qareen.dataset.base import DatasetLoader
 from qareen.indexing.chroma_indexer import ChromaIndexer
-from qareen.indexing.models import EmbeddingModel
+from qareen.indexing.embedding_model import EmbeddingModel
+from qareen.models import Settings
 
 MISSING_MODALITY_ERROR = "At least one modality must be present"
 

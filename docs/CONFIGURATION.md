@@ -39,32 +39,7 @@ chroma_client = chromadb.PersistentClient(
 )
 ```
 
-## Logging Configuration
 
-### Basic Setup
-
-By default, `qareen` uses rich-formatted logging. To configure logging behavior:
-
-```python
-from qareen.indexing.chroma_indexer import setup_logging
-
-# Rich formatting (default)
-setup_logging(rich=True, level=logging.INFO)
-
-# Plain text output
-setup_logging(rich=False, level=logging.INFO)
-
-# Debug level
-setup_logging(rich=True, level=logging.DEBUG)
-```
-
-### Disabling Rich Output
-
-For CI/CD pipelines or environments where rich formatting causes issues, use plain logging:
-
-```python
-setup_logging(rich=False)
-```
 
 ## Environment Variables
 

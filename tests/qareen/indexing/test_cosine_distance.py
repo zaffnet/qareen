@@ -10,10 +10,11 @@ import numpy as np
 from datasets import Dataset
 from PIL import Image
 
-from qareen.config.settings import Settings
 from qareen.dataset.base import DatasetLoader
 from qareen.indexing.chroma_indexer import ChromaIndexer
-from qareen.indexing.models import EmbeddingModel
+from qareen.indexing.embedding_model import EmbeddingModel
+from qareen.models import Settings
+from qareen.retrieving.chroma_retriever import ChromaRetriever
 
 
 class SimpleDatasetLoader(DatasetLoader):
@@ -106,8 +107,15 @@ def test_collection_uses_cosine_distance() -> None:
             settings=settings,
         )
 
-        vectorstores = indexer.index(alpha_values=[0.5], rebuild=True, batch_size=10)
-        vectorstore = vectorstores[0.5]
+        indexer.index(alpha_values=[0.5], rebuild=True, batch_size=10)
+
+        retriever = ChromaRetriever(model, settings)
+        vectorstore = retriever.get_vectorstore(
+            dataset_name="test_dataset",
+            model_id="test_model",
+            alpha=0.5,
+            environment="dev",
+        )
 
         metadata = vectorstore._collection.metadata
         assert metadata.get("hnsw:space") == "cosine", "Collection must use cosine distance"
@@ -135,11 +143,13 @@ def test_score_range_with_cosine() -> None:
 
         vectorstores = indexer.index(alpha_values=[0.0, 0.5, 1.0], rebuild=True, batch_size=10)
 
+        retriever = ChromaRetriever(model, settings)
+
         query_image = Image.new("RGB", (10, 10), color=(255, 0, 0))
         query_text = "red"
 
         for alpha in [0.0, 0.5, 1.0]:
-            results = indexer.query_multimodal(
+            results = retriever.query_multimodal(
                 vectorstore=vectorstores[alpha],
                 image=query_image,
                 text=query_text,
@@ -175,8 +185,10 @@ def test_alpha_one_returns_nonzero_scores() -> None:
 
         vectorstores = indexer.index(alpha_values=[1.0], rebuild=True, batch_size=10)
 
+        retriever = ChromaRetriever(model, settings)
+
         query_image = Image.new("RGB", (20, 20), color=(100, 0, 0))
-        results = indexer.query_multimodal(
+        results = retriever.query_multimodal(
             vectorstore=vectorstores[1.0],
             image=query_image,
             text="query text ignored at alpha=1.0",
