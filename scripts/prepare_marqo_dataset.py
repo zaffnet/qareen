@@ -48,7 +48,7 @@ def main(
         logger.info("Shuffling dataset with seed=%s...", settings.random_seed)
         dataset = dataset.shuffle(seed=settings.random_seed)
 
-        sample_size = settings.marqo_sample_size
+        sample_size = settings.dataset_prep_sample_size
         logger.info("Selecting %s samples...", sample_size)
 
         if len(dataset) < sample_size:
@@ -64,7 +64,7 @@ def main(
         logger.info("Final dataset size: %s", len(dataset))
         logger.info("Final columns: %s", dataset.column_names)
 
-        save_path = str(settings.marqo_output_dir)
+        save_path = str(settings.prepared_dataset_dir)
         logger.info("Saving dataset to %s...", save_path)
 
         dataset.save_to_disk(save_path)

@@ -107,39 +107,32 @@ class Settings(BaseSettings):
 
     # Core configuration
     embedding_models: list[str] = Field(
-        default=["google/siglip-base-patch16-224"],
         description="Embedding model IDs",
     )
 
     alpha_values: list[float] = Field(
-        default=[0.5],
         description="Alpha values for multimodal embedding combination (0.0-1.0)",
     )
 
     environment: Literal["dev", "staging", "prod"] = Field(
-        default="dev",
         description="Environment (dev/staging/prod)",
     )
 
     # Directory configuration
     data_dir: Path = Field(
-        default=Path("data"),
         description="Directory for dataset storage",
     )
 
     chroma_db_dir: Path = Field(
-        default=Path("chroma_db"),
         description="Directory for ChromaDB storage",
     )
 
     # Dataset configuration
     dataset_path: str | None = Field(
-        default=None,
         description="Path to dataset (local directory or HuggingFace Hub name)",
     )
 
     dev_sample_size: int = Field(
-        default=300,
         description="Number of samples to use in development environment",
         gt=0,
     )
@@ -152,44 +145,37 @@ class Settings(BaseSettings):
 
     # Indexing configuration
     batch_size: int = Field(
-        default=3000,
         description="Batch size for indexing operations",
         gt=0,
     )
 
     rebuild_collections: bool = Field(
-        default=False,
         description="Delete existing collections before indexing",
     )
 
     # Retrieval configuration
     k_neighbors: int = Field(
-        default=5,
         description="Number of similar items to retrieve in queries",
         gt=0,
     )
 
     # Reproducibility
     random_seed: int = Field(
-        default=42,
         description="Random seed for reproducible sampling",
     )
 
-    # Marqo dataset preparation
-    marqo_sample_size: int = Field(
-        default=3000,
-        description="Sample size for Marqo dataset preparation",
+    # Dataset preparation
+    dataset_prep_sample_size: int = Field(
+        description="Sample size for dataset preparation",
         gt=0,
     )
 
-    marqo_output_dir: Path = Field(
-        default=Path("data/marqo_prepared"),
-        description="Output directory for prepared Marqo dataset",
+    prepared_dataset_dir: Path = Field(
+        description="Output directory for prepared datasets",
     )
 
     # Visualization configuration
     viz_output_file: Path = Field(
-        default=Path("data/marqo_comparison.md"),
         description="Output file path for visualization markdown",
     )
 
@@ -238,7 +224,7 @@ class Settings(BaseSettings):
 
         self.data_dir.mkdir(parents=True, exist_ok=True)
         self.chroma_db_dir.mkdir(parents=True, exist_ok=True)
-        self.marqo_output_dir.mkdir(parents=True, exist_ok=True)
+        self.prepared_dataset_dir.mkdir(parents=True, exist_ok=True)
 
         # Ensure viz output directory exists
         self.viz_output_file.parent.mkdir(parents=True, exist_ok=True)

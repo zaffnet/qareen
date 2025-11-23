@@ -10,10 +10,10 @@ import numpy as np
 from datasets import Dataset
 from PIL import Image
 
+from conftest import create_test_settings
 from qareen.dataset.base import DatasetLoader
 from qareen.indexing.chroma_indexer import ChromaIndexer
 from qareen.indexing.embedding_model import EmbeddingModel
-from qareen.models import Settings
 from qareen.retrieving.chroma_retriever import ChromaRetriever
 
 
@@ -95,7 +95,7 @@ class TestEmbeddingModel(EmbeddingModel):
 def test_collection_uses_cosine_distance() -> None:
     """Verify ChromaDB collections are created with cosine distance."""
     with tempfile.TemporaryDirectory() as tmpdir:
-        settings = Settings(environment="dev", chroma_db_dir=Path(tmpdir))
+        settings = create_test_settings(environment="dev", chroma_db_dir=Path(tmpdir))
         model = TestEmbeddingModel(embedding_dim=128)
         samples = [{"text": "sample", "image": Image.new("RGB", (10, 10))}]
         loader = SimpleDatasetLoader(samples)
@@ -124,7 +124,7 @@ def test_collection_uses_cosine_distance() -> None:
 def test_score_range_with_cosine() -> None:
     """Verify scores are in [0, 1] range with cosine distance."""
     with tempfile.TemporaryDirectory() as tmpdir:
-        settings = Settings(environment="dev", chroma_db_dir=Path(tmpdir))
+        settings = create_test_settings(environment="dev", chroma_db_dir=Path(tmpdir))
         model = TestEmbeddingModel(embedding_dim=128)
 
         samples = [
@@ -166,7 +166,7 @@ def test_score_range_with_cosine() -> None:
 def test_alpha_one_returns_nonzero_scores() -> None:
     """Verify alpha=1.0 returns non-zero scores with cosine distance."""
     with tempfile.TemporaryDirectory() as tmpdir:
-        settings = Settings(environment="dev", chroma_db_dir=Path(tmpdir))
+        settings = create_test_settings(environment="dev", chroma_db_dir=Path(tmpdir))
         model = TestEmbeddingModel(embedding_dim=256)
 
         samples = [

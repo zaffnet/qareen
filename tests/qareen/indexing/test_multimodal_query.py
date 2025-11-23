@@ -11,10 +11,10 @@ import pytest
 from datasets import Dataset
 from PIL import Image
 
+from conftest import create_test_settings
 from qareen.dataset.base import DatasetLoader
 from qareen.indexing.chroma_indexer import ChromaIndexer
 from qareen.indexing.embedding_model import EmbeddingModel
-from qareen.models import Settings
 from qareen.retrieving.chroma_retriever import ChromaRetriever
 
 
@@ -190,7 +190,7 @@ class SimpleDatasetLoader(DatasetLoader):
 def test_query_multimodal_with_text_only() -> None:
     """Test multimodal query with text-only data."""
     with tempfile.TemporaryDirectory() as tmpdir:
-        settings = Settings(environment="dev", chroma_db_dir=Path(tmpdir))
+        settings = create_test_settings(environment="dev", chroma_db_dir=Path(tmpdir))
         model = MockEmbeddingModel(embedding_dim=128)
 
         samples = [
@@ -232,7 +232,7 @@ def test_query_multimodal_with_text_only() -> None:
 def test_query_multimodal_with_image_only() -> None:
     """Test multimodal query with image-only data."""
     with tempfile.TemporaryDirectory() as tmpdir:
-        settings = Settings(environment="dev", chroma_db_dir=Path(tmpdir))
+        settings = create_test_settings(environment="dev", chroma_db_dir=Path(tmpdir))
         model = MockEmbeddingModel(embedding_dim=128)
 
         img1 = Image.new("RGB", (100, 100), color="red")
@@ -278,7 +278,7 @@ def test_query_multimodal_with_image_only() -> None:
 def test_query_multimodal_with_both_modalities() -> None:
     """Test multimodal query with both text and image."""
     with tempfile.TemporaryDirectory() as tmpdir:
-        settings = Settings(environment="dev", chroma_db_dir=Path(tmpdir))
+        settings = create_test_settings(environment="dev", chroma_db_dir=Path(tmpdir))
         model = MockEmbeddingModel(embedding_dim=128)
 
         img1 = Image.new("RGB", (100, 100), color="red")
@@ -327,7 +327,7 @@ def test_query_multimodal_different_alphas_different_results() -> None:
     This is the CRITICAL test that would have caught the original bug.
     """
     with tempfile.TemporaryDirectory() as tmpdir:
-        settings = Settings(environment="dev", chroma_db_dir=Path(tmpdir))
+        settings = create_test_settings(environment="dev", chroma_db_dir=Path(tmpdir))
         model = MockEmbeddingModel(embedding_dim=128, deterministic=True)
 
         img1 = Image.new("RGB", (100, 100), color=(255, 0, 0))
@@ -401,7 +401,7 @@ def test_query_multimodal_different_alphas_different_results() -> None:
 def test_query_multimodal_validates_alpha() -> None:
     """Test that query_multimodal validates alpha range."""
     with tempfile.TemporaryDirectory() as tmpdir:
-        settings = Settings(environment="dev", chroma_db_dir=Path(tmpdir))
+        settings = create_test_settings(environment="dev", chroma_db_dir=Path(tmpdir))
         model = MockEmbeddingModel(embedding_dim=128)
 
         samples = [{"text": "sample", "image": None}]
@@ -447,7 +447,7 @@ def test_query_multimodal_validates_alpha() -> None:
 def test_query_multimodal_with_score_threshold() -> None:
     """Test query_multimodal with score threshold filtering."""
     with tempfile.TemporaryDirectory() as tmpdir:
-        settings = Settings(environment="dev", chroma_db_dir=Path(tmpdir))
+        settings = create_test_settings(environment="dev", chroma_db_dir=Path(tmpdir))
         model = MockEmbeddingModel(embedding_dim=128)
 
         samples = [
@@ -498,7 +498,7 @@ def test_query_multimodal_with_score_threshold() -> None:
 def test_query_multimodal_calls_embed_multimodal() -> None:
     """Test that query_multimodal actually calls embed_multimodal on the model."""
     with tempfile.TemporaryDirectory() as tmpdir:
-        settings = Settings(environment="dev", chroma_db_dir=Path(tmpdir))
+        settings = create_test_settings(environment="dev", chroma_db_dir=Path(tmpdir))
         model = MockEmbeddingModel(embedding_dim=128)
 
         samples = [{"text": "sample", "image": None}]

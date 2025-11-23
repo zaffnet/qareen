@@ -100,51 +100,61 @@ def generate_markdown(
 ) -> None:
     """Generate markdown visualization file."""
     with output_path.open("w", encoding="utf-8") as f:
-        f.write("# Marqo Fashion Dataset: Model and Alpha Comparison\\n\\n")
+        f.write("# Marqo Fashion Dataset: Model and Alpha Comparison\n\n")
 
         # Reproducibility information
-        f.write("## Reproducibility Information\\n\\n")
-        f.write(f"**Generated**: {datetime.now(UTC).isoformat()}\\n\\n")
-        f.write(f"**Dataset**: `{settings.dataset_path}`\\n")
-        f.write(f"**Environment**: `{settings.environment}`\\n")
-        f.write(f"**K (neighbors)**: `{settings.k_neighbors}`\\n")
-        f.write(f"**Sample Index**: `{sample_idx}`\\n")
-        f.write(f"**Random Seed**: `{settings.random_seed}`\\n")
-        f.write(f"**Models**: {len(settings.embedding_models)}\\n")
-        f.write(f"**Alpha Values**: {len(settings.alpha_values)}\\n\\n")
-        f.write("---\\n\\n")
+        f.write("## Reproducibility Information\n\n")
+        f.write("| Parameter | Value |\n")
+        f.write("|-----------|-------|\n")
+        f.write(f"| Generated | {datetime.now(UTC).isoformat()} |\n")
+        f.write(f"| Dataset | `{settings.dataset_path}` |\n")
+        f.write(f"| Environment | `{settings.environment}` |\n")
+        f.write(f"| K (neighbors) | `{settings.k_neighbors}` |\n")
+        f.write(f"| Sample Index | `{sample_idx}` |\n")
+        f.write(f"| Random Seed | `{settings.random_seed}` |\n")
+        f.write(f"| Models | {len(settings.embedding_models)} |\n")
+        f.write(f"| Alpha Values | {len(settings.alpha_values)} |\n\n")
+        f.write("---\n\n")
 
         # Query sample
-        f.write("## Query Sample\\n\\n")
-        f.write(f"**Sample Index**: {sample_idx}\\n\\n")
+        f.write("## Query Sample\n\n")
+        f.write(f"**Sample Index**: {sample_idx}\n\n")
 
         if query_image_path and query_image_path.exists():
             f.write(
-                f'<img src="images/{query_image_path.name}" width="300" alt="Query Image">\\n\\n'
+                f'<div align="center">\n'
+                f'<img src="images/{query_image_path.name}" width="400" alt="Query Image">\n'
+                f"</div>\n\n"
             )
         else:
-            f.write("*No image available*\\n\\n")
+            f.write("*No image available*\n\n")
 
-        f.write("**Query Text**:\\n")
-        f.write(f"> {query_text or ''}\\n\\n")
-        f.write("---\\n\\n")
+        f.write("**Query Text**:\n\n")
+        f.write(f"> {query_text or ''}\n\n")
+        f.write("---\n\n")
 
         # Results for each model/alpha combination
         for model_id in settings.embedding_models:
-            f.write(f"## Model: `{model_id}`\\n\\n")
+            f.write(f"## Model: `{model_id}`\n\n")
 
             for alpha in settings.alpha_values:
-                f.write(f"### Alpha = {alpha:.3f}\\n\\n")
+                f.write(f"### Alpha = {alpha:.3f}\n\n")
 
                 results = all_results[model_id].get(alpha, [])
                 if not results:
-                    f.write("*No results available*\\n\\n")
+                    f.write("*No results available*\n\n")
                     continue
 
-                f.write("<table>\\n<tr>\\n")
+                f.write(
+                    "<div style='display: flex; flex-wrap: wrap; gap: 15px; margin: 20px 0;'>\n"
+                )
 
                 for i, (doc, score) in enumerate(results, 1):
-                    f.write("<td>\\n\\n")
+                    f.write(
+                        "<div style='flex: 1; min-width: 180px; max-width: 220px; "
+                        "border: 1px solid #ddd; border-radius: 8px; padding: 10px; "
+                        "text-align: center; background: #f9f9f9;'>\n"
+                    )
 
                     # Get result image
                     doc_index = doc.metadata.get("index", "unknown")
@@ -158,22 +168,25 @@ def generate_markdown(
                                     if result_image.mode != "RGB":
                                         result_image = result_image.convert("RGB")
                                     result_image.save(result_img_path)
-                                img_html = (
+                                f.write(
                                     f'<img src="images/{result_img_path.name}" '
-                                    f'width="150" alt="Result {i}"><br>\\n'
+                                    f'width="180" style="border-radius: 4px; margin-bottom: 8px;" '
+                                    f'alt="Result {i}"><br>\n'
                                 )
-                                f.write(img_html)
                         except (ValueError, IndexError, KeyError):
                             pass
 
-                    f.write(f"**#{i}** Score: {score:.3f}<br>\\n")
-                    preview_text = truncate_text(doc.page_content)
-                    f.write(f"<small>{preview_text}</small>\\n\\n")
-                    f.write("</td>\\n")
+                    f.write(
+                        f"<strong>#{i}</strong> "
+                        f"<span style='color: #666;'>Score: {score:.3f}</span><br>\n"
+                    )
+                    preview_text = truncate_text(doc.page_content, max_length=60)
+                    f.write(f"<small style='color: #333;'>{preview_text}</small>\n")
+                    f.write("</div>\n")
 
-                f.write("</tr>\\n</table>\\n\\n")
+                f.write("</div>\n\n")
 
-            f.write("---\\n\\n")
+            f.write("---\n\n")
 
 
 @app.command()

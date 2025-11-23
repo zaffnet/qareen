@@ -14,10 +14,10 @@ import numpy as np
 from datasets import Dataset
 from PIL import Image
 
+from conftest import create_test_settings
 from qareen.dataset.base import DatasetLoader
 from qareen.indexing.chroma_indexer import ChromaIndexer
 from qareen.indexing.embedding_model import EmbeddingModel
-from qareen.models import Settings
 from qareen.retrieving.chroma_retriever import ChromaRetriever
 
 
@@ -220,7 +220,7 @@ def test_regression_text_heavy_query() -> None:
     This test freezes expected behavior for a specific query configuration.
     """
     with tempfile.TemporaryDirectory() as tmpdir:
-        settings = Settings(environment="dev", chroma_db_dir=Path(tmpdir))
+        settings = create_test_settings(environment="dev", chroma_db_dir=Path(tmpdir))
         model = FixedEmbeddingModel(embedding_dim=64)
 
         samples = create_fixed_test_dataset()
@@ -274,7 +274,7 @@ def test_regression_image_heavy_query() -> None:
     This test freezes expected behavior for image-focused retrieval.
     """
     with tempfile.TemporaryDirectory() as tmpdir:
-        settings = Settings(environment="dev", chroma_db_dir=Path(tmpdir))
+        settings = create_test_settings(environment="dev", chroma_db_dir=Path(tmpdir))
         model = FixedEmbeddingModel(embedding_dim=64)
 
         samples = create_fixed_test_dataset()
@@ -329,7 +329,7 @@ def test_regression_balanced_query() -> None:
     This test verifies that alpha=0.5 properly balances both modalities.
     """
     with tempfile.TemporaryDirectory() as tmpdir:
-        settings = Settings(environment="dev", chroma_db_dir=Path(tmpdir))
+        settings = create_test_settings(environment="dev", chroma_db_dir=Path(tmpdir))
         model = FixedEmbeddingModel(embedding_dim=64)
 
         samples = create_fixed_test_dataset()
@@ -382,7 +382,7 @@ def test_regression_score_ranges_across_alphas() -> None:
     Ensures that the same query with different alphas produces different score distributions.
     """
     with tempfile.TemporaryDirectory() as tmpdir:
-        settings = Settings(environment="dev", chroma_db_dir=Path(tmpdir))
+        settings = create_test_settings(environment="dev", chroma_db_dir=Path(tmpdir))
         model = FixedEmbeddingModel(embedding_dim=64)
 
         samples = create_fixed_test_dataset()
@@ -442,7 +442,7 @@ def test_regression_top_k_consistency() -> None:
     Verifies that retrieving top-k results is stable across multiple calls.
     """
     with tempfile.TemporaryDirectory() as tmpdir:
-        settings = Settings(environment="dev", chroma_db_dir=Path(tmpdir))
+        settings = create_test_settings(environment="dev", chroma_db_dir=Path(tmpdir))
         model = FixedEmbeddingModel(embedding_dim=64)
 
         samples = create_fixed_test_dataset()
@@ -493,7 +493,7 @@ def test_regression_top_k_consistency() -> None:
 def test_regression_metadata_preservation() -> None:
     """Regression test that metadata is preserved in query results."""
     with tempfile.TemporaryDirectory() as tmpdir:
-        settings = Settings(environment="dev", chroma_db_dir=Path(tmpdir))
+        settings = create_test_settings(environment="dev", chroma_db_dir=Path(tmpdir))
         model = FixedEmbeddingModel(embedding_dim=64)
 
         samples = create_fixed_test_dataset()

@@ -9,10 +9,10 @@ from unittest.mock import MagicMock
 import numpy as np
 from PIL import Image
 
+from conftest import create_test_settings
 from qareen.dataset.base import DatasetLoader
 from qareen.indexing.chroma_indexer import ChromaIndexer
 from qareen.indexing.embedding_model import EmbeddingModel
-from qareen.models import Settings
 from qareen.retrieving.chroma_retriever import ChromaRetriever
 
 
@@ -210,7 +210,7 @@ class MockDatasetLoader(DatasetLoader):
 def test_similarity_search_works_with_embedding_wrapper() -> None:
     """Regression test: similarity_search should work with EmbeddingModelWrapper."""
     with tempfile.TemporaryDirectory() as tmpdir:
-        settings = Settings(environment="dev", chroma_db_dir=Path(tmpdir))
+        settings = create_test_settings(environment="dev", chroma_db_dir=Path(tmpdir))
         embedding_model = MockEmbeddingModel(embedding_dim=128)
         dataset_loader = MockDatasetLoader(dataset_size=3, track_select=True)
 
@@ -240,7 +240,7 @@ def test_similarity_search_works_with_embedding_wrapper() -> None:
 def test_get_vectorstore_similarity_search_works() -> None:
     """Test that get_vectorstore returns a usable vectorstore for similarity_search."""
     with tempfile.TemporaryDirectory() as tmpdir:
-        settings = Settings(environment="dev", chroma_db_dir=Path(tmpdir))
+        settings = create_test_settings(environment="dev", chroma_db_dir=Path(tmpdir))
         embedding_model = MockEmbeddingModel(embedding_dim=128)
         dataset_loader = MockDatasetLoader(dataset_size=3, track_select=True)
 
@@ -269,7 +269,7 @@ def test_get_vectorstore_similarity_search_works() -> None:
 def test_sample_size_honored_in_non_dev_environment() -> None:
     """Test that sample_size argument is honored in non-dev environments."""
     with tempfile.TemporaryDirectory() as tmpdir:
-        settings = Settings(environment="prod", chroma_db_dir=Path(tmpdir))
+        settings = create_test_settings(environment="prod", chroma_db_dir=Path(tmpdir))
         embedding_model = MockEmbeddingModel(embedding_dim=128)
         dataset_loader = MockDatasetLoader(dataset_size=100, track_select=True)
 
@@ -289,7 +289,7 @@ def test_sample_size_honored_in_non_dev_environment() -> None:
 def test_sample_size_honored_in_staging_environment() -> None:
     """Test that sample_size argument is honored in staging environment."""
     with tempfile.TemporaryDirectory() as tmpdir:
-        settings = Settings(environment="staging", chroma_db_dir=Path(tmpdir))
+        settings = create_test_settings(environment="staging", chroma_db_dir=Path(tmpdir))
         embedding_model = MockEmbeddingModel(embedding_dim=128)
         dataset_loader = MockDatasetLoader(dataset_size=100, track_select=True)
 
@@ -309,7 +309,9 @@ def test_sample_size_honored_in_staging_environment() -> None:
 def test_dev_sample_size_fallback_in_dev_environment() -> None:
     """Test that dev_sample_size is used when sample_size is None in dev."""
     with tempfile.TemporaryDirectory() as tmpdir:
-        settings = Settings(environment="dev", dev_sample_size=42, chroma_db_dir=Path(tmpdir))
+        settings = create_test_settings(
+            environment="dev", dev_sample_size=42, chroma_db_dir=Path(tmpdir)
+        )
         embedding_model = MockEmbeddingModel(embedding_dim=128)
         dataset_loader = MockDatasetLoader(dataset_size=100, track_select=True)
 
@@ -329,7 +331,9 @@ def test_dev_sample_size_fallback_in_dev_environment() -> None:
 def test_explicit_sample_size_overrides_dev_sample_size() -> None:
     """Test that explicit sample_size overrides dev_sample_size in dev."""
     with tempfile.TemporaryDirectory() as tmpdir:
-        settings = Settings(environment="dev", dev_sample_size=100, chroma_db_dir=Path(tmpdir))
+        settings = create_test_settings(
+            environment="dev", dev_sample_size=100, chroma_db_dir=Path(tmpdir)
+        )
         embedding_model = MockEmbeddingModel(embedding_dim=128)
         dataset_loader = MockDatasetLoader(dataset_size=200, track_select=True)
 
@@ -349,7 +353,7 @@ def test_explicit_sample_size_overrides_dev_sample_size() -> None:
 def test_no_limit_in_non_dev_when_sample_size_none() -> None:
     """Test that no limit is applied in non-dev when sample_size is None."""
     with tempfile.TemporaryDirectory() as tmpdir:
-        settings = Settings(environment="prod", chroma_db_dir=Path(tmpdir))
+        settings = create_test_settings(environment="prod", chroma_db_dir=Path(tmpdir))
         embedding_model = MockEmbeddingModel(embedding_dim=128)
         dataset_loader = MockDatasetLoader(dataset_size=100, track_select=True)
 
@@ -375,7 +379,7 @@ def test_query_multimodal_alpha_mismatch() -> None:
     import pytest
 
     with tempfile.TemporaryDirectory() as tmp_dir:
-        settings = Settings(
+        settings = create_test_settings(
             chroma_db_dir=Path(tmp_dir) / "chroma_db",
             data_dir=Path(tmp_dir) / "data",
         )
@@ -416,7 +420,7 @@ def test_query_multimodal_alpha_mismatch() -> None:
 def test_query_multimodal_alpha_match() -> None:
     """Test that query_multimodal works when alpha matches collection alpha."""
     with tempfile.TemporaryDirectory() as tmp_dir:
-        settings = Settings(
+        settings = create_test_settings(
             chroma_db_dir=Path(tmp_dir) / "chroma_db",
             data_dir=Path(tmp_dir) / "data",
         )

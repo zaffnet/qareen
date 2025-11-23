@@ -14,10 +14,10 @@ import numpy as np
 from datasets import Dataset
 from PIL import Image
 
+from conftest import create_test_settings
 from qareen.dataset.base import DatasetLoader
 from qareen.indexing.chroma_indexer import ChromaIndexer
 from qareen.indexing.embedding_model import EmbeddingModel
-from qareen.models import Settings
 from qareen.retrieving.chroma_retriever import ChromaRetriever
 
 
@@ -187,7 +187,7 @@ def test_alpha_spectrum_produces_different_results() -> None:
     which items are retrieved.
     """
     with tempfile.TemporaryDirectory() as tmpdir:
-        settings = Settings(environment="dev", chroma_db_dir=Path(tmpdir))
+        settings = create_test_settings(environment="dev", chroma_db_dir=Path(tmpdir))
         model = DeterministicEmbeddingModel(embedding_dim=256)
 
         img_red = Image.new("RGB", (100, 100), color=(255, 0, 0))
@@ -256,7 +256,7 @@ def test_alpha_spectrum_produces_different_results() -> None:
 def test_alpha_affects_score_distribution() -> None:
     """Test that different alpha values produce different score distributions."""
     with tempfile.TemporaryDirectory() as tmpdir:
-        settings = Settings(environment="dev", chroma_db_dir=Path(tmpdir))
+        settings = create_test_settings(environment="dev", chroma_db_dir=Path(tmpdir))
         model = DeterministicEmbeddingModel(embedding_dim=128)
 
         img1 = Image.new("RGB", (50, 50), color=(200, 50, 50))
@@ -321,7 +321,7 @@ def test_extreme_alphas_behave_differently() -> None:
     Alpha 0.0 should rely purely on text, alpha 1.0 purely on image.
     """
     with tempfile.TemporaryDirectory() as tmpdir:
-        settings = Settings(environment="dev", chroma_db_dir=Path(tmpdir))
+        settings = create_test_settings(environment="dev", chroma_db_dir=Path(tmpdir))
         model = DeterministicEmbeddingModel(embedding_dim=256)
 
         img_similar_to_query = Image.new("RGB", (100, 100), color=(255, 0, 0))
@@ -382,7 +382,7 @@ def test_extreme_alphas_behave_differently() -> None:
 def test_mid_range_alpha_balances_modalities() -> None:
     """Test that mid-range alpha values balance text and image influence."""
     with tempfile.TemporaryDirectory() as tmpdir:
-        settings = Settings(environment="dev", chroma_db_dir=Path(tmpdir))
+        settings = create_test_settings(environment="dev", chroma_db_dir=Path(tmpdir))
         model = DeterministicEmbeddingModel(embedding_dim=256)
 
         img1 = Image.new("RGB", (80, 80), color=(100, 0, 0))
