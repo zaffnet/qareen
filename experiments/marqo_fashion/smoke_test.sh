@@ -7,7 +7,7 @@ cd "$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 source .venv/bin/activate
 
 export QAREEN_DATASET_PATH="data/marqo_prepared" QAREEN_ALPHA_VALUES="[0.0, 0.25, 0.5, 0.75, 1.0]"
-MODELS=("Marqo/marqo-ecommerce-embeddings-L")
+MODELS=("openai/clip-vit-large-patch14" "Marqo/marqo-fashionSigLIP" "google/siglip2-so400m-patch14-224" "Marqo/marqo-ecommerce-embeddings-B")
 NUM_ALPHAS=$(python -c "import json; print(len(set(json.loads('$QAREEN_ALPHA_VALUES'))))")
 NUM_MODELS=${#MODELS[@]}
 MODELS_JSON=$(python -c "import json, sys; print(json.dumps(sys.argv[1:]))" "${MODELS[@]}")

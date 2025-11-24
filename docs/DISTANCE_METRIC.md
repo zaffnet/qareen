@@ -16,4 +16,7 @@ Cosine distance measures directional similarity, providing consistent scores [0.
 
 ## L2 Normalization
 
-Embeddings must be L2-normalized before storage (`embedding / ||embedding||`) as cosine distance assumes normalized vectors. All `qareen` models handle this automatically.
+qareen models automatically L2-normalize embeddings before storage, so developers do not need to normalize manually.
+
+> [!NOTE]
+> Manual normalization (`embedding / ||embedding||`) is only necessary if embeddings are produced or stored outside of qareen's APIs.

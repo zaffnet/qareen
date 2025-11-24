@@ -56,15 +56,16 @@ if [[ "$STEP" == "all" ]] || [[ "$STEP" == "index" ]]; then
         echo "Building indexes for: $MODEL"
         set_common_env
         export QAREEN_EMBEDDING_MODELS='["'$MODEL'"]'
-        export QAREEN_ALPHA_VALUES="[$(IFS=,; echo "${ALPHA_VALUES[*]}")]"
+        ALPHA_VALUES_STR="[$(IFS=,; echo "${ALPHA_VALUES[*]}")]" || { echo "ERROR: Failed to encode alpha values" >&2; exit 1; }
+        export QAREEN_ALPHA_VALUES="$ALPHA_VALUES_STR"
         python3 scripts/build_index.py --dataset-name "$DATASET_PATH" || { echo "ERROR: Index building failed for $MODEL" >&2; exit 1; }
     done
 fi
 
 if [[ "$STEP" == "all" ]] || [[ "$STEP" == "visualize" ]]; then
     echo "Step 3: Generating Visualization"
-    MODELS_JSON=$(python3 -c "import json, sys; print(json.dumps(sys.argv[1:]))" "${MODELS[@]}")
-    ALPHAS_JSON=$(python3 -c "import json, sys; print(json.dumps([float(x) for x in sys.argv[1:]]))" "${ALPHA_VALUES[@]}")
+    MODELS_JSON=$(python3 -c "import json, sys; print(json.dumps(sys.argv[1:]))" "${MODELS[@]}") || { echo "ERROR: Failed to encode models" >&2; exit 1; }
+    ALPHAS_JSON=$(python3 -c "import json, sys; print(json.dumps([float(x) for x in sys.argv[1:]]))" "${ALPHA_VALUES[@]}") || { echo "ERROR: Failed to encode alpha values" >&2; exit 1; }
     set_common_env
     export QAREEN_EMBEDDING_MODELS="$MODELS_JSON" QAREEN_ALPHA_VALUES="$ALPHAS_JSON"
     python scripts/visualize_marqo_comparison.py --dataset-path "$DATASET_PATH" || { echo "ERROR: Visualization failed" >&2; exit 1; }

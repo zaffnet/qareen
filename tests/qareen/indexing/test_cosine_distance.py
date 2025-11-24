@@ -39,7 +39,7 @@ class SimpleDatasetLoader(DatasetLoader):
         return {"num_samples": len(self.samples)}
 
 
-class TestEmbeddingModel(EmbeddingModel):
+class MockEmbeddingModel(EmbeddingModel):
     """Test embedding model with predictable outputs."""
 
     def __init__(self, embedding_dim: int = 128) -> None:
@@ -96,7 +96,7 @@ def test_collection_uses_cosine_distance() -> None:
     """Verify ChromaDB collections are created with cosine distance."""
     with tempfile.TemporaryDirectory() as tmpdir:
         settings = create_test_settings(environment="dev", chroma_db_dir=Path(tmpdir))
-        model = TestEmbeddingModel(embedding_dim=128)
+        model = MockEmbeddingModel(embedding_dim=128)
         samples = [{"text": "sample", "image": Image.new("RGB", (10, 10))}]
         loader = SimpleDatasetLoader(samples)
         loader.load()
@@ -125,7 +125,7 @@ def test_score_range_with_cosine() -> None:
     """Verify scores are in [0, 1] range with cosine distance."""
     with tempfile.TemporaryDirectory() as tmpdir:
         settings = create_test_settings(environment="dev", chroma_db_dir=Path(tmpdir))
-        model = TestEmbeddingModel(embedding_dim=128)
+        model = MockEmbeddingModel(embedding_dim=128)
 
         samples = [
             {"text": "red", "image": Image.new("RGB", (10, 10), color=(255, 0, 0))},
@@ -167,7 +167,7 @@ def test_alpha_one_returns_nonzero_scores() -> None:
     """Verify alpha=1.0 returns non-zero scores with cosine distance."""
     with tempfile.TemporaryDirectory() as tmpdir:
         settings = create_test_settings(environment="dev", chroma_db_dir=Path(tmpdir))
-        model = TestEmbeddingModel(embedding_dim=256)
+        model = MockEmbeddingModel(embedding_dim=256)
 
         samples = [
             {"text": "item1", "image": Image.new("RGB", (20, 20), color=(100, 0, 0))},
@@ -204,7 +204,7 @@ def test_alpha_one_returns_nonzero_scores() -> None:
 
 def test_l2_normalized_embeddings_required() -> None:
     """Verify embeddings are L2-normalized (required for cosine distance)."""
-    model = TestEmbeddingModel(embedding_dim=128)
+    model = MockEmbeddingModel(embedding_dim=128)
     model.load_model()
 
     text_emb = model.embed_text("test")

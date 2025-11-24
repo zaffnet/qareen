@@ -141,7 +141,7 @@ class DeterministicEmbeddingModel(EmbeddingModel):
         return self._embedding_dim
 
 
-class TestDatasetLoader(DatasetLoader):
+class MockDatasetLoader(DatasetLoader):
     """Dataset loader for integration tests."""
 
     def __init__(self, samples: list[dict[str, Any]]) -> None:
@@ -210,7 +210,7 @@ def test_alpha_spectrum_produces_different_results() -> None:
             {"text": "category_B item_5", "image": img_red},
         ]
 
-        loader = TestDatasetLoader(samples)
+        loader = MockDatasetLoader(samples)
 
         indexer = ChromaIndexer(
             dataset_loader=loader,
@@ -279,7 +279,7 @@ def test_alpha_affects_score_distribution() -> None:
             {"text": "blue thing", "image": img1},
         ]
 
-        loader = TestDatasetLoader(samples)
+        loader = MockDatasetLoader(samples)
 
         indexer = ChromaIndexer(
             dataset_loader=loader,
@@ -341,7 +341,7 @@ def test_extreme_alphas_behave_differently() -> None:
             {"text": "other text", "image": img_different_from_query},
         ]
 
-        loader = TestDatasetLoader(samples)
+        loader = MockDatasetLoader(samples)
 
         indexer = ChromaIndexer(
             dataset_loader=loader,
@@ -403,7 +403,7 @@ def test_mid_range_alpha_balances_modalities() -> None:
             {"text": "text_C", "image": img3},
         ]
 
-        loader = TestDatasetLoader(samples)
+        loader = MockDatasetLoader(samples)
 
         indexer = ChromaIndexer(
             dataset_loader=loader,

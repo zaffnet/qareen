@@ -17,7 +17,8 @@ def download_image_with_retry(image_url: str, max_retries: int = 3) -> Image.Ima
             if attempt == max_retries - 1:
                 return None
             time.sleep(2**attempt)
-    return None
+    # unreachable: loop always returns or raises
+    return None  # type checker: satisfies return type annotation
 
 
 def load_image(image: Image.Image | dict | str | None) -> Image.Image | None:

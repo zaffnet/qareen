@@ -84,7 +84,9 @@ class ChromaIndexer(VectorStoreIndexer):
                 with contextlib.suppress(ValueError, NotFoundError):
                     client.delete_collection(name=name)
 
-            collection = client.create_collection(name=name, metadata={"hnsw:space": "cosine"})
+            collection = client.get_or_create_collection(
+                name=name, metadata={"hnsw:space": "cosine"}
+            )
             dataset_len = len(dataset)
 
             for idx in tqdm(

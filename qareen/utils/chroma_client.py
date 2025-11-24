@@ -18,5 +18,5 @@ def create_chroma_client(db_path: Path) -> chromadb.PersistentClient:
 
 def close_chroma_client(client: chromadb.PersistentClient | None) -> None:
     if client is not None:
-        with contextlib.suppress(Exception):
+        with contextlib.suppress(AttributeError, RuntimeError):
             client.clear_system_cache()
