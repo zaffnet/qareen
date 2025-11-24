@@ -18,7 +18,15 @@ def test_schema_pydantic_model() -> None:
 
 @pytest.fixture
 def sample_img_path(tmp_path: Path) -> Path:
-    """Fixture to create a sample image file."""
+    """
+    Create a 224×224 red JPEG image named "sample.jpg" inside the provided temporary directory.
+    
+    Parameters:
+        tmp_path (Path): Directory in which to create the sample image (typically the pytest `tmp_path` fixture).
+    
+    Returns:
+        Path: Path to the created "sample.jpg" file.
+    """
     path = tmp_path / "sample.jpg"
     Image.new("RGB", (224, 224), color="red").save(path)
     return path

@@ -21,12 +21,12 @@ class MissingColumnsError(ValueError):
     """Exception raised when required dataset columns are missing."""
 
     def __init__(self, required: set[str], missing: set[str]) -> None:
-        """Initialize exception with required and missing columns.
-
-        Args:
-            required: Set of required column names.
-            missing: Set of missing column names.
-
+        """
+        Create a MissingColumnsError that records which required dataset columns are missing.
+        
+        Parameters:
+            required (set[str]): The set of required column names.
+            missing (set[str]): The subset of `required` that are missing from the dataset.
         """
         required_sorted = sorted(required)
         missing_sorted = sorted(missing)
@@ -40,15 +40,15 @@ class MissingColumnsError(ValueError):
 
 
 def validate_dataset_columns(dataset: Dataset, required_columns: set[str]) -> None:
-    """Validate that the dataset contains the required columns.
-
-    Args:
-        dataset: The dataset to check.
-        required_columns: A set of column names that must be present.
-
+    """
+    Ensure the dataset contains all column names in `required_columns`.
+    
+    Parameters:
+        dataset (Dataset): Dataset to validate.
+        required_columns (set[str]): Required column names that must be present.
+    
     Raises:
-        MissingColumnsError: If any required columns are missing.
-
+        MissingColumnsError: If one or more required columns are missing from the dataset.
     """
     missing = required_columns - set(dataset.column_names)
     if missing:
@@ -62,6 +62,15 @@ def main(
         typer.Option(help="Path to configuration file (.env format)"),
     ] = None,
 ) -> None:
+    """
+    Prepare the Marqo "marqo-gs-woman-fashion" dataset from HuggingFace, validate required columns, sample and shuffle it according to configuration, and save the prepared dataset to disk.
+    
+    Parameters:
+        config_file (Path | None): Optional path to a .env-style configuration file used to construct runtime Settings. If omitted, default Settings are used.
+    
+    Raises:
+        typer.Exit: Exits with code 1 if any error occurs during preparation.
+    """
     try:
         settings = Settings(_env_file=str(config_file)) if config_file else Settings()
 

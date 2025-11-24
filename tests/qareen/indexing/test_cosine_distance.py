@@ -36,6 +36,12 @@ class SimpleDatasetLoader(DatasetLoader):
         return "test_dataset"
 
     def get_dataset_info(self) -> dict:
+        """
+        Provide basic information about the dataset.
+        
+        Returns:
+            info (dict): Dictionary containing `"num_samples"` set to the number of samples in the loader.
+        """
         return {"num_samples": len(self.samples)}
 
 
@@ -43,6 +49,15 @@ class MockEmbeddingModel(EmbeddingModel):
     """Test embedding model with predictable outputs."""
 
     def __init__(self, embedding_dim: int = 128) -> None:
+        """
+        Initialize the mock embedding model with a fixed embedding dimensionality.
+        
+        Parameters:
+            embedding_dim (int): Length of embedding vectors produced by this model. Defaults to 128.
+        
+        Notes:
+            Sets the `model_loaded` flag to False.
+        """
         self._embedding_dim = embedding_dim
         self.model_loaded = False
 
@@ -164,7 +179,11 @@ def test_score_range_with_cosine() -> None:
 
 
 def test_alpha_one_returns_nonzero_scores() -> None:
-    """Verify alpha=1.0 returns non-zero scores with cosine distance."""
+    """
+    Ensure multimodal retrieval with alpha=1.0 produces at least one non-zero cosine score.
+    
+    Indexes three image items using alpha=1.0 and asserts that querying with a matching image returns results and that at least one returned score is greater than 0.0.
+    """
     with tempfile.TemporaryDirectory() as tmpdir:
         settings = create_test_settings(environment="dev", chroma_db_dir=Path(tmpdir))
         model = MockEmbeddingModel(embedding_dim=256)

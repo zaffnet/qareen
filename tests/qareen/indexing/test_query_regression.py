@@ -73,14 +73,19 @@ class FixedEmbeddingModel(EmbeddingModel):
         return self._get_fixed_embedding(text, self.text_embeddings)
 
     def embed_image(self, image: Image.Image | str | Path | None) -> np.ndarray | None:
-        """Generate fixed image embedding.
-
-        Args:
-            image: Input image
-
+        """
+        Produce a deterministic fixed embedding for an image suitable for regression tests.
+        
+        The embedding is deterministic and derived from the image's content and size so repeated calls with the same image produce the same vector. The function accepts a PIL Image or a filesystem path to an image; passing None returns None.
+        
+        Parameters:
+            image (PIL.Image.Image | str | Path | None): A PIL Image, a path string or Path to an image file, or None.
+        
         Returns:
-            Fixed embedding or None if image is None
-
+            np.ndarray | None: A normalized NumPy array of length equal to the model's embedding dimension containing the fixed embedding, or `None` if `image` is `None`.
+        
+        Raises:
+            TypeError: If `image` is neither `None`, a path-like object, nor a PIL Image.
         """
         if image is None:
             return None
@@ -112,16 +117,19 @@ class FixedEmbeddingModel(EmbeddingModel):
         text: str | None,
         alpha: float,
     ) -> np.ndarray:
-        """Generate multimodal embedding with alpha weighting.
-
-        Args:
-            image: Input image
-            text: Input text
-            alpha: Weight for image embedding
-
+        """
+        Compute a multimodal embedding by combining image and text embeddings with an image-weight alpha.
+        
+        If only one modality is provided, returns that modality's embedding. If both modalities are present, blends the image and text embeddings using alpha (image weight) and returns the L2-normalized result.
+        
+        Parameters:
+            alpha (float): Weight of the image embedding in the blend; 0.0 yields the text embedding, 1.0 yields the image embedding.
+        
         Returns:
-            Combined embedding
-
+            np.ndarray: Embedding vector representing the combined (or single-modality) representation.
+        
+        Raises:
+            ValueError: If both `image` and `text` are None.
         """
         image_embedding = self.embed_image(image)
         text_embedding = self.embed_text(text)
@@ -342,9 +350,14 @@ def test_regression_image_heavy_query() -> None:
 
 
 def test_regression_balanced_query() -> None:
-    """Regression test for balanced (alpha=0.5) multimodal query.
-
-    This test verifies that alpha=0.5 properly balances both modalities.
+    """
+    Verify that a balanced multimodal query (alpha = 0.5) returns sensible top results.
+    
+    Indexes a fixed regression dataset with a deterministic embedding model, performs a multimodal query
+    using a green 50x50 image and the text "green square", and asserts:
+    - exactly three results are returned,
+    - the top document's text is one of the indexed sample texts,
+    - the top similarity score is greater than 0.4.
     """
     with tempfile.TemporaryDirectory() as tmpdir:
         settings = create_test_settings(environment="dev", chroma_db_dir=Path(tmpdir))

@@ -57,14 +57,17 @@ class DeterministicEmbeddingModel(EmbeddingModel):
         return self.normalize_l2(embedding)
 
     def embed_image(self, image: Image.Image | str | Path | None) -> np.ndarray | None:
-        """Generate deterministic image embedding based on pixel values.
-
-        Args:
-            image: Input image
-
+        """
+        Generate a deterministic L2-normalized embedding for the provided image using its pixel statistics.
+        
+        Parameters:
+            image (PIL.Image.Image | str | Path | None): A PIL Image object or a path (string or Path) to an image file. If None, no embedding is produced.
+        
         Returns:
-            Embedding or None if image is None
-
+            np.ndarray | None: An L2-normalized float32 embedding vector when an image is provided, or `None` if `image` is `None`.
+        
+        Raises:
+            TypeError: If `image` is not a PIL Image and not a path-like string/Path.
         """
         if image is None:
             return None
@@ -132,11 +135,11 @@ class DeterministicEmbeddingModel(EmbeddingModel):
 
     @property
     def embedding_dim(self) -> int:
-        """Return embedding dimension.
-
+        """
+        Get the embedding vector dimensionality.
+        
         Returns:
-            Embedding dimension
-
+            embedding_dim (int): Number of dimensions in each embedding vector.
         """
         return self._embedding_dim
 
@@ -145,11 +148,11 @@ class MockDatasetLoader(DatasetLoader):
     """Dataset loader for integration tests."""
 
     def __init__(self, samples: list[dict[str, Any]]) -> None:
-        """Initialize with sample data.
-
-        Args:
-            samples: List of sample dictionaries
-
+        """
+        Initialize the loader with an in-memory list of dataset samples for tests.
+        
+        Parameters:
+            samples (list[dict[str, Any]]): Sample records used to build the Dataset; each dict represents one item (typically includes fields like text and image).
         """
         self.samples = samples
         self._dataset: Dataset | None = None
@@ -262,7 +265,13 @@ def test_alpha_spectrum_produces_different_results() -> None:
 
 
 def test_alpha_affects_score_distribution() -> None:
-    """Test that different alpha values produce different score distributions."""
+    """
+    Verify that varying the multimodal alpha yields distinct retrieval score distributions.
+    
+    Indexes a small test dataset for alpha values [0.0, 0.25, 0.5, 0.75, 1.0], runs the same multimodal query for each alpha, and validates that:
+    - each alpha returns non-empty results with all scores in the range [0.0, 1.0],
+    - at least three unique mean scores (rounded to 4 decimals) exist across the alphas, indicating diverse score distributions.
+    """
     with tempfile.TemporaryDirectory() as tmpdir:
         settings = create_test_settings(environment="dev", chroma_db_dir=Path(tmpdir))
         model = DeterministicEmbeddingModel(embedding_dim=128)
@@ -324,9 +333,10 @@ def test_alpha_affects_score_distribution() -> None:
 
 
 def test_extreme_alphas_behave_differently() -> None:
-    """Test that alpha=0.0 and alpha=1.0 produce clearly different results.
-
-    Alpha 0.0 should rely purely on text, alpha 1.0 purely on image.
+    """
+    Verify that pure-text (alpha=0.0) and pure-image (alpha=1.0) multimodal queries return different top results or scores when text and image modalities point to different items.
+    
+    Runs an end-to-end integration scenario: builds a small dataset with items where text and image indicate different best matches, indexes separate vector stores for alpha=0.0 and alpha=1.0, performs top-k multimodal retrieval for each, and asserts that the top retrieved document or its score differs between the text-only and image-only queries.
     """
     with tempfile.TemporaryDirectory() as tmpdir:
         settings = create_test_settings(environment="dev", chroma_db_dir=Path(tmpdir))

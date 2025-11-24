@@ -11,6 +11,17 @@ from qareen.models import Settings
 
 
 def test_settings_defaults_match_plan() -> None:
+    """
+    Verify the Settings model's defaults and types match the expected configuration plan.
+    
+    Checks that:
+    - Settings is a subclass of BaseSettings.
+    - `embedding_models` contains at least one string.
+    - `data_dir` equals Path("data").
+    - `chroma_db_dir` equals Path("chroma_db").
+    - `dev_sample_size` equals 300.
+    - `environment` is one of "dev", "staging", or "prod".
+    """
     assert issubclass(Settings, BaseSettings)
 
     settings = create_test_settings()
@@ -35,6 +46,12 @@ def test_ensure_directories_creates_directories(tmp_path: Path) -> None:
 
 
 def test_ensure_directories_idempotent(tmp_path: Path) -> None:
+    """
+    Verify that calling `ensure_directories()` multiple times is idempotent: it sets the internal `_dirs_ensured` flag and ensures both `data_dir` and `chroma_db_dir` exist.
+    
+    Parameters:
+        tmp_path (Path): Temporary filesystem path provided by pytest.
+    """
     settings = create_test_settings(
         data_dir=tmp_path / "data",
         chroma_db_dir=tmp_path / "chroma_db",

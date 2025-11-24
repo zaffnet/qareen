@@ -278,7 +278,11 @@ def test_alpha_matters_for_dual_modality_samples() -> None:
 
 
 def test_multiple_alphas_with_single_modality() -> None:
-    """Indexing with multiple alphas should work even for single-modality samples."""
+    """
+    Verify that indexing with multiple alpha values creates separate vectorstores for each alpha even when samples contain only a single modality.
+    
+    This test indexes a dataset containing a single text-only sample with multiple alpha values and asserts a distinct vectorstore exists for each provided alpha and that the embedding model was invoked once per alpha.
+    """
     with tempfile.TemporaryDirectory() as tmpdir:
         settings = create_test_settings(environment="dev", chroma_db_dir=Path(tmpdir))
         model = AlphaAwareEmbeddingModel(embedding_dim=128)

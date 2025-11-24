@@ -19,6 +19,14 @@ __all__ = [
 
 
 def check_gpu_available() -> bool:
+    """
+    Detects whether a CUDA-capable GPU is available according to PyTorch.
+    
+    If PyTorch is not installed, this function reports no GPU available and returns `False`.
+    
+    Returns:
+        `True` if a CUDA-capable GPU is available, `False` otherwise.
+    """
     try:
         import torch
 

@@ -18,13 +18,14 @@ logging.getLogger("chromadb.telemetry.product.posthog").setLevel(logging.CRITICA
 
 
 def create_test_settings(**overrides: object) -> Settings:
-    """Create Settings instance with all required fields for testing.
-
-    Args:
-        **overrides: Field values to override defaults
-
+    """
+    Create a Settings instance populated with sensible defaults for tests.
+    
+    Parameters:
+        overrides (object): Keyword overrides for any Settings field; keys are field names and values replace the default values.
+    
     Returns:
-        Settings instance with all required fields set
+        Settings: A Settings instance with defaults merged with any provided overrides.
     """
     defaults = {
         "embedding_models": ["google/siglip-base-patch16-224"],
@@ -48,6 +49,10 @@ def create_test_settings(**overrides: object) -> Settings:
 
 @pytest.fixture(autouse=True)
 def cleanup_resources():
-    """Cleanup resources after each test to prevent file handle leaks."""
+    """
+    Run garbage collection after each test to release file handles and other resources.
+    
+    Intended for use as an autouse, function-scoped pytest fixture; yields to the test and invokes gc.collect() after the test completes.
+    """
     yield
     gc.collect()

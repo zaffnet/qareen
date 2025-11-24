@@ -7,6 +7,23 @@ import re
 def get_collection_name(
     dataset_name: str, model_id: str, alpha: float | None = None, environment: str = "dev"
 ) -> str:
+    """
+    Constructs a sanitized collection name from environment, dataset name, model id, and an optional alpha suffix.
+    
+    Sanitizes inputs to lowercase alphanumeric/underscore segments, collapses repeated underscores, and trims leading/trailing underscores. Produces a name of the form "<env>_<dataset>_<model>" with an optional "_a{alpha:.3f}" suffix. If the dataset and model parts would exceed the maximum allowed length (63 characters) when combined with the environment and suffix, the function truncates the parts and appends a deterministic short hash suffix to keep the final name within limits.
+    
+    Parameters:
+        dataset_name (str): Source dataset name; must be a non-empty string.
+        model_id (str): Model identifier; must be a non-empty string.
+        alpha (float | None): Optional numeric suffix formatted as `_a{value:.3f}` when provided.
+        environment (str): One of "dev", "staging", or "prod" (case-insensitive); defaults to "dev".
+    
+    Returns:
+        str: The constructed, sanitized collection name.
+    
+    Raises:
+        ValueError: If `dataset_name` or `model_id` is empty, if `environment` is not one of the allowed values, or if the final collection name exceeds 63 characters.
+    """
     dataset_name = dataset_name.strip()
     model_id = model_id.strip()
     env = environment.strip().lower()
@@ -21,6 +38,15 @@ def get_collection_name(
         )
 
     def sanitize(part: str) -> str:
+        """
+        Sanitize a string into a lowercase, underscore-separated identifier.
+        
+        Parameters:
+        	part (str): Input string to normalize.
+        
+        Returns:
+        	sanitized (str): The input converted to lowercase, with any character that is not a lowercase letter, digit, or underscore replaced by an underscore, consecutive underscores collapsed into one, and any leading or trailing underscores removed.
+        """
         return re.sub(r"_+", "_", re.sub(r"[^a-z0-9_]+", "_", part.lower())).strip("_")
 
     env_part, dataset_part, model_part = sanitize(env), sanitize(dataset_name), sanitize(model_id)

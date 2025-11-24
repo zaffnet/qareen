@@ -17,6 +17,7 @@ MODELS=("openai/clip-vit-large-patch14" "Marqo/marqo-fashionSigLIP")
 ALPHA_VALUES=(0.0 0.250 0.500 0.750 1.0)
 STEP="${1:-all}"
 
+# show_usage prints the script usage and the supported steps: prepare, index, visualize, and all (default).
 show_usage() {
     echo "Usage: $0 [STEP]"
     echo "Steps: prepare | index | visualize | all (default)"
@@ -32,6 +33,7 @@ echo "Dataset: $DATASET_PATH | Sample: $SAMPLE_SIZE | Env: $ENVIRONMENT | Batch:
 echo "Models: ${MODELS[*]} | Alpha: ${ALPHA_VALUES[*]} | Step: $STEP"
 echo ""
 
+# set_common_env sets and exports common QAREEN_* environment variables used by downstream Python scripts.
 set_common_env() {
     export QAREEN_ENVIRONMENT="$ENVIRONMENT" QAREEN_DATA_DIR="data" QAREEN_CHROMA_DB_DIR="chroma_db"
     export QAREEN_DATASET_PATH="" QAREEN_DEV_SAMPLE_SIZE="$SAMPLE_SIZE" QAREEN_BATCH_SIZE="$BATCH_SIZE"

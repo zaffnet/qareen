@@ -25,10 +25,32 @@ app = typer.Typer()
 
 
 def truncate_text(text: str, max_length: int = 80) -> str:
+    """
+    Truncates text to at most max_length characters and appends "..." when truncation occurs.
+    
+    Parameters:
+        text (str): The string to truncate.
+        max_length (int): Maximum allowed length of the returned string; must be greater than or equal to 0.
+    
+    Returns:
+        str: The original text if its length is less than or equal to max_length, otherwise a truncated string ending with "...".
+    """
     return text[:max_length] + "..." if len(text) > max_length else text
 
 
 def save_query_image(query_image: Image.Image | str | None, output_dir: Path) -> Path | None:
+    """
+    Save an RGB query image to disk as "query_image.jpg" and return its path.
+    
+    If the provided image is not in RGB mode it will be converted before saving. If `query_image` is None or not a PIL Image, nothing is saved and None is returned.
+    
+    Parameters:
+        query_image (PIL.Image.Image | str | None): The query image to save; must be a PIL Image instance to be saved.
+        output_dir (pathlib.Path): Directory where the image file `query_image.jpg` will be written.
+    
+    Returns:
+        pathlib.Path | None: Path to the saved `query_image.jpg` when saved, or `None` if no valid image was provided.
+    """
     if not query_image or not isinstance(query_image, Image.Image):
         return None
     query_image_path = output_dir / "query_image.jpg"
@@ -44,6 +66,20 @@ def query_all_combinations(
     query_image: Image.Image | str | None,
     query_text: str,
 ) -> dict[str, dict[float, list]]:
+    """
+    Collects multimodal retrieval results across all configured embedding models and alpha values.
+    
+    Queries each embedding model in settings for the given dataset and query (image and text) for every alpha in settings.alpha_values and aggregates the results into a nested mapping keyed first by model_id then by alpha.
+    
+    Parameters:
+        settings (Settings): Configuration object containing embedding_models, alpha_values, k_neighbors, environment, and helper factories.
+        dataset_name (str): Name of the dataset to load vectorstores for.
+        query_image (PIL.Image.Image | str | None): Query image (PIL Image or image path) or None when no image query is used.
+        query_text (str): Query text.
+    
+    Returns:
+        dict[str, dict[float, list]]: A mapping from model_id to a mapping of alpha to the list of retrieval results for that model/alpha. Each list contains the raw results returned by the retriever (typically tuples of document and score). If a query for a particular model/alpha fails, that alpha maps to an empty list.
+    """
     all_results: dict[str, dict[float, list]] = {}
     for model_id in settings.embedding_models:
         logger.info("Processing model: %s", model_id)
@@ -81,6 +117,23 @@ def generate_markdown(
     dataset: Any,
     images_dir: Path,
 ) -> None:
+    """
+    Write a Markdown/HTML report comparing embedding models and alpha values for a single query sample and save it to `output_path`.
+    
+    Parameters:
+        output_path (Path): File path to write the generated Markdown/HTML report.
+        settings (Settings): Configuration containing dataset_path, environment, k_neighbors, random_seed, embedding_models, and alpha_values used to annotate the report.
+        sample_idx (int): Index of the query sample within the dataset.
+        query_text (str): Text query for the sample (rendered in the report).
+        query_image_path (Path | None): Path to the saved query image to embed in the report, or `None` if no query image is available.
+        all_results (dict[str, dict[float, list]]): Nested mapping of results organized as { model_id: { alpha: [(doc, score), ...] } } where `doc` objects expose `metadata` and `page_content`.
+        dataset (Any): Sequence-like dataset where items can be indexed by integer and may contain an "image" (PIL Image) for result rendering.
+        images_dir (Path): Directory where result images will be saved and referenced from the report.
+    
+    Side effects:
+        - Writes the report to `output_path`.
+        - May save result images into `images_dir` for embedding in the report.
+    """
     with output_path.open("w", encoding="utf-8") as f:
         f.write("# Marqo Fashion Dataset: Model and Alpha Comparison\n\n")
         f.write("## Reproducibility Information\n\n")
@@ -165,6 +218,16 @@ def main(
         typer.Option(help="Path to configuration file (.env format)"),
     ] = None,
 ) -> None:
+    """
+    Generate a markdown visualization comparing retrieval results across configured embedding models and alpha values.
+    
+    Loads settings (optionally from a .env file), loads the dataset, selects a sample (by index or randomly), queries all model/alpha combinations for that sample, and writes a Markdown/HTML report and associated images to the configured visualization output path. Exits with a non-zero code via typer.Exit on invalid configuration, missing/empty dataset, or other fatal errors.
+    
+    Parameters:
+        dataset_path (str | None): Optional path to the dataset that overrides the value in the configuration.
+        sample_index (int | None): Optional zero-based index of the sample to visualize; if omitted, a random sample is chosen using the configured random seed.
+        config_file (Path | None): Optional path to a .env configuration file used to construct Settings.
+    """
     try:
         settings = Settings(_env_file=str(config_file)) if config_file else Settings()
         if dataset_path:

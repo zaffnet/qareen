@@ -35,6 +35,18 @@ class DatasetItem(BaseModel):
     @field_validator("text")
     @classmethod
     def validate_text(cls, v: str | None) -> str | None:
+        """
+        Trim leading and trailing whitespace from text and ensure it is not empty.
+        
+        Parameters:
+            v (str | None): Input text to validate; may be None.
+        
+        Returns:
+            str | None: The trimmed string if provided, otherwise None.
+        
+        Raises:
+            ValueError: If `v` is a string that becomes empty after trimming.
+        """
         if v is not None:
             if not v.strip():
                 raise ValueError("Text must be a non-empty string")
@@ -44,6 +56,22 @@ class DatasetItem(BaseModel):
     @field_validator("image")
     @classmethod
     def validate_image(cls, v: str | Path | Image.Image | None) -> str | Path | Image.Image | None:
+        """
+        Validate that the provided image value is either a supported file path or a PIL Image.
+        
+        Parameters:
+            v (str | Path | PIL.Image.Image | None): Image input to validate. Accepted values are:
+                - None
+                - a filesystem path or path-like string with a supported image extension
+                - a PIL Image instance
+        
+        Returns:
+            str | Path | PIL.Image.Image | None: The original `v` if it is valid, or `None` when `v` is `None`.
+        
+        Raises:
+            ValueError: If `v` is a path/string whose file extension is not in IMAGE_FILE_EXTENSIONS.
+            TypeError: If `v` is neither a path/string nor a PIL Image instance.
+        """
         if v is None:
             return None
         if isinstance(v, (str, Path)):
@@ -55,6 +83,15 @@ class DatasetItem(BaseModel):
 
     @model_validator(mode="after")
     def validate_at_least_one_modality(self) -> DatasetItem:
+        """
+        Ensure the instance has at least one of the text or image modalities set.
+        
+        Raises:
+            ValueError: If both `text` and `image` are None.
+        
+        Returns:
+            DatasetItem: The validated model instance (`self`).
+        """
         if self.text is None and self.image is None:
             raise ValueError("At least one modality (text or image) must be provided")
         return self
@@ -88,6 +125,18 @@ class Settings(BaseSettings):
     @field_validator("alpha_values")
     @classmethod
     def validate_alpha_values(cls, v: list[float]) -> list[float]:
+        """
+        Validate and normalize a list of alpha values used for interpolation or weighting.
+        
+        Parameters:
+            v (list[float]): List of alpha values expected to be in the range 0.0 to 1.0 inclusive.
+        
+        Returns:
+            list[float]: A sorted list of unique alpha values.
+        
+        Raises:
+            ValueError: If `v` is empty or any alpha is outside the range 0.0 to 1.0.
+        """
         if not v:
             raise ValueError("At least one alpha value is required")
         for alpha in v:
@@ -98,19 +147,48 @@ class Settings(BaseSettings):
     @field_validator("environment", mode="before")
     @classmethod
     def normalize_environment(cls, v: str) -> str:
+        """
+        Normalize an environment value to lowercase when it is a string.
+        
+        Parameters:
+            v: The environment value to normalize; if not a string it is returned unchanged.
+        
+        Returns:
+            The lowercased string when `v` is a `str`, otherwise the original value.
+        """
         return v.lower() if isinstance(v, str) else v
 
     @field_validator("embedding_models")
     @classmethod
     def validate_models(cls, v: list[str]) -> list[str]:
+        """
+        Ensure the embedding model list is non-empty and return it with duplicates removed while preserving order.
+        
+        Parameters:
+            v (list[str]): Sequence of embedding model identifiers.
+        
+        Returns:
+            list[str]: The provided model identifiers with duplicates removed in their original order.
+        
+        Raises:
+            ValueError: If `v` is empty.
+        """
         if not v:
             raise ValueError("At least one embedding model is required")
         return list(dict.fromkeys(v))
 
     def model_post_init(self, __context: object) -> None:
+        """
+        Perform post-initialization tasks for the Settings model by ensuring required directories exist.
+        """
         self.ensure_directories()
 
     def ensure_directories(self) -> None:
+        """
+        Ensure required filesystem directories exist for this Settings instance.
+        
+        Creates data_dir, chroma_db_dir, prepared_dataset_dir, and the parent directory of viz_output_file if they do not already exist. This operation is idempotent and will be skipped after it has run once for the instance.
+        """
         if self._dirs_ensured:
             return
         self.data_dir.mkdir(parents=True, exist_ok=True)
@@ -120,6 +198,15 @@ class Settings(BaseSettings):
         self._dirs_ensured = True
 
     def create_embedding_model(self, model_id: str | None = None) -> Any:
+        """
+        Create an embedding model instance based on a model identifier.
+        
+        Parameters:
+            model_id (str | None): Optional model identifier to instantiate; when omitted the first entry from `self.embedding_models` is used.
+        
+        Returns:
+            Any: An embedding model instance — `MarqoFashionSigLIPModel` if the model id starts with "marqo/", otherwise `SIGLIPEmbeddingModel`.
+        """
         from qareen.indexing.marqo_fashion_model import MarqoFashionSigLIPModel
         from qareen.indexing.siglip_model import SIGLIPEmbeddingModel
 
@@ -129,6 +216,20 @@ class Settings(BaseSettings):
         return SIGLIPEmbeddingModel(model_id=mid)
 
     def create_dataset_loader(self, dataset_path: str | None = None) -> Any:
+        """
+        Create a dataset loader for a local dataset path or a Hugging Face dataset name.
+        
+        If `dataset_path` (or the `Settings.dataset_path` fallback) points to an existing local path, returns a LocalDatasetLoader for that path; otherwise returns a HuggingFaceDatasetLoader for the given dataset name using the "train" split.
+        
+        Parameters:
+            dataset_path (str | None): Optional local path or Hugging Face dataset identifier; if omitted, `self.dataset_path` is used.
+        
+        Returns:
+            A dataset loader instance: `LocalDatasetLoader` when the path exists, otherwise `HuggingFaceDatasetLoader`.
+        
+        Raises:
+            ValueError: If neither `dataset_path` nor `self.dataset_path` is provided.
+        """
         from qareen.dataset.hf_dataset import HuggingFaceDatasetLoader
         from qareen.dataset.local_dataset import LocalDatasetLoader
 

@@ -27,6 +27,16 @@ def main(
         Path | None, typer.Option(help="Path to configuration file (.env format)")
     ] = None,
 ) -> int:
+    """
+    Build vector indexes for a dataset using configuration from Settings or an optional .env file.
+    
+    Parameters:
+        dataset_name (str | None): Dataset identifier that overrides the configured `dataset_path` when provided.
+        config_file (Path | None): Path to a .env-style configuration file to load Settings from.
+    
+    Returns:
+        int: Exit code — `0` on success, `1` on failure.
+    """
     try:
         settings = Settings(_env_file=str(config_file)) if config_file else Settings()
         if dataset_name:

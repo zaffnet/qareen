@@ -64,14 +64,14 @@ class MockEmbeddingModel(EmbeddingModel):
         return self.normalize_l2(embedding)
 
     def embed_image(self, image: Image.Image | str | Path | None) -> np.ndarray | None:
-        """Generate image embedding.
-
-        Args:
-            image: Input image
-
+        """
+        Generate a normalized embedding vector for the provided image input.
+        
+        Parameters:
+            image (PIL.Image.Image | str | pathlib.Path | None): Image to embed. May be a PIL Image, a path (Path or str) pointing to an image, or None.
+        
         Returns:
-            Embedding or None if image is None
-
+            np.ndarray | None: L2-normalized embedding vector of length equal to the model's embedding dimension, or `None` if `image` is `None`. When the model is configured as deterministic, the same image content will produce a consistent embedding.
         """
         self.embed_image_calls.append(image)
         if image is None:
