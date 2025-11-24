@@ -69,7 +69,7 @@ def test_embed_image_invalid_type():
     model.model = Mock()
     model.preprocess_val = Mock()
 
-    with pytest.raises(TypeError, match=model.IMAGE_TYPE_ERROR):
+    with pytest.raises(TypeError, match="Image must be PIL Image or path string"):
         model.embed_image({"invalid": "type"})
 
 
@@ -78,7 +78,7 @@ def test_embed_image_invalid_path():
     model.model = Mock()
     model.preprocess_val = Mock()
 
-    with pytest.raises(ValueError, match=model.IMAGE_TYPE_ERROR):
+    with pytest.raises(ValueError, match="Image must be PIL Image or path string"):
         model.embed_image("/nonexistent/path.jpg")
 
 

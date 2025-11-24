@@ -14,6 +14,7 @@ from conftest import create_test_settings
 from qareen.dataset.base import DatasetLoader
 from qareen.indexing.chroma_indexer import ChromaIndexer
 from qareen.indexing.embedding_model import EmbeddingModel
+from qareen.retrieving.chroma_retriever import ChromaRetriever
 
 MISSING_MODALITY_ERROR = "At least one modality must be present"
 
@@ -255,8 +256,15 @@ def test_indexer_handles_text_only_samples() -> None:
 
         assert len(vectorstores) == 1
         vectorstore = vectorstores[0.5]
+        retriever = ChromaRetriever(model, settings)
 
-        results = vectorstore.similarity_search("text only", k=2)
+        results = retriever.query_multimodal(
+            vectorstore=vectorstore,
+            image=None,
+            text="text only",
+            alpha=0.5,
+            k=2,
+        )
         assert len(results) == 2
 
 
@@ -281,8 +289,15 @@ def test_indexer_handles_image_only_samples() -> None:
 
         assert len(vectorstores) == 1
         vectorstore = vectorstores[0.5]
+        retriever = ChromaRetriever(model, settings)
 
-        results = vectorstore.similarity_search("query", k=2)
+        results = retriever.query_multimodal(
+            vectorstore=vectorstore,
+            image=None,
+            text="query",
+            alpha=0.5,
+            k=2,
+        )
         assert len(results) == 2
 
 
@@ -308,6 +323,13 @@ def test_indexer_handles_mixed_modality_samples() -> None:
 
         assert len(vectorstores) == 1
         vectorstore = vectorstores[0.5]
+        retriever = ChromaRetriever(model, settings)
 
-        results = vectorstore.similarity_search("query", k=3)
+        results = retriever.query_multimodal(
+            vectorstore=vectorstore,
+            image=None,
+            text="query",
+            alpha=0.5,
+            k=3,
+        )
         assert len(results) == 3

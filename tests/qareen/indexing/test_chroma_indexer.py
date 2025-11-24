@@ -231,10 +231,16 @@ def test_similarity_search_works_with_embedding_wrapper() -> None:
             environment="dev",
         )
 
-        results = vectorstore.similarity_search("apple", k=1)
+        results = retriever.query_multimodal(
+            vectorstore=vectorstore,
+            image=None,
+            text="apple",
+            alpha=0.5,
+            k=1,
+        )
 
         assert len(results) == 1
-        assert results[0].page_content in ["text_0", "text_1", "text_2"]
+        assert results[0][0].page_content in ["text_0", "text_1", "text_2"]
 
 
 def test_get_vectorstore_similarity_search_works() -> None:
@@ -260,10 +266,16 @@ def test_get_vectorstore_similarity_search_works() -> None:
             environment="dev",
         )
 
-        results = vectorstore.similarity_search("banana", k=1)
+        results = retriever.query_multimodal(
+            vectorstore=vectorstore,
+            image=None,
+            text="banana",
+            alpha=0.5,
+            k=1,
+        )
 
         assert len(results) == 1
-        assert results[0].page_content in ["text_0", "text_1", "text_2"]
+        assert results[0][0].page_content in ["text_0", "text_1", "text_2"]
 
 
 def test_sample_size_honored_in_non_dev_environment() -> None:

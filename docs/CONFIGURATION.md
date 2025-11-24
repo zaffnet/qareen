@@ -28,16 +28,7 @@ ANONYMIZED_TELEMETRY=False uv run python scripts/build_index.py ...
 
 ### Option 3: Programmatic (Already Implemented)
 
-The `ChromaIndexer` class already disables telemetry when creating ChromaDB clients:
-
-```python
-from chromadb.config import Settings as ChromaSettings
-
-chroma_client = chromadb.PersistentClient(
-    path=str(settings.chroma_db_dir),
-    settings=ChromaSettings(anonymized_telemetry=False),
-)
-```
+ChromaDB clients are created with telemetry disabled via `qareen.utils.chroma_client.create_chroma_client()`.
 
 
 
@@ -51,10 +42,10 @@ chroma_client = chromadb.PersistentClient(
 
 ## Settings
 
-The `Settings` class in `qareen.config.settings` manages configuration:
+The `Settings` class in `qareen.models` manages configuration:
 
 ```python
-from qareen.config.settings import Settings
+from qareen.models import Settings
 
 settings = Settings(
     environment="dev",

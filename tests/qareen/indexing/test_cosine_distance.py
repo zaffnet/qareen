@@ -117,7 +117,7 @@ def test_collection_uses_cosine_distance() -> None:
             environment="dev",
         )
 
-        metadata = vectorstore._collection.metadata
+        metadata = vectorstore.metadata
         assert metadata.get("hnsw:space") == "cosine", "Collection must use cosine distance"
 
 

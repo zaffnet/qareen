@@ -3,10 +3,7 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING
-
-if TYPE_CHECKING:
-    from langchain_core.vectorstores import VectorStore
+from typing import Any
 
 
 class VectorStoreIndexer(ABC):
@@ -25,7 +22,7 @@ class VectorStoreIndexer(ABC):
         batch_size: int = 100,
         sample_size: int | None = None,
         environment: str = "dev",
-    ) -> dict[float, VectorStore]:
+    ) -> dict[float, Any]:
         """Create vector store index.
 
         Implementations should support a rebuild parameter to control whether

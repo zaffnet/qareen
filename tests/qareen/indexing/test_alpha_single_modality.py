@@ -14,6 +14,7 @@ from conftest import create_test_settings
 from qareen.dataset.base import DatasetLoader
 from qareen.indexing.chroma_indexer import ChromaIndexer
 from qareen.indexing.embedding_model import EmbeddingModel
+from qareen.retrieving.chroma_retriever import ChromaRetriever
 
 MISSING_MODALITY_ERROR = "At least one modality must be present"
 
@@ -319,8 +320,15 @@ def test_text_only_query_with_text_only_index() -> None:
 
         vectorstores = indexer.index(alpha_values=[0.5], rebuild=True, batch_size=10)
         vectorstore = vectorstores[0.5]
+        retriever = ChromaRetriever(model, settings)
 
-        results = vectorstore.similarity_search("apple", k=1)
+        results = retriever.query_multimodal(
+            vectorstore=vectorstore,
+            image=None,
+            text="apple",
+            alpha=0.5,
+            k=1,
+        )
         assert len(results) == 1
 
 
@@ -343,8 +351,15 @@ def test_image_query_embedding_with_image_only_index() -> None:
 
         vectorstores = indexer.index(alpha_values=[0.5], rebuild=True, batch_size=10)
         vectorstore = vectorstores[0.5]
+        retriever = ChromaRetriever(model, settings)
 
-        results = vectorstore.similarity_search("query text", k=2)
+        results = retriever.query_multimodal(
+            vectorstore=vectorstore,
+            image=None,
+            text="query text",
+            alpha=0.5,
+            k=2,
+        )
         assert len(results) == 2
 
 

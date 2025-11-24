@@ -64,104 +64,68 @@ uv run python scripts/build_index.py \
 
 ## Retrieval / Querying
 
-Use the `ChromaIndexer` to query indexed data:
+Use the `ChromaRetriever` to query indexed data:
 
 ```python
-from pathlib import Path
 from PIL import Image
-from qareen.config.settings import Settings
-from qareen.dataset.local_dataset import LocalDatasetLoader
-from qareen.indexing.chroma_indexer import ChromaIndexer
+from qareen.models import Settings
 from qareen.indexing.siglip_model import SIGLIPEmbeddingModel
+from qareen.retrieving.chroma_retriever import ChromaRetriever
 
-# Initialize components
 settings = Settings(environment="dev")
-dataset_loader = LocalDatasetLoader("data/my_products")
 embedding_model = SIGLIPEmbeddingModel("google/siglip-base-patch16-224")
+retriever = ChromaRetriever(embedding_model=embedding_model, settings=settings)
 
-indexer = ChromaIndexer(
-    dataset_loader=dataset_loader,
-    embedding_model=embedding_model,
-    settings=settings,
-)
-
-# Load the vectorstore for a specific alpha
-vectorstore = indexer.get_vectorstore(
+vectorstore = retriever.get_vectorstore(
     dataset_name="my_products",
     model_id="google/siglip-base-patch16-224",
     alpha=0.5,
     environment="dev",
 )
 
-# Query with both image and text
 query_image = Image.open("query_image.jpg")
-query_text = "designer handbag"
-
-results = indexer.query_multimodal(
+results = retriever.query_multimodal(
     vectorstore=vectorstore,
     image=query_image,
-    text=query_text,
-    alpha=0.5,  # Must match the indexed alpha
-    k=5,  # Return top 5 results
+    text="designer handbag",
+    alpha=0.5,
+    k=5,
 )
 
-# Process results
 for doc, score in results:
-    print(f"Score: {score:.3f}")
-    print(f"Text: {doc.page_content}")
-    print(f"Metadata: {doc.metadata}")
-    print("---")
+    print(f"Score: {score:.3f} | Text: {doc.page_content} | Metadata: {doc.metadata}")
 ```
 
 **Query variations:**
 
 ```python
 # Text-only query (alpha=0.0)
-results = indexer.query_multimodal(
-    vectorstore=vectorstore_alpha_0,
-    image=None,
-    text="leather handbag",
-    alpha=0.0,
-    k=5,
-)
+results = retriever.query_multimodal(vectorstore=vectorstore_alpha_0, image=None, text="leather handbag", alpha=0.0, k=5)
 
 # Image-only query (alpha=1.0)
-results = indexer.query_multimodal(
-    vectorstore=vectorstore_alpha_1,
-    image=query_image,
-    text=None,
-    alpha=1.0,
-    k=5,
-)
+results = retriever.query_multimodal(vectorstore=vectorstore_alpha_1, image=query_image, text=None, alpha=1.0, k=5)
 
 # Balanced multimodal (alpha=0.5)
-results = indexer.query_multimodal(
-    vectorstore=vectorstore_alpha_05,
-    image=query_image,
-    text="red handbag",
-    alpha=0.5,
-    k=10,
-)
+results = retriever.query_multimodal(vectorstore=vectorstore_alpha_05, image=query_image, text="red handbag", alpha=0.5, k=10)
 ```
 
 ## Quick Start
 
 1. **Prepare**: Create dataset with `text`/`image` columns and save to disk.
 2. **Index**: Run `uv run python scripts/build_index.py --dataset-name <path> ...`
-3. **Query**: Use `ChromaIndexer.query_multimodal()` in your application.
+3. **Query**: Use `ChromaRetriever.query_multimodal()` in your application.
 
 ## Configuration
 
 Environment variables and paths are managed via `Settings`:
 
 ```python
-from qareen.config.settings import Settings
+from qareen.models import Settings
 
-# Custom configuration
 settings = Settings(
     environment="prod",
     chroma_db_dir=Path("/custom/path/chroma_db"),
-    dev_sample_size=1000,  # Limit samples in dev
+    dev_sample_size=1000,
 )
 ```
 

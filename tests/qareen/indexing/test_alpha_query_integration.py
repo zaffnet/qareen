@@ -76,7 +76,15 @@ class DeterministicEmbeddingModel(EmbeddingModel):
             raise TypeError("Image must be PIL Image or path string")
 
         image_array = np.array(image)
-        seed = int(image_array.sum() + image_array.mean() * 1000) % (2**31)
+        # Use color-specific features to differentiate images
+        # Include per-channel statistics to distinguish colors
+        if len(image_array.shape) == 3:  # RGB image
+            r_mean = float(image_array[:, :, 0].mean())
+            g_mean = float(image_array[:, :, 1].mean())
+            b_mean = float(image_array[:, :, 2].mean())
+            seed = int(r_mean * 1000 + g_mean * 100 + b_mean * 10 + image_array.sum()) % (2**31)
+        else:
+            seed = int(image_array.sum() + image_array.mean() * 1000) % (2**31)
         rng = np.random.RandomState(seed)
         embedding = rng.randn(self._embedding_dim).astype(np.float32)
         return self.normalize_l2(embedding)

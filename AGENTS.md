@@ -11,7 +11,7 @@ Use `source .venv/bin/activate && uv run python ...` for executing python files 
 
 ## Architecture Patterns
 
-Pydantic-first: use Pydantic models for all data structures, configs, schemas. Use ABC pattern for extensible components (see `qareen/dataset/base.py`, `qareen/indexing/base.py`). Follow module structure: dataset/, indexing/, config/. Use LangChain VectorStore interface for new vector store backends.
+Pydantic-first: use Pydantic models for all data structures, configs, schemas. Use ABC pattern for extensible components (see `qareen/dataset/base.py`, `qareen/indexing/base.py`). Follow module structure: dataset/, indexing/, config/. Implement vector store backends against the interfaces defined in `qareen/indexing`.
 
 ## Code Style
 

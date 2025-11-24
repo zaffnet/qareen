@@ -3,12 +3,19 @@
 from __future__ import annotations
 
 from abc import ABC
-
-from langchain_core.embeddings import Embeddings
-from langchain_core.vectorstores import VectorStore
+from typing import Protocol
 
 from qareen.indexing.base import VectorStoreIndexer
 from qareen.indexing.chroma_indexer import ChromaIndexer
+
+
+class Embeddings(Protocol):
+    """Placeholder interface for embedding providers."""
+
+
+class VectorStore(Protocol):
+    """Placeholder interface for vector stores."""
+
 
 REQUIRED_INDEXER_METHODS = frozenset({"index"})
 
