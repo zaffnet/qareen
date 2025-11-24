@@ -13,7 +13,7 @@ def download_image_with_retry(image_url: str, max_retries: int = 3) -> Image.Ima
             response = requests.get(image_url, timeout=30)
             response.raise_for_status()
             return Image.open(BytesIO(response.content))
-        except Exception:
+        except (requests.exceptions.RequestException, UnidentifiedImageError):
             if attempt == max_retries - 1:
                 return None
             time.sleep(2**attempt)

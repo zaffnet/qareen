@@ -108,9 +108,12 @@ class ChromaRetriever:
             return []
 
         ids = results["ids"][0]
-        metadatas = results.get("metadatas", [[]])[0] or [{}] * len(ids)
-        docs = results.get("documents", [[]])[0] or [""] * len(ids)
-        distances = results.get("distances", [[]])[0] or [0.0] * len(ids)
+        metadatas_list = results.get("metadatas") or [[]]
+        metadatas = metadatas_list[0] if metadatas_list else [{}] * len(ids)
+        docs_list = results.get("documents") or [[]]
+        docs = docs_list[0] if docs_list else [""] * len(ids)
+        distances_list = results.get("distances") or [[]]
+        distances = distances_list[0] if distances_list else [0.0] * len(ids)
 
         documents = []
         for _id, metadata, doc_text, distance in zip(ids, metadatas, docs, distances, strict=True):

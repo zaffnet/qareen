@@ -7,7 +7,7 @@ Run `uv sync --all-extras` to install dependencies.
 - `pyproject.toml` is the source of truth. Edit it directly, then run `uv sync`. Never use `uv pip install` or `pip install`.
 
 ## Running Python
-Use `source .venv/bin/activate && uv run python ...` for executing python files or commands.
+Use `uv run python ...` for executing python files or commands.
 
 ## Architecture Patterns
 

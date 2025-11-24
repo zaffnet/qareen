@@ -137,6 +137,7 @@ def generate_markdown(
                                 )
                                 f.write(img_tag)
                         except (ValueError, IndexError, KeyError):
+                            # Skip if image path is invalid or not found
                             pass
                     score_text = (
                         f"<strong>#{i}</strong> "

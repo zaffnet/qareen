@@ -99,7 +99,7 @@ class ChromaIndexer(VectorStoreIndexer):
 
                 docs, embeddings, metadatas, ids = [], [], [], []
                 for i, (text, image) in enumerate(
-                    zip(batch_dict["text"], batch_dict["image"], strict=False)
+                    zip(batch_dict["text"], batch_dict["image"], strict=True)
                 ):
                     img = load_image(image)
                     emb = self.embedding_model.embed_multimodal(image=img, text=text, alpha=alpha)

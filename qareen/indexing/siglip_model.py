@@ -107,6 +107,7 @@ class SIGLIPEmbeddingModel(EmbeddingModel):
             if hasattr(config, "text_config") and hasattr(config.text_config, "hidden_size"):
                 return int(config.text_config.hidden_size)
         except AttributeError:
+            # Fall back to inferring dimension from dummy embedding
             pass
 
         try:
