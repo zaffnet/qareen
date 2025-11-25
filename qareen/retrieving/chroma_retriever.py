@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import contextlib
-import re
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
@@ -15,7 +14,7 @@ if TYPE_CHECKING:
 from qareen.models import Settings
 from qareen.utils.chroma_client import close_chroma_client, create_chroma_client
 from qareen.utils.image_utils import load_image
-from qareen.utils.naming import get_collection_name
+from qareen.utils.naming import ALPHA_SUFFIX_PATTERN, get_collection_name
 
 ALPHA_TOLERANCE = 1e-6
 IDENTICAL_THRESHOLD = 0.999999
@@ -142,6 +141,6 @@ class ChromaRetriever:
             float(match.group(1).replace("_", "."))
             for collection in self._get_chroma_client().list_collections()
             if collection.name.startswith(prefix)
-            and (match := re.search(r"_a(\d+_\d+)", collection.name))
+            and (match := ALPHA_SUFFIX_PATTERN.search(collection.name))
         ]
         return sorted(alphas)

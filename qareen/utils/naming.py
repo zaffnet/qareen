@@ -3,6 +3,12 @@ from __future__ import annotations
 import hashlib
 import re
 
+# ChromaDB collection name max length limit
+CHROMA_COLLECTION_MAX_LENGTH = 63
+
+# Regex pattern for parsing alpha values from collection names (e.g., "_a0_500" -> "0_500")
+ALPHA_SUFFIX_PATTERN = re.compile(r"_a(\d+_\d+)")
+
 
 def get_collection_name(
     dataset_name: str, model_id: str, alpha: float | None = None, environment: str = "dev"
@@ -34,7 +40,7 @@ def get_collection_name(
         alpha_suffix = f"_a{alpha_str}"
     else:
         alpha_suffix = ""
-    max_length = 63
+    max_length = CHROMA_COLLECTION_MAX_LENGTH
     available_length = max_length - len(env_part) - len(alpha_suffix) - 2
 
     if len(dataset_part) + len(model_part) <= available_length:
