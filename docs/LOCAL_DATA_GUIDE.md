@@ -93,8 +93,9 @@ settings = Settings(environment="dev")
 embedding_model = SIGLIPEmbeddingModel("google/siglip-base-patch16-224")
 retriever = ChromaRetriever(embedding_model=embedding_model, settings=settings)
 
+# Note: dataset_name should match what was used during indexing (e.g., "data/my_products")
 vectorstore = retriever.get_vectorstore(
-    dataset_name="my_products",
+    dataset_name="data/my_products",
     model_id="google/siglip-base-patch16-224",
     alpha=0.5,
     environment="dev",
@@ -116,6 +117,14 @@ for doc, score in results:
 **Query variations:**
 
 ```python
+# Get vectorstores for different alpha values
+vectorstore_alpha_0 = retriever.get_vectorstore(
+    dataset_name="data/my_products", model_id="google/siglip-base-patch16-224", alpha=0.0, environment="dev"
+)
+vectorstore_alpha_1 = retriever.get_vectorstore(
+    dataset_name="data/my_products", model_id="google/siglip-base-patch16-224", alpha=1.0, environment="dev"
+)
+
 # Text-only query (alpha=0.0)
 results = retriever.query_multimodal(vectorstore=vectorstore_alpha_0, image=None, text="leather handbag", alpha=0.0, k=5)
 
@@ -123,7 +132,7 @@ results = retriever.query_multimodal(vectorstore=vectorstore_alpha_0, image=None
 results = retriever.query_multimodal(vectorstore=vectorstore_alpha_1, image=query_image, text=None, alpha=1.0, k=5)
 
 # Balanced multimodal (alpha=0.5)
-results = retriever.query_multimodal(vectorstore=vectorstore_alpha_05, image=query_image, text="red handbag", alpha=0.5, k=10)
+results = retriever.query_multimodal(vectorstore=vectorstore, image=query_image, text="red handbag", alpha=0.5, k=10)
 ```
 
 ## Quick Start
@@ -151,7 +160,7 @@ See [CONFIGURATION.md](CONFIGURATION.md) for full configuration options.
 ## Notes
 
 - **Alpha values:** Must match between indexing and querying (use same alpha)
-- **Collection naming:** Format: `{env}_{dataset}_{model}_a{alpha:.3f}`
+- **Collection naming:** Format: `{env}_{dataset}_{model}_a{alpha}` (e.g., `dev_my_products_siglip_a0_500`)
 - **Storage:** ChromaDB persists to `chroma_db/` directory by default
 - **Models:** Any HuggingFace CLIP/SIGLIP model supported
 - **Distance metric:** Cosine distance (see [DISTANCE_METRIC.md](DISTANCE_METRIC.md))

@@ -7,6 +7,8 @@ from PIL import Image
 from pydantic import BaseModel, Field, PrivateAttr, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+__all__ = ["DatasetItem", "Settings", "IMAGE_FILE_EXTENSIONS"]
+
 IMAGE_FILE_EXTENSIONS: frozenset[str] = frozenset(
     {
         ".jpg",

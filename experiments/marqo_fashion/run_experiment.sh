@@ -34,7 +34,7 @@ echo ""
 
 set_common_env() {
     export QAREEN_ENVIRONMENT="$ENVIRONMENT" QAREEN_DATA_DIR="data" QAREEN_CHROMA_DB_DIR="chroma_db"
-    export QAREEN_DATASET_PATH="" QAREEN_DEV_SAMPLE_SIZE="$SAMPLE_SIZE" QAREEN_BATCH_SIZE="$BATCH_SIZE"
+    export QAREEN_DATASET_PATH="$DATASET_PATH" QAREEN_DEV_SAMPLE_SIZE="$SAMPLE_SIZE" QAREEN_BATCH_SIZE="$BATCH_SIZE"
     export QAREEN_REBUILD_COLLECTIONS="$REBUILD" QAREEN_K_NEIGHBORS="5" QAREEN_RANDOM_SEED="$SEED"
     export QAREEN_DATASET_PREP_SAMPLE_SIZE="$SAMPLE_SIZE" QAREEN_PREPARED_DATASET_DIR="$DATASET_PATH"
     export QAREEN_VIZ_OUTPUT_FILE="data/marqo_comparison.md"
@@ -42,11 +42,13 @@ set_common_env() {
 
 if [[ "$STEP" == "all" ]] || [[ "$STEP" == "prepare" ]]; then
     echo "Step 1: Preparing Marqo Fashion Dataset"
-    [ -d "$DATASET_PATH" ] && echo "Dataset exists, skipping..." || {
+    if [ -d "$DATASET_PATH" ]; then
+        echo "Dataset exists, skipping..."
+    else
         set_common_env
         export QAREEN_EMBEDDING_MODELS='["google/siglip-base-patch16-224"]' QAREEN_ALPHA_VALUES='[0.5]'
         python3 scripts/prepare_marqo_dataset.py || { echo "ERROR: Dataset preparation failed" >&2; exit 1; }
-    }
+    fi
 fi
 
 if [[ "$STEP" == "all" ]] || [[ "$STEP" == "index" ]]; then
@@ -56,7 +58,7 @@ if [[ "$STEP" == "all" ]] || [[ "$STEP" == "index" ]]; then
         echo "Building indexes for: $MODEL"
         set_common_env
         export QAREEN_EMBEDDING_MODELS='["'$MODEL'"]'
-        ALPHA_VALUES_STR="[$(IFS=,; echo "${ALPHA_VALUES[*]}")]" || { echo "ERROR: Failed to encode alpha values" >&2; exit 1; }
+        ALPHA_VALUES_STR=$(python3 -c "import json, sys; print(json.dumps([float(x) for x in sys.argv[1:]]))" "${ALPHA_VALUES[@]}") || { echo "ERROR: Failed to encode alpha values" >&2; exit 1; }
         export QAREEN_ALPHA_VALUES="$ALPHA_VALUES_STR"
         python3 scripts/build_index.py --dataset-name "$DATASET_PATH" || { echo "ERROR: Index building failed for $MODEL" >&2; exit 1; }
     done
@@ -68,7 +70,7 @@ if [[ "$STEP" == "all" ]] || [[ "$STEP" == "visualize" ]]; then
     ALPHAS_JSON=$(python3 -c "import json, sys; print(json.dumps([float(x) for x in sys.argv[1:]]))" "${ALPHA_VALUES[@]}") || { echo "ERROR: Failed to encode alpha values" >&2; exit 1; }
     set_common_env
     export QAREEN_EMBEDDING_MODELS="$MODELS_JSON" QAREEN_ALPHA_VALUES="$ALPHAS_JSON"
-    python scripts/visualize_marqo_comparison.py --dataset-path "$DATASET_PATH" || { echo "ERROR: Visualization failed" >&2; exit 1; }
+    python3 scripts/visualize_marqo_comparison.py --dataset-path "$DATASET_PATH" || { echo "ERROR: Visualization failed" >&2; exit 1; }
 fi
 
 echo "==================================================================="

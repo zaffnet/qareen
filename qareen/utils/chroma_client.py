@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import contextlib
+import logging
 from typing import TYPE_CHECKING
 
 import chromadb
@@ -8,6 +8,8 @@ from chromadb.config import Settings as ChromaSettings
 
 if TYPE_CHECKING:
     from pathlib import Path
+
+logger = logging.getLogger(__name__)
 
 
 def create_chroma_client(db_path: Path) -> chromadb.PersistentClient:
@@ -18,5 +20,9 @@ def create_chroma_client(db_path: Path) -> chromadb.PersistentClient:
 
 def close_chroma_client(client: chromadb.PersistentClient | None) -> None:
     if client is not None:
-        with contextlib.suppress(AttributeError, RuntimeError):
+        try:
             client.clear_system_cache()
+        except AttributeError:
+            pass
+        except RuntimeError as e:
+            logger.warning("RuntimeError during ChromaDB cleanup: %s", e)
