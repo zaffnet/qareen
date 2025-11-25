@@ -165,12 +165,12 @@ def test_embedding_dim_caching(mock_open_clip):
     model = MarqoFashionSigLIPModel()
 
     with patch.object(model, "embed_text") as mock_embed:
-        mock_embed.return_value = np.zeros(63)
+        mock_embed.return_value = np.zeros(512)
         dim1 = model.embedding_dim
         dim2 = model.embedding_dim
 
-        assert dim1 == 63
-        assert dim2 == 63
+        assert dim1 == 512
+        assert dim2 == 512
         mock_embed.assert_called_once()
 
 
