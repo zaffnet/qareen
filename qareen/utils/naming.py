@@ -25,7 +25,7 @@ def get_collection_name(
 
     env_part, dataset_part, model_part = sanitize(env), sanitize(dataset_name), sanitize(model_id)
     alpha_suffix = f"_a{alpha:.3f}" if alpha is not None else ""
-    max_length = 63
+    max_length = 512
     available_length = max_length - len(env_part) - len(alpha_suffix) - 2
 
     if len(dataset_part) + len(model_part) <= available_length:

@@ -65,11 +65,17 @@ See [docs/CONFIGURATION.md](docs/CONFIGURATION.md) for environment variables, lo
 
 See [docs/DISTANCE_METRIC.md](docs/DISTANCE_METRIC.md) for details on the cosine distance metric used for similarity search.
 
-## References
+## Quick Start
 
-Run the end-to-end example (requires SQID dataset):
+Run the end-to-end example (requires dataset and environment configuration):
 
 ```bash
+# Set required environment variables (or use a .env config file)
+export QAREEN_EMBEDDING_MODELS='["google/siglip-base-patch16-224"]'
+export QAREEN_ALPHA_VALUES='[0.0, 0.5, 1.0]'
+export QAREEN_ENVIRONMENT="dev"
+# ... see docs/CONFIGURATION.md for all required settings
+
 uv run python scripts/build_index.py --dataset-name <data_dir>
 ```
 

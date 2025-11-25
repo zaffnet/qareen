@@ -28,23 +28,41 @@ At least one modality must be present. See [DATASET_FORMAT.md](DATASET_FORMAT.md
 
 ## Indexing Data
 
-Index your local dataset using the `build_index.py` script:
+Index your local dataset using the `build_index.py` script. Configuration is via environment variables (prefixed with `QAREEN_`) or a `.env` config file.
+
+**Set environment variables:**
 
 ```bash
-uv run python scripts/build_index.py \
-  --dataset-name data/my_products \
-  --models google/siglip-base-patch16-224 \
-  --alpha-values 0.0 0.5 1.0 \
-  --environment dev \
-  --batch-size 100
+export QAREEN_ENVIRONMENT="dev"
+export QAREEN_DATA_DIR="data"
+export QAREEN_CHROMA_DB_DIR="chroma_db"
+export QAREEN_EMBEDDING_MODELS='["google/siglip-base-patch16-224"]'
+export QAREEN_ALPHA_VALUES='[0.0, 0.5, 1.0]'
+export QAREEN_DEV_SAMPLE_SIZE="300"
+export QAREEN_BATCH_SIZE="100"
+export QAREEN_REBUILD_COLLECTIONS="false"
+export QAREEN_K_NEIGHBORS="5"
+export QAREEN_RANDOM_SEED="42"
+export QAREEN_DATASET_PREP_SAMPLE_SIZE="1000"
+export QAREEN_PREPARED_DATASET_DIR="data/prepared"
+export QAREEN_VIZ_OUTPUT_FILE="data/comparison.md"
 ```
 
-**Key parameters:**
-- `--dataset-name`: Path to local dataset directory (or HuggingFace Hub ID)
-- `--models`: One or more embedding models (CLIP, SIGLIP, Marqo variants)
-- `--alpha-values`: Image-text weights (0.0=text-only, 1.0=image-only)
-- `--environment`: dev/staging/prod (affects collection naming)
-- `--rebuild`: Add to delete and recreate existing collections
+**Run the indexer:**
+
+```bash
+uv run python scripts/build_index.py --dataset-name data/my_products
+```
+
+**Or use a config file:**
+
+```bash
+uv run python scripts/build_index.py --dataset-name data/my_products --config-file .env
+```
+
+**CLI options:**
+- `--dataset-name`: Path to local dataset directory (or HuggingFace Hub ID), overrides config
+- `--config-file`: Path to `.env` configuration file
 
 The script will:
 1. Load your dataset from disk
@@ -55,11 +73,10 @@ The script will:
 **Example with multiple models:**
 
 ```bash
-uv run python scripts/build_index.py \
-  --dataset-name data/my_products \
-  --models openai/clip-vit-large-patch14 Marqo/marqo-fashionSigLIP \
-  --alpha-values 0.0 0.25 0.5 0.75 1.0 \
-  --environment prod
+export QAREEN_EMBEDDING_MODELS='["openai/clip-vit-large-patch14", "Marqo/marqo-fashionSigLIP"]'
+export QAREEN_ALPHA_VALUES='[0.0, 0.25, 0.5, 0.75, 1.0]'
+export QAREEN_ENVIRONMENT="prod"
+uv run python scripts/build_index.py --dataset-name data/my_products
 ```
 
 ## Retrieval / Querying

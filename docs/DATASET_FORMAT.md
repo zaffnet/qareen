@@ -30,7 +30,7 @@ At least one of `text` or `image` must be provided.
 - Both image and text `None`: rejected
 - Text must be non-empty when provided
 - Image: PIL Image, valid path, or `None`
-- Valid extensions: .jpg, .jpeg, .png, .gif, .bmp, .webp, .tiff, .tif, .svg
+- Valid extensions: .jpg, .jpeg, .png, .gif, .bmp, .webp, .tiff, .tif, .avif, .heic, .heif, .jfif, .svg
 
 ## Embedding
 
