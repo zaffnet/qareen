@@ -116,12 +116,13 @@ class ChromaRetriever:
         distances = distances_list[0] if distances_list else [0.0] * len(ids)
 
         documents = []
+        skipped_identical = False
         for _id, metadata, doc_text, distance in zip(ids, metadatas, docs, distances, strict=True):
             similarity = max(0.0, min(1.0, 1.0 - (abs(distance) / 2.0)))
-            skip = similarity > IDENTICAL_THRESHOLD
-            if score_threshold is not None:
-                skip = skip or similarity < score_threshold
-            if skip:
+            if similarity > IDENTICAL_THRESHOLD and not skipped_identical:
+                skipped_identical = True
+                continue
+            if score_threshold is not None and similarity < score_threshold:
                 continue
             documents.append((Document(page_content=doc_text, metadata=metadata), similarity))
             if len(documents) >= k:
