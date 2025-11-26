@@ -22,7 +22,7 @@ def close_chroma_client(client: chromadb.PersistentClient | None) -> None:
     if client is not None:
         try:
             client.clear_system_cache()
-        except AttributeError:
-            pass
+        except AttributeError as e:
+            logger.debug("ChromaDB client missing clear_system_cache: %s", e)
         except RuntimeError as e:
             logger.warning("RuntimeError during ChromaDB cleanup: %s", e)

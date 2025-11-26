@@ -17,23 +17,23 @@ def download_image_with_retry(
         max_retries = 1
     for attempt in range(max_retries):
         try:
-            response = requests.get(image_url, timeout=15, stream=True)
-            response.raise_for_status()
+            with requests.get(image_url, timeout=15, stream=True) as response:
+                response.raise_for_status()
 
-            content_length = response.headers.get("content-length")
-            if content_length and int(content_length) > max_bytes:
-                return None
-
-            content = BytesIO()
-            size = 0
-            for chunk in response.iter_content(chunk_size=8192):
-                size += len(chunk)
-                if size > max_bytes:
+                content_length = response.headers.get("content-length")
+                if content_length and int(content_length) > max_bytes:
                     return None
-                content.write(chunk)
-            content.seek(0)
 
-            return Image.open(content)
+                content = BytesIO()
+                size = 0
+                for chunk in response.iter_content(chunk_size=8192):
+                    size += len(chunk)
+                    if size > max_bytes:
+                        return None
+                    content.write(chunk)
+                content.seek(0)
+
+                return Image.open(content)
         except (requests.exceptions.RequestException, UnidentifiedImageError):
             if attempt == max_retries - 1:
                 return None
