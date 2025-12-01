@@ -103,20 +103,13 @@ class ChromaRetriever:
             include=["metadatas", "documents", "distances"],
         )
 
-        if not results.get("ids") or not results["ids"][0]:
+        ids = (results.get("ids") or [[]])[0]
+        if not ids:
             return []
 
-        ids = results["ids"][0]
-        metadatas = (results.get("metadatas") or [[]])[0]
-        docs = (results.get("documents") or [[]])[0]
-        distances = (results.get("distances") or [[]])[0]
-
-        if not metadatas:
-            metadatas = [{}] * len(ids)
-        if not docs:
-            docs = [""] * len(ids)
-        if not distances:
-            distances = [0.0] * len(ids)
+        metadatas = (results.get("metadatas") or [[]])[0] or [{}] * len(ids)
+        docs = (results.get("documents") or [[]])[0] or [""] * len(ids)
+        distances = (results.get("distances") or [[]])[0] or [0.0] * len(ids)
 
         documents = []
         skipped_identical = False
@@ -137,9 +130,12 @@ class ChromaRetriever:
         self, dataset_name: str, model_id: str, environment: str = "dev"
     ) -> list[float]:
         prefix = get_collection_name(dataset_name, model_id, None, environment)
+        collections = self._get_chroma_client().list_collections()
+        if not collections:
+            return []
         alphas = [
             float(match.group(1).replace("_", "."))
-            for collection in self._get_chroma_client().list_collections()
+            for collection in collections
             if collection.name.startswith(prefix)
             and (match := ALPHA_SUFFIX_PATTERN.search(collection.name))
         ]

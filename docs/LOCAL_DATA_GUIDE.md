@@ -121,6 +121,9 @@ for doc, score in results:
 vectorstore_alpha_0 = retriever.get_vectorstore(
     dataset_name="data/my_products", model_id="google/siglip-base-patch16-224", alpha=0.0, environment="dev"
 )
+vectorstore_alpha_05 = retriever.get_vectorstore(
+    dataset_name="data/my_products", model_id="google/siglip-base-patch16-224", alpha=0.5, environment="dev"
+)
 vectorstore_alpha_1 = retriever.get_vectorstore(
     dataset_name="data/my_products", model_id="google/siglip-base-patch16-224", alpha=1.0, environment="dev"
 )
@@ -132,7 +135,7 @@ results = retriever.query_multimodal(vectorstore=vectorstore_alpha_0, image=None
 results = retriever.query_multimodal(vectorstore=vectorstore_alpha_1, image=query_image, text=None, alpha=1.0, k=5)
 
 # Balanced multimodal (alpha=0.5)
-results = retriever.query_multimodal(vectorstore=vectorstore, image=query_image, text="red handbag", alpha=0.5, k=10)
+results = retriever.query_multimodal(vectorstore=vectorstore_alpha_05, image=query_image, text="red handbag", alpha=0.5, k=10)
 ```
 
 ## Quick Start
