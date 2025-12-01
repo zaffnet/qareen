@@ -8,7 +8,7 @@ Run `uv sync --all-extras` to install dependencies.
 
 ## Running Python
 
-After activating the virtual environment with `source .venv/bin/activate`, use `python` to run scripts. Scripts use `python3` for consistency when called from shell scripts.
+Use `source .venv/bin/activate && uv run python ...` for executing python files or commands.
 
 ## Rules
 
