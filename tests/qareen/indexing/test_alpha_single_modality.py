@@ -10,10 +10,11 @@ from unittest.mock import MagicMock
 import numpy as np
 from PIL import Image
 
-from qareen.config.settings import Settings
+from conftest import create_test_settings
 from qareen.dataset.base import DatasetLoader
 from qareen.indexing.chroma_indexer import ChromaIndexer
-from qareen.indexing.models import EmbeddingModel
+from qareen.indexing.embedding_model import EmbeddingModel
+from qareen.retrieving.chroma_retriever import ChromaRetriever
 
 MISSING_MODALITY_ERROR = "At least one modality must be present"
 
@@ -84,7 +85,7 @@ class AlphaAwareEmbeddingModel(EmbeddingModel):
         embedding = np.random.randn(self.embedding_dim).astype(np.float32)
         return self.normalize_l2(embedding)
 
-    def embed_multimodal(
+    def _embed_multimodal_impl(
         self,
         image: Image.Image | str | Path | None,
         text: str | None,
@@ -207,7 +208,7 @@ class SimpleDatasetLoader(DatasetLoader):
 def test_alpha_ignored_for_text_only_samples() -> None:
     """Alpha should be ignored when only text is present."""
     with tempfile.TemporaryDirectory() as tmpdir:
-        settings = Settings(environment="dev", chroma_db_dir=Path(tmpdir))
+        settings = create_test_settings(environment="dev", chroma_db_dir=Path(tmpdir))
         model = AlphaAwareEmbeddingModel(embedding_dim=128)
         samples: list[dict[str, object]] = [{"text": "text only", "image": None}]
         loader = SimpleDatasetLoader(samples)
@@ -231,7 +232,7 @@ def test_alpha_ignored_for_text_only_samples() -> None:
 def test_alpha_ignored_for_image_only_samples() -> None:
     """Alpha should be ignored when only image is present."""
     with tempfile.TemporaryDirectory() as tmpdir:
-        settings = Settings(environment="dev", chroma_db_dir=Path(tmpdir))
+        settings = create_test_settings(environment="dev", chroma_db_dir=Path(tmpdir))
         model = AlphaAwareEmbeddingModel(embedding_dim=128)
         samples = [{"text": None, "image": Image.new("RGB", (224, 224), color="red")}]
         loader = SimpleDatasetLoader(samples)
@@ -255,7 +256,7 @@ def test_alpha_ignored_for_image_only_samples() -> None:
 def test_alpha_matters_for_dual_modality_samples() -> None:
     """Alpha should affect embedding when both modalities present."""
     with tempfile.TemporaryDirectory() as tmpdir:
-        settings = Settings(environment="dev", chroma_db_dir=Path(tmpdir))
+        settings = create_test_settings(environment="dev", chroma_db_dir=Path(tmpdir))
         model = AlphaAwareEmbeddingModel(embedding_dim=128)
         samples = [{"text": "caption", "image": Image.new("RGB", (224, 224), color="red")}]
         loader = SimpleDatasetLoader(samples)
@@ -279,7 +280,7 @@ def test_alpha_matters_for_dual_modality_samples() -> None:
 def test_multiple_alphas_with_single_modality() -> None:
     """Indexing with multiple alphas should work even for single-modality samples."""
     with tempfile.TemporaryDirectory() as tmpdir:
-        settings = Settings(environment="dev", chroma_db_dir=Path(tmpdir))
+        settings = create_test_settings(environment="dev", chroma_db_dir=Path(tmpdir))
         model = AlphaAwareEmbeddingModel(embedding_dim=128)
         samples: list[dict[str, object]] = [{"text": "text only", "image": None}]
         loader = SimpleDatasetLoader(samples)
@@ -302,7 +303,7 @@ def test_multiple_alphas_with_single_modality() -> None:
 def test_text_only_query_with_text_only_index() -> None:
     """Text query must retrieve text-only samples from text-only index."""
     with tempfile.TemporaryDirectory() as tmpdir:
-        settings = Settings(environment="dev", chroma_db_dir=Path(tmpdir))
+        settings = create_test_settings(environment="dev", chroma_db_dir=Path(tmpdir))
         model = AlphaAwareEmbeddingModel(embedding_dim=128)
         samples: list[dict[str, object]] = [
             {"text": "apple fruit", "image": None},
@@ -319,15 +320,22 @@ def test_text_only_query_with_text_only_index() -> None:
 
         vectorstores = indexer.index(alpha_values=[0.5], rebuild=True, batch_size=10)
         vectorstore = vectorstores[0.5]
+        retriever = ChromaRetriever(model, settings)
 
-        results = vectorstore.similarity_search("apple", k=1)
+        results = retriever.query_multimodal(
+            vectorstore=vectorstore,
+            image=None,
+            text="apple",
+            alpha=0.5,
+            k=1,
+        )
         assert len(results) == 1
 
 
 def test_image_query_embedding_with_image_only_index() -> None:
     """Image-based query should work with image-only index."""
     with tempfile.TemporaryDirectory() as tmpdir:
-        settings = Settings(environment="dev", chroma_db_dir=Path(tmpdir))
+        settings = create_test_settings(environment="dev", chroma_db_dir=Path(tmpdir))
         model = AlphaAwareEmbeddingModel(embedding_dim=128)
         samples = [
             {"text": None, "image": Image.new("RGB", (224, 224), color="red")},
@@ -343,15 +351,22 @@ def test_image_query_embedding_with_image_only_index() -> None:
 
         vectorstores = indexer.index(alpha_values=[0.5], rebuild=True, batch_size=10)
         vectorstore = vectorstores[0.5]
+        retriever = ChromaRetriever(model, settings)
 
-        results = vectorstore.similarity_search("query text", k=2)
+        results = retriever.query_multimodal(
+            vectorstore=vectorstore,
+            image=None,
+            text="query text",
+            alpha=0.5,
+            k=2,
+        )
         assert len(results) == 2
 
 
 def test_alpha_zero_equivalent_to_text_only() -> None:
     """Alpha=0.0 should produce text-only embedding for dual-modality sample."""
     with tempfile.TemporaryDirectory() as tmpdir:
-        settings = Settings(environment="dev", chroma_db_dir=Path(tmpdir))
+        settings = create_test_settings(environment="dev", chroma_db_dir=Path(tmpdir))
         model = AlphaAwareEmbeddingModel(embedding_dim=128)
         samples = [{"text": "caption", "image": Image.new("RGB", (224, 224), color="red")}]
         loader = SimpleDatasetLoader(samples)
@@ -373,7 +388,7 @@ def test_alpha_zero_equivalent_to_text_only() -> None:
 def test_alpha_one_equivalent_to_image_only() -> None:
     """Alpha=1.0 should produce image-only embedding for dual-modality sample."""
     with tempfile.TemporaryDirectory() as tmpdir:
-        settings = Settings(environment="dev", chroma_db_dir=Path(tmpdir))
+        settings = create_test_settings(environment="dev", chroma_db_dir=Path(tmpdir))
         model = AlphaAwareEmbeddingModel(embedding_dim=128)
         samples = [{"text": "caption", "image": Image.new("RGB", (224, 224), color="red")}]
         loader = SimpleDatasetLoader(samples)
