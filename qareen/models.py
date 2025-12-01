@@ -83,6 +83,11 @@ class Settings(BaseSettings):
     dataset_prep_sample_size: int = Field(default=1000, gt=0)
     prepared_dataset_dir: Path = Field(default=Path("data/prepared"))
     viz_output_file: Path = Field(default=Path("data/comparison.md"))
+    timeout: float | None = Field(
+        default=None,
+        gt=0,
+        description="Indexing timeout in seconds. None disables timeout.",
+    )
 
     _dirs_ensured: bool = PrivateAttr(default=False)
 

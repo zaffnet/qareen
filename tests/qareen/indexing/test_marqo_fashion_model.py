@@ -9,7 +9,7 @@ import pytest
 
 from qareen.indexing.marqo_fashion_model import MarqoFashionSigLIPModel
 
-from .conftest import TEST_EMBEDDING_DIM
+from .constants import TEST_EMBEDDING_DIM
 
 
 def test_init():
