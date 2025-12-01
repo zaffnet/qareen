@@ -10,11 +10,10 @@ import numpy as np
 import pytest
 from PIL import Image
 
-from conftest import create_test_settings
+from qareen.config.settings import Settings
 from qareen.dataset.base import DatasetLoader
 from qareen.indexing.chroma_indexer import ChromaIndexer
-from qareen.indexing.embedding_model import EmbeddingModel
-from qareen.retrieving.chroma_retriever import ChromaRetriever
+from qareen.indexing.models import EmbeddingModel
 
 MISSING_MODALITY_ERROR = "At least one modality must be present"
 
@@ -75,7 +74,7 @@ class SingleModalityEmbeddingModel(EmbeddingModel):
         embedding = np.random.randn(self.embedding_dim).astype(np.float32)
         return self.normalize_l2(embedding)
 
-    def _embed_multimodal_impl(
+    def embed_multimodal(
         self,
         image: Image.Image | str | Path | None,
         text: str | None,
@@ -238,7 +237,7 @@ def test_embedding_model_rejects_both_none() -> None:
 def test_indexer_handles_text_only_samples() -> None:
     """Indexer must successfully index text-only samples."""
     with tempfile.TemporaryDirectory() as tmpdir:
-        settings = create_test_settings(environment="dev", chroma_db_dir=Path(tmpdir))
+        settings = Settings(environment="dev", chroma_db_dir=Path(tmpdir))
         model = SingleModalityEmbeddingModel(embedding_dim=128)
         samples: list[dict[str, object]] = [
             {"text": "text only sample 1", "image": None},
@@ -256,22 +255,15 @@ def test_indexer_handles_text_only_samples() -> None:
 
         assert len(vectorstores) == 1
         vectorstore = vectorstores[0.5]
-        retriever = ChromaRetriever(model, settings)
 
-        results = retriever.query_multimodal(
-            vectorstore=vectorstore,
-            image=None,
-            text="text only",
-            alpha=0.5,
-            k=2,
-        )
+        results = vectorstore.similarity_search("text only", k=2)
         assert len(results) == 2
 
 
 def test_indexer_handles_image_only_samples() -> None:
     """Indexer must successfully index image-only samples."""
     with tempfile.TemporaryDirectory() as tmpdir:
-        settings = create_test_settings(environment="dev", chroma_db_dir=Path(tmpdir))
+        settings = Settings(environment="dev", chroma_db_dir=Path(tmpdir))
         model = SingleModalityEmbeddingModel(embedding_dim=128)
         samples = [
             {"text": None, "image": Image.new("RGB", (224, 224), color="red")},
@@ -289,22 +281,15 @@ def test_indexer_handles_image_only_samples() -> None:
 
         assert len(vectorstores) == 1
         vectorstore = vectorstores[0.5]
-        retriever = ChromaRetriever(model, settings)
 
-        results = retriever.query_multimodal(
-            vectorstore=vectorstore,
-            image=None,
-            text="query",
-            alpha=0.5,
-            k=2,
-        )
+        results = vectorstore.similarity_search("query", k=2)
         assert len(results) == 2
 
 
 def test_indexer_handles_mixed_modality_samples() -> None:
     """Indexer must handle dataset with mixed single/dual modality samples."""
     with tempfile.TemporaryDirectory() as tmpdir:
-        settings = create_test_settings(environment="dev", chroma_db_dir=Path(tmpdir))
+        settings = Settings(environment="dev", chroma_db_dir=Path(tmpdir))
         model = SingleModalityEmbeddingModel(embedding_dim=128)
         samples = [
             {"text": "both modalities", "image": Image.new("RGB", (224, 224), color="red")},
@@ -323,13 +308,6 @@ def test_indexer_handles_mixed_modality_samples() -> None:
 
         assert len(vectorstores) == 1
         vectorstore = vectorstores[0.5]
-        retriever = ChromaRetriever(model, settings)
 
-        results = retriever.query_multimodal(
-            vectorstore=vectorstore,
-            image=None,
-            text="query",
-            alpha=0.5,
-            k=3,
-        )
+        results = vectorstore.similarity_search("query", k=3)
         assert len(results) == 3

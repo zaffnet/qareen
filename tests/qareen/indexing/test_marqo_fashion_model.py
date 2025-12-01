@@ -7,13 +7,9 @@ from unittest.mock import Mock, patch
 import numpy as np
 import pytest
 
+from qareen.indexing.exceptions import InvalidAlphaError
 from qareen.indexing.marqo_fashion_model import MarqoFashionSigLIPModel
-
-# Arbitrary embedding dimension for testing embedding_dim property.
-# The actual value doesn't matter - we're testing that the property
-# correctly reads from model config. Using a non-standard dimension
-# (not 512 or 768) to clearly show it's a test value.
-TEST_EMBEDDING_DIM = 63
+from tests.qareen.indexing.test_fixtures import TEST_EMBEDDING_DIM
 
 
 def test_init():
@@ -75,8 +71,8 @@ def test_embed_image_invalid_type():
     model.model = Mock()
     model.preprocess_val = Mock()
 
-    with pytest.raises(TypeError, match="Image must be PIL Image or path string"):
-        model.embed_image({"invalid": "type"})
+    with pytest.raises(TypeError, match=model.IMAGE_TYPE_ERROR):
+        model.embed_image({"invalid": "type"})  # type: ignore[arg-type]
 
 
 def test_embed_image_invalid_path():
@@ -84,17 +80,17 @@ def test_embed_image_invalid_path():
     model.model = Mock()
     model.preprocess_val = Mock()
 
-    with pytest.raises(ValueError, match="Image must be PIL Image or path string"):
+    with pytest.raises(ValueError, match=model.IMAGE_TYPE_ERROR):
         model.embed_image("/nonexistent/path.jpg")
 
 
 def test_embed_multimodal_invalid_alpha():
     model = MarqoFashionSigLIPModel()
 
-    with pytest.raises(ValueError, match="Alpha must be in range"):
+    with pytest.raises(InvalidAlphaError):
         model.embed_multimodal(image=None, text="test", alpha=1.5)
 
-    with pytest.raises(ValueError, match="Alpha must be in range"):
+    with pytest.raises(InvalidAlphaError):
         model.embed_multimodal(image=None, text="test", alpha=-0.1)
 
 
@@ -174,9 +170,11 @@ def test_embedding_dim_caching(mock_open_clip):
         mock_embed.return_value = np.zeros(TEST_EMBEDDING_DIM)
         dim1 = model.embedding_dim
         dim2 = model.embedding_dim
+        dim3 = model.embedding_dim
 
         assert dim1 == TEST_EMBEDDING_DIM
         assert dim2 == TEST_EMBEDDING_DIM
+        assert dim3 == TEST_EMBEDDING_DIM
         mock_embed.assert_called_once()
 
 

@@ -9,11 +9,10 @@ from unittest.mock import MagicMock
 import numpy as np
 from PIL import Image
 
-from conftest import create_test_settings
+from qareen.config.settings import Settings
 from qareen.dataset.base import DatasetLoader
 from qareen.indexing.chroma_indexer import ChromaIndexer
-from qareen.indexing.embedding_model import EmbeddingModel
-from qareen.retrieving.chroma_retriever import ChromaRetriever
+from qareen.indexing.models import EmbeddingModel
 
 
 class MissingModalityError(ValueError):
@@ -80,7 +79,7 @@ class MockEmbeddingModel(EmbeddingModel):
         embedding = np.random.randn(self.embedding_dim).astype(np.float32)
         return self.normalize_l2(embedding)
 
-    def _embed_multimodal_impl(
+    def embed_multimodal(
         self,
         image: Image.Image | str | Path | None,
         text: str | None,
@@ -210,7 +209,7 @@ class MockDatasetLoader(DatasetLoader):
 def test_similarity_search_works_with_embedding_wrapper() -> None:
     """Regression test: similarity_search should work with EmbeddingModelWrapper."""
     with tempfile.TemporaryDirectory() as tmpdir:
-        settings = create_test_settings(environment="dev", chroma_db_dir=Path(tmpdir))
+        settings = Settings(environment="dev", chroma_db_dir=Path(tmpdir))
         embedding_model = MockEmbeddingModel(embedding_dim=128)
         dataset_loader = MockDatasetLoader(dataset_size=3, track_select=True)
 
@@ -223,30 +222,18 @@ def test_similarity_search_works_with_embedding_wrapper() -> None:
         vectorstores = indexer.index(alpha_values=[0.5], rebuild=True, batch_size=10)
 
         assert len(vectorstores) == 1
-        retriever = ChromaRetriever(embedding_model, settings)
-        vectorstore = retriever.get_vectorstore(
-            dataset_name="test_dataset",
-            model_id="mock_model",
-            alpha=0.5,
-            environment="dev",
-        )
+        vectorstore = vectorstores[0.5]
 
-        results = retriever.query_multimodal(
-            vectorstore=vectorstore,
-            image=None,
-            text="apple",
-            alpha=0.5,
-            k=1,
-        )
+        results = vectorstore.similarity_search("apple", k=1)
 
         assert len(results) == 1
-        assert results[0][0].page_content in ["text_0", "text_1", "text_2"]
+        assert results[0].page_content in ["text_0", "text_1", "text_2"]
 
 
-def test_get_vectorstore_similarity_search_works() -> None:
-    """Test that get_vectorstore returns a usable vectorstore for similarity_search."""
+def test_create_vectorstore_similarity_search_works() -> None:
+    """Test that create_vectorstore returns a usable vectorstore for similarity_search."""
     with tempfile.TemporaryDirectory() as tmpdir:
-        settings = create_test_settings(environment="dev", chroma_db_dir=Path(tmpdir))
+        settings = Settings(environment="dev", chroma_db_dir=Path(tmpdir))
         embedding_model = MockEmbeddingModel(embedding_dim=128)
         dataset_loader = MockDatasetLoader(dataset_size=3, track_select=True)
 
@@ -258,30 +245,23 @@ def test_get_vectorstore_similarity_search_works() -> None:
 
         indexer.index(alpha_values=[0.5], rebuild=True, batch_size=10)
 
-        retriever = ChromaRetriever(embedding_model, settings)
-        vectorstore = retriever.get_vectorstore(
+        vectorstore = indexer.create_vectorstore(
             dataset_name="test_dataset",
             model_id="mock_model",
             alpha=0.5,
             environment="dev",
         )
 
-        results = retriever.query_multimodal(
-            vectorstore=vectorstore,
-            image=None,
-            text="banana",
-            alpha=0.5,
-            k=1,
-        )
+        results = vectorstore.similarity_search("banana", k=1)
 
         assert len(results) == 1
-        assert results[0][0].page_content in ["text_0", "text_1", "text_2"]
+        assert results[0].page_content in ["text_0", "text_1", "text_2"]
 
 
 def test_sample_size_honored_in_non_dev_environment() -> None:
     """Test that sample_size argument is honored in non-dev environments."""
     with tempfile.TemporaryDirectory() as tmpdir:
-        settings = create_test_settings(environment="prod", chroma_db_dir=Path(tmpdir))
+        settings = Settings(environment="prod", chroma_db_dir=Path(tmpdir))
         embedding_model = MockEmbeddingModel(embedding_dim=128)
         dataset_loader = MockDatasetLoader(dataset_size=100, track_select=True)
 
@@ -301,7 +281,7 @@ def test_sample_size_honored_in_non_dev_environment() -> None:
 def test_sample_size_honored_in_staging_environment() -> None:
     """Test that sample_size argument is honored in staging environment."""
     with tempfile.TemporaryDirectory() as tmpdir:
-        settings = create_test_settings(environment="staging", chroma_db_dir=Path(tmpdir))
+        settings = Settings(environment="staging", chroma_db_dir=Path(tmpdir))
         embedding_model = MockEmbeddingModel(embedding_dim=128)
         dataset_loader = MockDatasetLoader(dataset_size=100, track_select=True)
 
@@ -321,9 +301,7 @@ def test_sample_size_honored_in_staging_environment() -> None:
 def test_dev_sample_size_fallback_in_dev_environment() -> None:
     """Test that dev_sample_size is used when sample_size is None in dev."""
     with tempfile.TemporaryDirectory() as tmpdir:
-        settings = create_test_settings(
-            environment="dev", dev_sample_size=42, chroma_db_dir=Path(tmpdir)
-        )
+        settings = Settings(environment="dev", dev_sample_size=42, chroma_db_dir=Path(tmpdir))
         embedding_model = MockEmbeddingModel(embedding_dim=128)
         dataset_loader = MockDatasetLoader(dataset_size=100, track_select=True)
 
@@ -343,9 +321,7 @@ def test_dev_sample_size_fallback_in_dev_environment() -> None:
 def test_explicit_sample_size_overrides_dev_sample_size() -> None:
     """Test that explicit sample_size overrides dev_sample_size in dev."""
     with tempfile.TemporaryDirectory() as tmpdir:
-        settings = create_test_settings(
-            environment="dev", dev_sample_size=100, chroma_db_dir=Path(tmpdir)
-        )
+        settings = Settings(environment="dev", dev_sample_size=100, chroma_db_dir=Path(tmpdir))
         embedding_model = MockEmbeddingModel(embedding_dim=128)
         dataset_loader = MockDatasetLoader(dataset_size=200, track_select=True)
 
@@ -365,7 +341,7 @@ def test_explicit_sample_size_overrides_dev_sample_size() -> None:
 def test_no_limit_in_non_dev_when_sample_size_none() -> None:
     """Test that no limit is applied in non-dev when sample_size is None."""
     with tempfile.TemporaryDirectory() as tmpdir:
-        settings = create_test_settings(environment="prod", chroma_db_dir=Path(tmpdir))
+        settings = Settings(environment="prod", chroma_db_dir=Path(tmpdir))
         embedding_model = MockEmbeddingModel(embedding_dim=128)
         dataset_loader = MockDatasetLoader(dataset_size=100, track_select=True)
 
@@ -375,13 +351,7 @@ def test_no_limit_in_non_dev_when_sample_size_none() -> None:
             settings=settings,
         )
 
-        indexer.index(
-            alpha_values=[0.5],
-            rebuild=True,
-            batch_size=10,
-            sample_size=None,
-            environment="prod",
-        )
+        indexer.index(alpha_values=[0.5], rebuild=True, batch_size=10, sample_size=None)
 
         assert len(dataset_loader.select_calls) == 0
 
@@ -390,8 +360,10 @@ def test_query_multimodal_alpha_mismatch() -> None:
     """Test that query_multimodal raises error when alpha doesn't match collection alpha."""
     import pytest
 
+    from qareen.indexing.exceptions import AlphaMismatchError
+
     with tempfile.TemporaryDirectory() as tmp_dir:
-        settings = create_test_settings(
+        settings = Settings(
             chroma_db_dir=Path(tmp_dir) / "chroma_db",
             data_dir=Path(tmp_dir) / "data",
         )
@@ -406,8 +378,7 @@ def test_query_multimodal_alpha_mismatch() -> None:
 
         indexer.index(alpha_values=[0.5], rebuild=True, batch_size=10, sample_size=None)
 
-        retriever = ChromaRetriever(embedding_model, settings)
-        vectorstore = retriever.get_vectorstore(
+        vectorstore = indexer.create_vectorstore(
             dataset_name=dataset_loader.get_dataset_name(),
             model_id=embedding_model.get_model_id(),
             alpha=0.5,
@@ -416,8 +387,8 @@ def test_query_multimodal_alpha_mismatch() -> None:
 
         test_image = Image.new("RGB", (100, 100), color="red")
 
-        with pytest.raises(ValueError) as exc_info:
-            retriever.query_multimodal(
+        with pytest.raises(AlphaMismatchError) as exc_info:
+            indexer.query_multimodal(
                 vectorstore=vectorstore,
                 image=test_image,
                 text="test query",
@@ -425,6 +396,8 @@ def test_query_multimodal_alpha_mismatch() -> None:
                 k=5,
             )
 
+        assert exc_info.value.query_alpha == 0.3
+        assert exc_info.value.collection_alpha == 0.5
         assert "0.300" in str(exc_info.value)
         assert "0.500" in str(exc_info.value)
 
@@ -432,7 +405,7 @@ def test_query_multimodal_alpha_mismatch() -> None:
 def test_query_multimodal_alpha_match() -> None:
     """Test that query_multimodal works when alpha matches collection alpha."""
     with tempfile.TemporaryDirectory() as tmp_dir:
-        settings = create_test_settings(
+        settings = Settings(
             chroma_db_dir=Path(tmp_dir) / "chroma_db",
             data_dir=Path(tmp_dir) / "data",
         )
@@ -447,8 +420,7 @@ def test_query_multimodal_alpha_match() -> None:
 
         indexer.index(alpha_values=[0.5], rebuild=True, batch_size=10, sample_size=None)
 
-        retriever = ChromaRetriever(embedding_model, settings)
-        vectorstore = retriever.get_vectorstore(
+        vectorstore = indexer.create_vectorstore(
             dataset_name=dataset_loader.get_dataset_name(),
             model_id=embedding_model.get_model_id(),
             alpha=0.5,
@@ -457,7 +429,7 @@ def test_query_multimodal_alpha_match() -> None:
 
         test_image = Image.new("RGB", (100, 100), color="red")
 
-        results = retriever.query_multimodal(
+        results = indexer.query_multimodal(
             vectorstore=vectorstore,
             image=test_image,
             text="test query",

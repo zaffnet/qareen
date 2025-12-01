@@ -7,16 +7,11 @@ Run `uv sync --all-extras` to install dependencies.
 - `pyproject.toml` is the source of truth. Edit it directly, then run `uv sync`. Never use `uv pip install` or `pip install`.
 
 ## Running Python
-
 Use `uv run python ...` for executing python files or commands.
-
-## Rules
-
-All rules are present inside @.cursor/rules/ and are meant to be read before you start a task. You should abide by the rules at all times.
 
 ## Architecture Patterns
 
-Pydantic-first: use Pydantic models for all data structures, configs, schemas. Use ABC pattern for extensible components (see `qareen/dataset/base.py`, `qareen/indexing/base.py`). Follow module structure: `dataset/`, `indexing/`, `retrieving/`, `utils/`, and `qareen/models.py` for shared models. Implement vector store backends against the interfaces defined in `qareen/indexing`.
+Pydantic-first: use Pydantic models for all data structures, configs, schemas. Use ABC pattern for extensible components (see `qareen/dataset/base.py`, `qareen/indexing/base.py`). Follow module structure: dataset/, indexing/, config/. Use LangChain VectorStore interface for new vector store backends.
 
 ## Code Style
 
@@ -34,7 +29,7 @@ Pydantic-first: use Pydantic models for all data structures, configs, schemas. U
 2. **Edit, don't create** - Always prefer editing existing files over creating new ones
 3. **One task = one change** - Don't add features that weren't requested
 4. **No obvious comments** - Code should be self-documenting
-5. **No helper files** - No utils.py, helpers.py, or "temporary" scripts unless explicitly asked (standard `utils` package is allowed).
+5. **No helper files** - No utils.py, helpers.py, or "temporary" scripts unless explicitly asked
 
 **Anti-patterns:**
 - ❌ Creating new files when editing would work

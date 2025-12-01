@@ -11,11 +11,10 @@ import pytest
 from datasets import Dataset
 from PIL import Image
 
-from conftest import create_test_settings
+from qareen.config.settings import Settings
 from qareen.dataset.base import DatasetLoader
 from qareen.indexing.chroma_indexer import ChromaIndexer
-from qareen.indexing.embedding_model import EmbeddingModel
-from qareen.retrieving.chroma_retriever import ChromaRetriever
+from qareen.indexing.models import EmbeddingModel
 
 
 class MockEmbeddingModel(EmbeddingModel):
@@ -79,14 +78,7 @@ class MockEmbeddingModel(EmbeddingModel):
 
         if self.deterministic and isinstance(image, Image.Image):
             image_array = np.array(image)
-            # Use color-specific features to differentiate images
-            if len(image_array.shape) == 3:  # RGB image
-                r_mean = float(image_array[:, :, 0].mean())
-                g_mean = float(image_array[:, :, 1].mean())
-                b_mean = float(image_array[:, :, 2].mean())
-                seed = int(r_mean * 1000 + g_mean * 100 + b_mean * 10 + image_array.sum()) % (2**31)
-            else:
-                seed = int(image_array.sum()) % (2**31)
+            seed = int(image_array.sum()) % (2**31)
             rng = np.random.RandomState(seed)
             embedding = rng.randn(self._embedding_dim).astype(np.float32)
         else:
@@ -94,7 +86,7 @@ class MockEmbeddingModel(EmbeddingModel):
 
         return self.normalize_l2(embedding)
 
-    def _embed_multimodal_impl(
+    def embed_multimodal(
         self,
         image: Image.Image | str | Path | None,
         text: str | None,
@@ -197,7 +189,7 @@ class SimpleDatasetLoader(DatasetLoader):
 def test_query_multimodal_with_text_only() -> None:
     """Test multimodal query with text-only data."""
     with tempfile.TemporaryDirectory() as tmpdir:
-        settings = create_test_settings(environment="dev", chroma_db_dir=Path(tmpdir))
+        settings = Settings(environment="dev", chroma_db_dir=Path(tmpdir))
         model = MockEmbeddingModel(embedding_dim=128)
 
         samples = [
@@ -213,17 +205,10 @@ def test_query_multimodal_with_text_only() -> None:
             settings=settings,
         )
 
-        indexer.index(alpha_values=[0.5], rebuild=True, batch_size=10)
+        vectorstores = indexer.index(alpha_values=[0.5], rebuild=True, batch_size=10)
+        vectorstore = vectorstores[0.5]
 
-        retriever = ChromaRetriever(model, settings)
-        vectorstore = retriever.get_vectorstore(
-            dataset_name="test_dataset",
-            model_id="mock_model",
-            alpha=0.5,
-            environment="dev",
-        )
-
-        results = retriever.query_multimodal(
+        results = indexer.query_multimodal(
             vectorstore=vectorstore,
             image=None,
             text="apple",
@@ -239,7 +224,7 @@ def test_query_multimodal_with_text_only() -> None:
 def test_query_multimodal_with_image_only() -> None:
     """Test multimodal query with image-only data."""
     with tempfile.TemporaryDirectory() as tmpdir:
-        settings = create_test_settings(environment="dev", chroma_db_dir=Path(tmpdir))
+        settings = Settings(environment="dev", chroma_db_dir=Path(tmpdir))
         model = MockEmbeddingModel(embedding_dim=128)
 
         img1 = Image.new("RGB", (100, 100), color="red")
@@ -259,18 +244,11 @@ def test_query_multimodal_with_image_only() -> None:
             settings=settings,
         )
 
-        indexer.index(alpha_values=[1.0], rebuild=True, batch_size=10)
-
-        retriever = ChromaRetriever(model, settings)
-        vectorstore = retriever.get_vectorstore(
-            dataset_name="test_dataset",
-            model_id="mock_model",
-            alpha=1.0,
-            environment="dev",
-        )
+        vectorstores = indexer.index(alpha_values=[1.0], rebuild=True, batch_size=10)
+        vectorstore = vectorstores[1.0]
 
         query_image = Image.new("RGB", (100, 100), color="red")
-        results = retriever.query_multimodal(
+        results = indexer.query_multimodal(
             vectorstore=vectorstore,
             image=query_image,
             text=None,
@@ -285,7 +263,7 @@ def test_query_multimodal_with_image_only() -> None:
 def test_query_multimodal_with_both_modalities() -> None:
     """Test multimodal query with both text and image."""
     with tempfile.TemporaryDirectory() as tmpdir:
-        settings = create_test_settings(environment="dev", chroma_db_dir=Path(tmpdir))
+        settings = Settings(environment="dev", chroma_db_dir=Path(tmpdir))
         model = MockEmbeddingModel(embedding_dim=128)
 
         img1 = Image.new("RGB", (100, 100), color="red")
@@ -303,18 +281,11 @@ def test_query_multimodal_with_both_modalities() -> None:
             settings=settings,
         )
 
-        indexer.index(alpha_values=[0.5], rebuild=True, batch_size=10)
-
-        retriever = ChromaRetriever(model, settings)
-        vectorstore = retriever.get_vectorstore(
-            dataset_name="test_dataset",
-            model_id="mock_model",
-            alpha=0.5,
-            environment="dev",
-        )
+        vectorstores = indexer.index(alpha_values=[0.5], rebuild=True, batch_size=10)
+        vectorstore = vectorstores[0.5]
 
         query_image = Image.new("RGB", (100, 100), color="red")
-        results = retriever.query_multimodal(
+        results = indexer.query_multimodal(
             vectorstore=vectorstore,
             image=query_image,
             text="red apple",
@@ -334,7 +305,7 @@ def test_query_multimodal_different_alphas_different_results() -> None:
     This is the CRITICAL test that would have caught the original bug.
     """
     with tempfile.TemporaryDirectory() as tmpdir:
-        settings = create_test_settings(environment="dev", chroma_db_dir=Path(tmpdir))
+        settings = Settings(environment="dev", chroma_db_dir=Path(tmpdir))
         model = MockEmbeddingModel(embedding_dim=128, deterministic=True)
 
         img1 = Image.new("RGB", (100, 100), color=(255, 0, 0))
@@ -355,21 +326,15 @@ def test_query_multimodal_different_alphas_different_results() -> None:
         )
 
         alpha_values = [0.0, 0.5, 1.0]
-        indexer.index(alpha_values=alpha_values, rebuild=True, batch_size=10)
+        vectorstores = indexer.index(alpha_values=alpha_values, rebuild=True, batch_size=10)
 
-        retriever = ChromaRetriever(model, settings)
         query_image = Image.new("RGB", (100, 100), color=(255, 0, 0))
         query_text = "text_alpha"
 
         all_results = {}
         for alpha in alpha_values:
-            vectorstore = retriever.get_vectorstore(
-                dataset_name="test_dataset",
-                model_id="mock_model",
-                alpha=alpha,
-                environment="dev",
-            )
-            results = retriever.query_multimodal(
+            vectorstore = vectorstores[alpha]
+            results = indexer.query_multimodal(
                 vectorstore=vectorstore,
                 image=query_image,
                 text=query_text,
@@ -408,7 +373,7 @@ def test_query_multimodal_different_alphas_different_results() -> None:
 def test_query_multimodal_validates_alpha() -> None:
     """Test that query_multimodal validates alpha range."""
     with tempfile.TemporaryDirectory() as tmpdir:
-        settings = create_test_settings(environment="dev", chroma_db_dir=Path(tmpdir))
+        settings = Settings(environment="dev", chroma_db_dir=Path(tmpdir))
         model = MockEmbeddingModel(embedding_dim=128)
 
         samples = [{"text": "sample", "image": None}]
@@ -420,18 +385,11 @@ def test_query_multimodal_validates_alpha() -> None:
             settings=settings,
         )
 
-        indexer.index(alpha_values=[0.5], rebuild=True, batch_size=10)
-
-        retriever = ChromaRetriever(model, settings)
-        vectorstore = retriever.get_vectorstore(
-            dataset_name="test_dataset",
-            model_id="mock_model",
-            alpha=0.5,
-            environment="dev",
-        )
+        vectorstores = indexer.index(alpha_values=[0.5], rebuild=True, batch_size=10)
+        vectorstore = vectorstores[0.5]
 
         with pytest.raises(ValueError) as exc:
-            retriever.query_multimodal(
+            indexer.query_multimodal(
                 vectorstore=vectorstore,
                 image=None,
                 text="query",
@@ -441,7 +399,7 @@ def test_query_multimodal_validates_alpha() -> None:
         assert "alpha must be in range" in str(exc.value)
 
         with pytest.raises(ValueError) as exc:
-            retriever.query_multimodal(
+            indexer.query_multimodal(
                 vectorstore=vectorstore,
                 image=None,
                 text="query",
@@ -454,7 +412,7 @@ def test_query_multimodal_validates_alpha() -> None:
 def test_query_multimodal_with_score_threshold() -> None:
     """Test query_multimodal with score threshold filtering."""
     with tempfile.TemporaryDirectory() as tmpdir:
-        settings = create_test_settings(environment="dev", chroma_db_dir=Path(tmpdir))
+        settings = Settings(environment="dev", chroma_db_dir=Path(tmpdir))
         model = MockEmbeddingModel(embedding_dim=128)
 
         samples = [
@@ -470,17 +428,10 @@ def test_query_multimodal_with_score_threshold() -> None:
             settings=settings,
         )
 
-        indexer.index(alpha_values=[0.5], rebuild=True, batch_size=10)
+        vectorstores = indexer.index(alpha_values=[0.5], rebuild=True, batch_size=10)
+        vectorstore = vectorstores[0.5]
 
-        retriever = ChromaRetriever(model, settings)
-        vectorstore = retriever.get_vectorstore(
-            dataset_name="test_dataset",
-            model_id="mock_model",
-            alpha=0.5,
-            environment="dev",
-        )
-
-        results_no_threshold = retriever.query_multimodal(
+        results_no_threshold = indexer.query_multimodal(
             vectorstore=vectorstore,
             image=None,
             text="apple",
@@ -488,7 +439,7 @@ def test_query_multimodal_with_score_threshold() -> None:
             k=3,
         )
 
-        results_with_threshold = retriever.query_multimodal(
+        results_with_threshold = indexer.query_multimodal(
             vectorstore=vectorstore,
             image=None,
             text="apple",
@@ -505,7 +456,7 @@ def test_query_multimodal_with_score_threshold() -> None:
 def test_query_multimodal_calls_embed_multimodal() -> None:
     """Test that query_multimodal actually calls embed_multimodal on the model."""
     with tempfile.TemporaryDirectory() as tmpdir:
-        settings = create_test_settings(environment="dev", chroma_db_dir=Path(tmpdir))
+        settings = Settings(environment="dev", chroma_db_dir=Path(tmpdir))
         model = MockEmbeddingModel(embedding_dim=128)
 
         samples = [{"text": "sample", "image": None}]
@@ -517,19 +468,12 @@ def test_query_multimodal_calls_embed_multimodal() -> None:
             settings=settings,
         )
 
-        indexer.index(alpha_values=[0.5], rebuild=True, batch_size=10)
-
-        retriever = ChromaRetriever(model, settings)
-        vectorstore = retriever.get_vectorstore(
-            dataset_name="test_dataset",
-            model_id="mock_model",
-            alpha=0.5,
-            environment="dev",
-        )
+        vectorstores = indexer.index(alpha_values=[0.5], rebuild=True, batch_size=10)
+        vectorstore = vectorstores[0.5]
 
         initial_call_count = len(model.embed_multimodal_calls)
 
-        retriever.query_multimodal(
+        indexer.query_multimodal(
             vectorstore=vectorstore,
             image=None,
             text="query text",

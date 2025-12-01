@@ -3,21 +3,14 @@
 from __future__ import annotations
 
 from abc import ABC
-from typing import Protocol
+
+from langchain_core.embeddings import Embeddings
+from langchain_core.vectorstores import VectorStore
 
 from qareen.indexing.base import VectorStoreIndexer
 from qareen.indexing.chroma_indexer import ChromaIndexer
 
-
-class Embeddings(Protocol):
-    """Placeholder interface for embedding providers."""
-
-
-class VectorStore(Protocol):
-    """Placeholder interface for vector stores."""
-
-
-REQUIRED_INDEXER_METHODS = frozenset({"index"})
+REQUIRED_INDEXER_METHODS = frozenset({"index", "create_vectorstore", "get_embeddings"})
 
 
 def test_vector_store_indexer_contract_and_naming() -> None:
@@ -31,15 +24,13 @@ def test_vector_store_indexer_contract_and_naming() -> None:
         def index(
             self,
             alpha_values: list[float],
-            *,
             rebuild: bool,
             batch_size: int = 100,
             sample_size: int | None = None,
-            environment: str | None = None,
         ) -> dict[float, VectorStore]:
             raise NotImplementedError()
 
-        def get_vectorstore(
+        def create_vectorstore(
             self,
             dataset_name: str,
             model_id: str,
@@ -51,10 +42,9 @@ def test_vector_store_indexer_contract_and_naming() -> None:
         def get_embeddings(self) -> Embeddings:
             raise NotImplementedError()
 
-    from qareen.utils.naming import get_collection_name
-
+    indexer = StubChromaIndexer()
     assert (
-        get_collection_name(
+        indexer.get_collection_name(
             dataset_name="Conceptual Captions",
             environment="staging",
             model_id="google/siglip-base-patch16-224",

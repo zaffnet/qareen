@@ -28,45 +28,73 @@ ANONYMIZED_TELEMETRY=False uv run python scripts/build_index.py ...
 
 ### Option 3: Programmatic (Already Implemented)
 
-ChromaDB clients are created with telemetry disabled via `qareen.utils.chroma_client.create_chroma_client()`.
+The `ChromaIndexer` class already disables telemetry when creating ChromaDB clients:
 
+```python
+from chromadb.config import Settings as ChromaSettings
 
+chroma_client = chromadb.PersistentClient(
+    path=str(settings.chroma_db_dir),
+    settings=ChromaSettings(anonymized_telemetry=False),
+)
+```
+
+## Logging Configuration
+
+### Basic Setup
+
+By default, `qareen` uses rich-formatted logging. To configure logging behavior:
+
+```python
+from qareen.indexing.chroma_indexer import setup_logging
+
+# Rich formatting (default)
+setup_logging(rich=True, level=logging.INFO)
+
+# Plain text output
+setup_logging(rich=False, level=logging.INFO)
+
+# Debug level
+setup_logging(rich=True, level=logging.DEBUG)
+```
+
+### Disabling Rich Output
+
+For CI/CD pipelines or environments where rich formatting causes issues, use plain logging:
+
+```python
+setup_logging(rich=False)
+```
 
 ## Environment Variables
 
-The `Settings` class (`qareen.models`) reads configuration from environment variables prefixed with `QAREEN_`. You can also place variables in a `.env` file at the project root (uses `pydantic-settings`).
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `ANONYMIZED_TELEMETRY` | `False` | Disable ChromaDB telemetry globally |
+| `CHROMA_DB_DIR` | `./chroma_db` | ChromaDB persistence directory |
+| `ENVIRONMENT` | `dev` | Environment: `dev`, `staging`, or `prod` |
 
-### Reference
+## Settings
 
-| Variable | Type | Req | Default | Description |
-|----------|------|:---:|---------|-------------|
-| `QAREEN_ENVIRONMENT` | `dev`\|`staging`\|`prod` | ✓ | — | Controls sampling (`dev` uses `dev_sample_size`) |
-| `QAREEN_EMBEDDING_MODELS` | JSON array | ✓ | — | Model IDs (CLIP/SIGLIP/Marqo) |
-| `QAREEN_ALPHA_VALUES` | JSON array | ✓ | — | Image-text weights [0.0=text, 1.0=image] |
-| `QAREEN_DATA_DIR` | path | ✓ | — | Base data directory |
-| `QAREEN_CHROMA_DB_DIR` | path | ✓ | — | ChromaDB persistence directory |
-| `QAREEN_PREPARED_DATASET_DIR` | path | ✓ | — | Prepared datasets directory |
-| `QAREEN_VIZ_OUTPUT_FILE` | path | ✓ | — | Visualization output file |
-| `QAREEN_DEV_SAMPLE_SIZE` | int (>0) | ✓ | — | Sample size in dev mode |
-| `QAREEN_BATCH_SIZE` | int (>0) | ✓ | — | Indexing batch size |
-| `QAREEN_K_NEIGHBORS` | int (>0) | ✓ | — | Retrieval neighbor count |
-| `QAREEN_RANDOM_SEED` | int | ✓ | — | Random seed |
-| `QAREEN_DATASET_PREP_SAMPLE_SIZE` | int (>0) | ✓ | — | Dataset preparation sample size |
-| `QAREEN_REBUILD_COLLECTIONS` | bool | ✓ | — | Delete existing collections before indexing (`scripts/build_index.py`) |
-| `QAREEN_DATASET_PATH` | string | — | `None` | Dataset path (local or HuggingFace) |
-| `ANONYMIZED_TELEMETRY` | bool | — | `False` | ChromaDB telemetry (no prefix) |
+The `Settings` class in `qareen.config.settings` manages configuration:
 
-### Usage
+```python
+from qareen.config.settings import Settings
 
-```bash
-# Minimal dev setup
-export QAREEN_ENVIRONMENT="dev" QAREEN_DATA_DIR="data" QAREEN_CHROMA_DB_DIR="chroma_db"
-export QAREEN_EMBEDDING_MODELS='["google/siglip-base-patch16-224"]' QAREEN_ALPHA_VALUES='[0.5]'
-export QAREEN_DEV_SAMPLE_SIZE="300" QAREEN_BATCH_SIZE="100" QAREEN_K_NEIGHBORS="5"
-export QAREEN_RANDOM_SEED="42" QAREEN_DATASET_PREP_SAMPLE_SIZE="1000"
-export QAREEN_PREPARED_DATASET_DIR="data/prepared" QAREEN_VIZ_OUTPUT_FILE="data/comparison.md"
-export QAREEN_REBUILD_COLLECTIONS="false"
+settings = Settings(
+    environment="dev",
+    chroma_db_dir="./chroma_db",
+    dev_sample_size=300,
+    batch_size=10,
+)
 ```
+
+### Key Settings
+
+- **environment**: Controls dataset sampling (`dev` uses `dev_sample_size`)
+- **dev_sample_size**: Number of samples to use in dev mode (default: 300)
+- **batch_size**: Batch size for indexing operations (default: 100)
+- **max_image_bytes**: Maximum image size in bytes (default: 10MB)
 
 ## Distance Metric
 
