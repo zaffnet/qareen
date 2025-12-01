@@ -162,12 +162,12 @@ def test_get_model_id_special_chars():
 @patch("qareen.indexing.siglip_model.AutoProcessor")
 def test_embedding_dim_from_config(mock_processor_cls, mock_model_cls):
     mock_model = Mock()
-    mock_model.config.projection_dim = TEST_EMBEDDING_DIM
+    mock_model.config.projection_dim = 512
     mock_model_cls.from_pretrained.return_value = mock_model
     mock_processor_cls.from_pretrained.return_value = Mock()
 
     model = SIGLIPEmbeddingModel()
-    assert model.embedding_dim == TEST_EMBEDDING_DIM
+    assert model.embedding_dim == 512
 
 
 @patch("qareen.indexing.siglip_model.AutoModel")
