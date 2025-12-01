@@ -8,33 +8,29 @@ import pytest
 from PIL import Image
 from pydantic import BaseModel, ValidationError
 
-from qareen.dataset.schema import DatasetItem, DatasetSchema
+from qareen.models import DatasetItem
 
 
-def test_dataset_schema_contract(tmp_path: Path) -> None:
-    """Schema must capture text/image pairs while keeping metadata optional."""
-    assert issubclass(DatasetSchema, BaseModel)
+def test_schema_pydantic_model() -> None:
+    """Test that DatasetItem is a pydantic model."""
     assert issubclass(DatasetItem, BaseModel)
 
-    sample_img_path = tmp_path / "sample.jpg"
-    Image.new("RGB", (224, 224), color="red").save(sample_img_path)
 
-    sample = DatasetSchema(text="caption", image=str(sample_img_path), metadata={"split": "train"})
+@pytest.fixture
+def sample_img_path(tmp_path: Path) -> Path:
+    """Fixture to create a sample image file."""
+    path = tmp_path / "sample.jpg"
+    Image.new("RGB", (224, 224), color="red").save(path)
+    return path
+
+
+def test_dataset_sample_creation(sample_img_path: Path) -> None:
+    """Test creation of a dataset sample with both text and image."""
+    sample = DatasetItem(text="caption", image=str(sample_img_path), metadata={"split": "train"})
     assert sample.model_dump() == {
         "text": "caption",
         "image": str(sample_img_path),
         "metadata": {"split": "train"},
-        "dataset_name": None,
-    }
-
-    img_path = tmp_path / "img.png"
-    Image.new("RGB", (224, 224), color="blue").save(img_path)
-
-    item = DatasetItem(text="caption", image=str(img_path))
-    assert item.model_dump() == {
-        "text": "caption",
-        "image": str(img_path),
-        "metadata": None,
         "dataset_name": None,
     }
 

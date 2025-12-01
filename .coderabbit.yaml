@@ -1,4 +1,6 @@
+tone_instructions: "Please provide aggressive, critical feedback. Do not hold back on pointing out potential issues, even minor ones."
 reviews:
+  profile: assertive
   path_filters:
     - "!pyproject.toml"
     - "!.cursor/**"
