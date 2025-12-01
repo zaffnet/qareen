@@ -8,6 +8,7 @@ import numpy as np
 import pytest
 
 from qareen.indexing.siglip_model import SIGLIPEmbeddingModel
+from tests.qareen.indexing.test_fixtures import TEST_EMBEDDING_DIM
 
 # Arbitrary embedding dimension for testing embedding_dim property.
 # The actual value doesn't matter - we're testing that the property
@@ -200,8 +201,8 @@ def test_embedding_dim_fallback_to_embed(mock_processor_cls, mock_model_cls):
     model = SIGLIPEmbeddingModel()
 
     with patch.object(model, "embed_text") as mock_embed:
-        mock_embed.return_value = np.zeros(384)
-        assert model.embedding_dim == 384
+        mock_embed.return_value = np.zeros(TEST_EMBEDDING_DIM)
+        assert model.embedding_dim == TEST_EMBEDDING_DIM
 
 
 @patch("qareen.indexing.siglip_model.AutoModel")

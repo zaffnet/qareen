@@ -8,6 +8,7 @@ import numpy as np
 import pytest
 
 from qareen.indexing.marqo_fashion_model import MarqoFashionSigLIPModel
+from tests.qareen.indexing.test_fixtures import TEST_EMBEDDING_DIM
 
 # Arbitrary embedding dimension for testing embedding_dim property.
 # The actual value doesn't matter - we're testing that the property
@@ -174,6 +175,7 @@ def test_embedding_dim_caching(mock_open_clip):
         mock_embed.return_value = np.zeros(TEST_EMBEDDING_DIM)
         dim1 = model.embedding_dim
         dim2 = model.embedding_dim
+        dim3 = model.embedding_dim
 
         assert dim1 == TEST_EMBEDDING_DIM
         assert dim2 == TEST_EMBEDDING_DIM
