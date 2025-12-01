@@ -10,10 +10,11 @@ import numpy as np
 from datasets import Dataset
 from PIL import Image
 
-from qareen.config.settings import Settings
+from conftest import create_test_settings
 from qareen.dataset.base import DatasetLoader
 from qareen.indexing.chroma_indexer import ChromaIndexer
-from qareen.indexing.models import EmbeddingModel
+from qareen.indexing.embedding_model import EmbeddingModel
+from qareen.retrieving.chroma_retriever import ChromaRetriever
 
 
 class SimpleDatasetLoader(DatasetLoader):
@@ -38,7 +39,7 @@ class SimpleDatasetLoader(DatasetLoader):
         return {"num_samples": len(self.samples)}
 
 
-class TestEmbeddingModel(EmbeddingModel):
+class MockEmbeddingModel(EmbeddingModel):
     """Test embedding model with predictable outputs."""
 
     def __init__(self, embedding_dim: int = 128) -> None:
@@ -94,8 +95,8 @@ class TestEmbeddingModel(EmbeddingModel):
 def test_collection_uses_cosine_distance() -> None:
     """Verify ChromaDB collections are created with cosine distance."""
     with tempfile.TemporaryDirectory() as tmpdir:
-        settings = Settings(environment="dev", chroma_db_dir=Path(tmpdir))
-        model = TestEmbeddingModel(embedding_dim=128)
+        settings = create_test_settings(environment="dev", chroma_db_dir=Path(tmpdir))
+        model = MockEmbeddingModel(embedding_dim=128)
         samples = [{"text": "sample", "image": Image.new("RGB", (10, 10))}]
         loader = SimpleDatasetLoader(samples)
         loader.load()
@@ -106,18 +107,25 @@ def test_collection_uses_cosine_distance() -> None:
             settings=settings,
         )
 
-        vectorstores = indexer.index(alpha_values=[0.5], rebuild=True, batch_size=10)
-        vectorstore = vectorstores[0.5]
+        indexer.index(alpha_values=[0.5], rebuild=True, batch_size=10)
 
-        metadata = vectorstore._collection.metadata
+        retriever = ChromaRetriever(model, settings)
+        vectorstore = retriever.get_vectorstore(
+            dataset_name="test_dataset",
+            model_id="test_model",
+            alpha=0.5,
+            environment="dev",
+        )
+
+        metadata = vectorstore.metadata
         assert metadata.get("hnsw:space") == "cosine", "Collection must use cosine distance"
 
 
 def test_score_range_with_cosine() -> None:
     """Verify scores are in [0, 1] range with cosine distance."""
     with tempfile.TemporaryDirectory() as tmpdir:
-        settings = Settings(environment="dev", chroma_db_dir=Path(tmpdir))
-        model = TestEmbeddingModel(embedding_dim=128)
+        settings = create_test_settings(environment="dev", chroma_db_dir=Path(tmpdir))
+        model = MockEmbeddingModel(embedding_dim=128)
 
         samples = [
             {"text": "red", "image": Image.new("RGB", (10, 10), color=(255, 0, 0))},
@@ -135,11 +143,13 @@ def test_score_range_with_cosine() -> None:
 
         vectorstores = indexer.index(alpha_values=[0.0, 0.5, 1.0], rebuild=True, batch_size=10)
 
+        retriever = ChromaRetriever(model, settings)
+
         query_image = Image.new("RGB", (10, 10), color=(255, 0, 0))
         query_text = "red"
 
         for alpha in [0.0, 0.5, 1.0]:
-            results = indexer.query_multimodal(
+            results = retriever.query_multimodal(
                 vectorstore=vectorstores[alpha],
                 image=query_image,
                 text=query_text,
@@ -156,8 +166,8 @@ def test_score_range_with_cosine() -> None:
 def test_alpha_one_returns_nonzero_scores() -> None:
     """Verify alpha=1.0 returns non-zero scores with cosine distance."""
     with tempfile.TemporaryDirectory() as tmpdir:
-        settings = Settings(environment="dev", chroma_db_dir=Path(tmpdir))
-        model = TestEmbeddingModel(embedding_dim=256)
+        settings = create_test_settings(environment="dev", chroma_db_dir=Path(tmpdir))
+        model = MockEmbeddingModel(embedding_dim=256)
 
         samples = [
             {"text": "item1", "image": Image.new("RGB", (20, 20), color=(100, 0, 0))},
@@ -175,8 +185,10 @@ def test_alpha_one_returns_nonzero_scores() -> None:
 
         vectorstores = indexer.index(alpha_values=[1.0], rebuild=True, batch_size=10)
 
+        retriever = ChromaRetriever(model, settings)
+
         query_image = Image.new("RGB", (20, 20), color=(100, 0, 0))
-        results = indexer.query_multimodal(
+        results = retriever.query_multimodal(
             vectorstore=vectorstores[1.0],
             image=query_image,
             text="query text ignored at alpha=1.0",
@@ -192,7 +204,7 @@ def test_alpha_one_returns_nonzero_scores() -> None:
 
 def test_l2_normalized_embeddings_required() -> None:
     """Verify embeddings are L2-normalized (required for cosine distance)."""
-    model = TestEmbeddingModel(embedding_dim=128)
+    model = MockEmbeddingModel(embedding_dim=128)
     model.load_model()
 
     text_emb = model.embed_text("test")
