@@ -7,15 +7,8 @@ from unittest.mock import Mock, patch
 import numpy as np
 import pytest
 
-from tests.qareen.indexing.test_fixtures import TEST_EMBEDDING_DIM
-from qareen.indexing.exceptions import InvalidAlphaError
 from qareen.indexing.marqo_fashion_model import MarqoFashionSigLIPModel
-
-# Arbitrary embedding dimension for testing embedding_dim property.
-# The actual value doesn't matter - we're testing that the property
-# correctly reads from model config. Using a non-standard dimension
-# (not 512 or 768) to clearly show it's a test value.
-TEST_EMBEDDING_DIM = 63
+from tests.qareen.indexing.test_fixtures import TEST_EMBEDDING_DIM
 
 
 def test_init():
