@@ -1,4 +1,4 @@
-"""Shared test fixtures and constants for indexing tests."""
+"""Pytest configuration and shared fixtures for indexing tests."""
 
 # Arbitrary embedding dimension for testing embedding_dim property.
 # The actual value doesn't matter - we're testing that the property
