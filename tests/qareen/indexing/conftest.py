@@ -1,7 +1,8 @@
-"""Shared test fixtures and constants for indexing tests."""
+"""Module-level constants for indexing tests."""
 
-# Arbitrary embedding dimension for testing embedding_dim property.
-# The actual value doesn't matter - we're testing that the property
-# correctly reads from model config. Using a non-standard dimension
-# (not 512 or 768) to clearly show it's a test value.
-TEST_EMBEDDING_DIM = 63
+# Test embedding dimension constant shared across multiple indexing test modules.
+# Usage: Pass this value into model config (e.g., config.projection_dim = TEST_EMBEDDING_DIM)
+# and assert that the embedding_dim property equals TEST_EMBEDDING_DIM to verify correct
+# property behavior. Value 37 is deliberately non-standard to distinguish test values from
+# common production dimensions (e.g., 512, 768) and catch any hardcoded assumptions.
+TEST_EMBEDDING_DIM: int = 37
