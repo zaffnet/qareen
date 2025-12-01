@@ -9,6 +9,12 @@ import pytest
 
 from qareen.indexing.siglip_model import SIGLIPEmbeddingModel
 
+# Arbitrary embedding dimension for testing embedding_dim property.
+# The actual value doesn't matter - we're testing that the property
+# correctly reads from model config. Using a non-standard dimension
+# (not 512 or 768) to clearly show it's a test value.
+TEST_EMBEDDING_DIM = 63
+
 
 def test_init():
     model = SIGLIPEmbeddingModel(model_id="google/siglip-base-patch16-224")
@@ -162,12 +168,12 @@ def test_get_model_id_special_chars():
 @patch("qareen.indexing.siglip_model.AutoProcessor")
 def test_embedding_dim_from_config(mock_processor_cls, mock_model_cls):
     mock_model = Mock()
-    mock_model.config.projection_dim = 63
+    mock_model.config.projection_dim = TEST_EMBEDDING_DIM
     mock_model_cls.from_pretrained.return_value = mock_model
     mock_processor_cls.from_pretrained.return_value = Mock()
 
     model = SIGLIPEmbeddingModel()
-    assert model.embedding_dim == 63
+    assert model.embedding_dim == TEST_EMBEDDING_DIM
 
 
 @patch("qareen.indexing.siglip_model.AutoModel")

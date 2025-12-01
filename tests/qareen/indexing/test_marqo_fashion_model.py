@@ -9,6 +9,12 @@ import pytest
 
 from qareen.indexing.marqo_fashion_model import MarqoFashionSigLIPModel
 
+# Arbitrary embedding dimension for testing embedding_dim property.
+# The actual value doesn't matter - we're testing that the property
+# correctly reads from model config. Using a non-standard dimension
+# (not 512 or 768) to clearly show it's a test value.
+TEST_EMBEDDING_DIM = 63
+
 
 def test_init():
     model = MarqoFashionSigLIPModel(model_id="Marqo/test-model")
@@ -165,12 +171,12 @@ def test_embedding_dim_caching(mock_open_clip):
     model = MarqoFashionSigLIPModel()
 
     with patch.object(model, "embed_text") as mock_embed:
-        mock_embed.return_value = np.zeros(63)
+        mock_embed.return_value = np.zeros(TEST_EMBEDDING_DIM)
         dim1 = model.embedding_dim
         dim2 = model.embedding_dim
 
-        assert dim1 == 63
-        assert dim2 == 63
+        assert dim1 == TEST_EMBEDDING_DIM
+        assert dim2 == TEST_EMBEDDING_DIM
         mock_embed.assert_called_once()
 
 
