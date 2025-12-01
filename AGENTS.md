@@ -7,11 +7,16 @@ Run `uv sync --all-extras` to install dependencies.
 - `pyproject.toml` is the source of truth. Edit it directly, then run `uv sync`. Never use `uv pip install` or `pip install`.
 
 ## Running Python
-Use `uv run python ...` for executing python files or commands.
+
+After activating the virtual environment (`source .venv/bin/activate`), use `python` or `python3` to execute scripts. Project scripts use `python3` for explicit version specification.
+
+## Rules
+
+All rules are present inside @.cursor/rules/ and are meant to be read before you start a task. You should abide by the rules at all times.
 
 ## Architecture Patterns
 
-Pydantic-first: use Pydantic models for all data structures, configs, schemas. Use ABC pattern for extensible components (see `qareen/dataset/base.py`, `qareen/indexing/base.py`). Follow module structure: dataset/, indexing/, config/. Use LangChain VectorStore interface for new vector store backends.
+Pydantic-first: use Pydantic models for all data structures, configs, schemas. Use ABC pattern for extensible components (see `qareen/dataset/base.py`, `qareen/indexing/base.py`). Follow module structure: dataset/, indexing/, config/. Implement vector store backends against the interfaces defined in `qareen/indexing`.
 
 ## Code Style
 
