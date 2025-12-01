@@ -44,7 +44,9 @@ class EmbeddingModel(ABC):
     def normalize_l2(vector: np.ndarray) -> np.ndarray:
         if vector.size == 0:
             raise ValueError("cannot L2-normalize empty vector")
-        norm = float(np.linalg.norm(vector))
+        if not np.isfinite(vector).all():
+            raise ValueError("cannot L2-normalize vector containing NaN or Inf")
+        norm = np.linalg.norm(vector)
         if norm <= ZERO_NORM_TOLERANCE:
             raise ValueError("cannot L2-normalize zero vector")
         return vector / norm

@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import contextlib
-import re
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
@@ -15,7 +14,7 @@ if TYPE_CHECKING:
 from qareen.models import Settings
 from qareen.utils.chroma_client import close_chroma_client, create_chroma_client
 from qareen.utils.image_utils import load_image
-from qareen.utils.naming import get_collection_name
+from qareen.utils.naming import ALPHA_SUFFIX_PATTERN, get_collection_name
 
 ALPHA_TOLERANCE = 1e-6
 IDENTICAL_THRESHOLD = 0.999999
@@ -104,16 +103,13 @@ class ChromaRetriever:
             include=["metadatas", "documents", "distances"],
         )
 
-        if not results.get("ids"):
+        ids = (results.get("ids") or [[]])[0]
+        if not ids:
             return []
 
-        ids = results["ids"][0]
-        metadatas_list = results.get("metadatas") or [[]]
-        metadatas = metadatas_list[0] if metadatas_list else [{}] * len(ids)
-        docs_list = results.get("documents") or [[]]
-        docs = docs_list[0] if docs_list else [""] * len(ids)
-        distances_list = results.get("distances") or [[]]
-        distances = distances_list[0] if distances_list else [0.0] * len(ids)
+        metadatas = (results.get("metadatas") or [[]])[0] or [{}] * len(ids)
+        docs = (results.get("documents") or [[]])[0] or [""] * len(ids)
+        distances = (results.get("distances") or [[]])[0] or [0.0] * len(ids)
 
         documents = []
         skipped_identical = False
@@ -134,10 +130,13 @@ class ChromaRetriever:
         self, dataset_name: str, model_id: str, environment: str = "dev"
     ) -> list[float]:
         prefix = get_collection_name(dataset_name, model_id, None, environment)
+        collections = self._get_chroma_client().list_collections()
+        if not collections:
+            return []
         alphas = [
-            float(match.group(1))
-            for collection in self._get_chroma_client().list_collections()
+            float(match.group(1).replace("_", "."))
+            for collection in collections
             if collection.name.startswith(prefix)
-            and (match := re.search(r"_a(\d+\.\d+)", collection.name))
+            and (match := ALPHA_SUFFIX_PATTERN.search(collection.name))
         ]
         return sorted(alphas)
