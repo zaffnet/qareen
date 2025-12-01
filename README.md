@@ -4,7 +4,6 @@
 
 [![Python](https://img.shields.io/badge/Python-3.11%2B-3776AB?logo=python&logoColor=white&style=flat-square)](https://www.python.org/)
 [![Hugging Face](https://img.shields.io/badge/Hugging%20Face-Transformers-FFD21E?logo=huggingface&logoColor=black&style=flat-square)](https://huggingface.co/)
-[![LangChain](https://img.shields.io/badge/LangChain-Integration-1C3C3C?logo=langchain&logoColor=white&style=flat-square)](https://www.langchain.com/)
 [![ChromaDB](https://img.shields.io/badge/ChromaDB-Vector%20Store-orange?style=flat-square)](https://www.trychroma.com/)
 [![Pydantic](https://img.shields.io/badge/Pydantic-Validation-E92063?logo=pydantic&logoColor=white&style=flat-square)](https://docs.pydantic.dev/)
 
@@ -66,16 +65,21 @@ See [docs/CONFIGURATION.md](docs/CONFIGURATION.md) for environment variables, lo
 
 See [docs/DISTANCE_METRIC.md](docs/DISTANCE_METRIC.md) for details on the cosine distance metric used for similarity search.
 
-## References
+## Quick Start
 
-Run the end-to-end example (requires SQID dataset – see docs/QUICKSTART.md for data preparation):
+Run the end-to-end example (requires dataset and environment configuration):
 
 ```bash
-./scripts/build_index.sh <data_dir>
-./scripts/run_gradio.sh
+# Set required environment variables (or use a .env config file)
+export QAREEN_EMBEDDING_MODELS='["google/siglip-base-patch16-224"]'
+export QAREEN_ALPHA_VALUES='[0.0, 0.5, 1.0]'
+export QAREEN_ENVIRONMENT="dev"
+# ... see docs/CONFIGURATION.md for all required settings
+
+uv run python scripts/build_index.py --dataset-name <data_dir>
 ```
 
-See [docs/QUICKSTART.md](docs/QUICKSTART.md) for detailed steps.
+See [docs/LOCAL_DATA_GUIDE.md](docs/LOCAL_DATA_GUIDE.md) for detailed steps.
 
 ## References
 
