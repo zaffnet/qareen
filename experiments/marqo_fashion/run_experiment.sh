@@ -2,181 +2,84 @@
 
 set -euo pipefail
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+cd "$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 
-cd "$PROJECT_ROOT"
+[ -f .venv/bin/activate ] || { echo "ERROR: Virtual environment not found" >&2; exit 1; }
+source .venv/bin/activate
 
-if [ -n "$VIRTUAL_ENV" ]; then
-    echo "Virtual environment already active: $VIRTUAL_ENV"
-elif [ -f ".venv/bin/activate" ] && [ -r ".venv/bin/activate" ]; then
-    source .venv/bin/activate
-else
-    echo "ERROR: Virtual environment activation script not found or not readable at .venv/bin/activate" >&2
-    echo "Please create and activate the virtual environment first." >&2
-    exit 1
-fi
-
-DATASET_PATH="data/marqo_3k"
-SAMPLE_SIZE=3000
+DATASET_PATH="data/marqo_30k"
+SAMPLE_SIZE=30000
 SEED=42
-ENVIRONMENT="dev"
+ENVIRONMENT="prod"
 BATCH_SIZE=100
 REBUILD=false
-
-MODELS=(
-    "openai/clip-vit-large-patch14"
-    "Marqo/marqo-fashionSigLIP"
-    # "google/siglip2-so400m-patch16-512"
-    # "Marqo/marqo-ecommerce-embeddings-L"
-)
-
+MODELS=("openai/clip-vit-large-patch14" "Marqo/marqo-fashionSigLIP")
 ALPHA_VALUES=(0.0 0.250 0.500 0.750 1.0)
-
 STEP="${1:-all}"
 
 show_usage() {
     echo "Usage: $0 [STEP]"
-    echo ""
-    echo "Steps:"
-    echo "  prepare    - Prepare dataset only"
-    echo "  index      - Build indexes only (requires dataset)"
-    echo "  visualize  - Generate visualization only (requires indexes)"
-    echo "  all        - Run all steps (default)"
-    echo ""
-    echo "Examples:"
-    echo "  $0              # Run all steps"
-    echo "  $0 prepare      # Only prepare dataset"
-    echo "  $0 index        # Only build indexes (if dataset exists)"
-    echo "  $0 visualize    # Only generate visualization (if indexes exist)"
+    echo "Steps: prepare | index | visualize | all (default)"
 }
 
-if [[ "$STEP" == "help" ]] || [[ "$STEP" == "-h" ]] || [[ "$STEP" == "--help" ]]; then
-    show_usage
-    exit 0
-fi
-
-if [[ ! "$STEP" =~ ^(all|prepare|index|visualize)$ ]]; then
-    echo "ERROR: Invalid step '$STEP'"
-    echo ""
-    show_usage
-    exit 1
-fi
+[[ "$STEP" =~ ^(help|-h|--help)$ ]] && { show_usage; exit 0; }
+[[ "$STEP" =~ ^(all|prepare|index|visualize)$ ]] || { echo "ERROR: Invalid step '$STEP'" >&2; show_usage; exit 1; }
 
 echo "==================================================================="
 echo "Marqo Fashion Dataset: Indexing and Visualization Pipeline"
 echo "==================================================================="
+echo "Dataset: $DATASET_PATH | Sample: $SAMPLE_SIZE | Env: $ENVIRONMENT | Batch: $BATCH_SIZE | Rebuild: $REBUILD"
+echo "Models: ${MODELS[*]} | Alpha: ${ALPHA_VALUES[*]} | Step: $STEP"
 echo ""
-echo "Configuration:"
-echo "  Dataset Path: $DATASET_PATH"
-echo "  Sample Size: $SAMPLE_SIZE"
-echo "  Random Seed: $SEED"
-echo "  Environment: $ENVIRONMENT"
-echo "  Batch Size: $BATCH_SIZE"
-echo "  Rebuild: $REBUILD"
-echo "  Models: ${MODELS[*]}"
-echo "  Alpha Values: ${ALPHA_VALUES[*]}"
-echo "  Step: $STEP"
-echo ""
+
+set_common_env() {
+    export QAREEN_ENVIRONMENT="$ENVIRONMENT"
+    export QAREEN_DATA_DIR="data"
+    export QAREEN_CHROMA_DB_DIR="chroma_db"
+    export QAREEN_DATASET_PATH="$DATASET_PATH"
+    export QAREEN_DEV_SAMPLE_SIZE="$SAMPLE_SIZE"
+    export QAREEN_BATCH_SIZE="$BATCH_SIZE"
+    export QAREEN_REBUILD_COLLECTIONS="$REBUILD"
+    export QAREEN_K_NEIGHBORS="5"
+    export QAREEN_RANDOM_SEED="$SEED"
+    export QAREEN_DATASET_PREP_SAMPLE_SIZE="$SAMPLE_SIZE"
+    export QAREEN_PREPARED_DATASET_DIR="$DATASET_PATH"
+    export QAREEN_VIZ_OUTPUT_FILE="data/marqo_comparison.md"
+}
 
 if [[ "$STEP" == "all" ]] || [[ "$STEP" == "prepare" ]]; then
     echo "Step 1: Preparing Marqo Fashion Dataset"
-    echo "-------------------------------------------------------------------"
     if [ -d "$DATASET_PATH" ]; then
-        echo "Dataset already exists at $DATASET_PATH, skipping preparation..."
+        echo "Dataset exists, skipping..."
     else
-        if ! python scripts/prepare_marqo_dataset.py --output-dir "$DATASET_PATH"; then
-            echo "ERROR: Dataset preparation failed"
-            exit 1
-        fi
+        set_common_env
+        export QAREEN_EMBEDDING_MODELS='["google/siglip-base-patch16-224"]' QAREEN_ALPHA_VALUES='[0.5]'
+        python3 scripts/prepare_marqo_dataset.py || { echo "ERROR: Dataset preparation failed" >&2; exit 1; }
     fi
-    echo ""
 fi
 
 if [[ "$STEP" == "all" ]] || [[ "$STEP" == "index" ]]; then
-    echo "Step 2: Building Indexes for All Models and Alpha Values"
-    echo "-------------------------------------------------------------------"
-
-    if [ ! -d "$DATASET_PATH" ]; then
-        echo "ERROR: Dataset not found at $DATASET_PATH"
-        echo "Run with 'prepare' or 'all' step first"
-        exit 1
-    fi
-
+    echo "Step 2: Building Indexes"
+    [ -d "$DATASET_PATH" ] || { echo "ERROR: Dataset not found at $DATASET_PATH" >&2; exit 1; }
     for MODEL in "${MODELS[@]}"; do
-        echo ""
-        echo "Building indexes for model: $MODEL"
-        echo "-------------------------------------------------------------------"
-
-        declare -a ALPHA_FLAGS
-        ALPHA_FLAGS=()
-        for ALPHA in "${ALPHA_VALUES[@]}"; do
-            ALPHA_FLAGS+=("--alpha-values" "$ALPHA")
-        done
-
-        declare -a BUILD_CMD
-        BUILD_CMD=(
-            "python" "scripts/build_index.py"
-            "--dataset-name" "$DATASET_PATH"
-            "--models" "$MODEL"
-            "${ALPHA_FLAGS[@]}"
-            "--environment" "$ENVIRONMENT"
-            "--sample-size" "$SAMPLE_SIZE"
-            "--batch-size" "$BATCH_SIZE"
-        )
-
-        if [[ "$REBUILD" == "true" ]]; then
-            BUILD_CMD+=("--rebuild")
-        fi
-
-        if ! "${BUILD_CMD[@]}"; then
-            echo "ERROR: Index building failed for model $MODEL"
-            exit 1
-        fi
+        echo "Building indexes for: $MODEL"
+        set_common_env
+        export QAREEN_EMBEDDING_MODELS='["'$MODEL'"]'
+        ALPHA_VALUES_STR=$(python3 -c "import json, sys; print(json.dumps([float(x) for x in sys.argv[1:]]))" "${ALPHA_VALUES[@]}") || { echo "ERROR: Failed to encode alpha values" >&2; exit 1; }
+        export QAREEN_ALPHA_VALUES="$ALPHA_VALUES_STR"
+        python3 scripts/build_index.py --dataset-name "$DATASET_PATH" || { echo "ERROR: Index building failed for $MODEL" >&2; exit 1; }
     done
-    echo ""
 fi
 
 if [[ "$STEP" == "all" ]] || [[ "$STEP" == "visualize" ]]; then
-    echo "Step 3: Generating Comparison Visualization"
-    echo "-------------------------------------------------------------------"
-
-    declare -a MODEL_FLAGS_ARRAY
-    MODEL_FLAGS_ARRAY=()
-    for MODEL in "${MODELS[@]}"; do
-        MODEL_FLAGS_ARRAY+=("--models" "$MODEL")
-    done
-
-    declare -a ALPHA_FLAGS_ARRAY
-    ALPHA_FLAGS_ARRAY=()
-    for ALPHA in "${ALPHA_VALUES[@]}"; do
-        ALPHA_FLAGS_ARRAY+=("--alpha-values" "$ALPHA")
-    done
-
-    if ! python scripts/visualize_marqo_comparison.py \
-        --dataset-path "$DATASET_PATH" \
-        "${MODEL_FLAGS_ARRAY[@]}" \
-        "${ALPHA_FLAGS_ARRAY[@]}" \
-        --environment "$ENVIRONMENT" \
-        --k 5 \
-        --output "data/marqo_comparison.md" \
-        --seed "$SEED"; then
-        echo "ERROR: Visualization generation failed"
-        exit 1
-    fi
-    echo ""
+    echo "Step 3: Generating Visualization"
+    MODELS_JSON=$(python3 -c "import json, sys; print(json.dumps(sys.argv[1:]))" "${MODELS[@]}") || { echo "ERROR: Failed to encode models" >&2; exit 1; }
+    ALPHAS_JSON=$(python3 -c "import json, sys; print(json.dumps([float(x) for x in sys.argv[1:]]))" "${ALPHA_VALUES[@]}") || { echo "ERROR: Failed to encode alpha values" >&2; exit 1; }
+    set_common_env
+    export QAREEN_EMBEDDING_MODELS="$MODELS_JSON" QAREEN_ALPHA_VALUES="$ALPHAS_JSON"
+    python3 scripts/visualize_marqo_comparison.py --dataset-path "$DATASET_PATH" || { echo "ERROR: Visualization failed" >&2; exit 1; }
 fi
 
 echo "==================================================================="
-echo "Pipeline Complete!"
+echo "Pipeline Complete! Indexes: $((${#MODELS[@]} * ${#ALPHA_VALUES[@]})) | Visualization: data/marqo_comparison.md"
 echo "==================================================================="
-echo ""
-echo "Results:"
-echo "  - Dataset: $DATASET_PATH"
-echo "  - Total Indexes: $((${#MODELS[@]} * ${#ALPHA_VALUES[@]}))"
-echo "  - Visualization: data/marqo_comparison.md"
-echo ""
-echo "View results with: open data/marqo_comparison.md"
-echo ""
-
-exit 0
