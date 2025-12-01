@@ -24,45 +24,27 @@ dataset.save_to_disk("data/my_products")
 - `text`: string or `None`
 - `image`: PIL Image, path string, or `None`
 
-At least one modality must be present. See [DATASET_FORMAT.md](DATASET_FORMAT.md).
+At least one modality (text or image) must be non-`None`. See [DATASET_FORMAT.md](DATASET_FORMAT.md) for full schema.
 
 ## Indexing Data
 
-Index your local dataset using the `build_index.py` script. Configuration is via environment variables (prefixed with `QAREEN_`) or a `.env` config file.
-
-**Set environment variables:**
+Index your local dataset using the `build_index.py` script:
 
 ```bash
-export QAREEN_ENVIRONMENT="dev"
-export QAREEN_DATA_DIR="data"
-export QAREEN_CHROMA_DB_DIR="chroma_db"
-export QAREEN_EMBEDDING_MODELS='["google/siglip-base-patch16-224"]'
-export QAREEN_ALPHA_VALUES='[0.0, 0.5, 1.0]'
-export QAREEN_DEV_SAMPLE_SIZE="300"
-export QAREEN_BATCH_SIZE="100"
-export QAREEN_REBUILD_COLLECTIONS="false"
-export QAREEN_K_NEIGHBORS="5"
-export QAREEN_RANDOM_SEED="42"
-export QAREEN_DATASET_PREP_SAMPLE_SIZE="1000"
-export QAREEN_PREPARED_DATASET_DIR="data/prepared"
-export QAREEN_VIZ_OUTPUT_FILE="data/comparison.md"
+uv run python scripts/build_index.py \
+  --dataset-name data/my_products \
+  --models google/siglip-base-patch16-224 \
+  --alpha-values 0.0 0.5 1.0 \
+  --environment dev \
+  --batch-size 100
 ```
 
-**Run the indexer:**
-
-```bash
-uv run python scripts/build_index.py --dataset-name data/my_products
-```
-
-**Or use a config file:**
-
-```bash
-uv run python scripts/build_index.py --dataset-name data/my_products --config-file .env
-```
-
-**CLI options:**
-- `--dataset-name`: Path to local dataset directory (or HuggingFace Hub ID), overrides config
-- `--config-file`: Path to `.env` configuration file
+**Key parameters:**
+- `--dataset-name`: Path to local dataset directory (or HuggingFace Hub ID)
+- `--models`: One or more embedding models (CLIP, SIGLIP, Marqo variants)
+- `--alpha-values`: Image-text weights (0.0=text-only, 1.0=image-only)
+- `--environment`: dev/staging/prod (affects collection naming)
+- `--rebuild`: Add to delete and recreate existing collections
 
 The script will:
 1. Load your dataset from disk
@@ -73,88 +55,126 @@ The script will:
 **Example with multiple models:**
 
 ```bash
-export QAREEN_EMBEDDING_MODELS='["openai/clip-vit-large-patch14", "Marqo/marqo-fashionSigLIP"]'
-export QAREEN_ALPHA_VALUES='[0.0, 0.25, 0.5, 0.75, 1.0]'
-export QAREEN_ENVIRONMENT="prod"
-uv run python scripts/build_index.py --dataset-name data/my_products
+uv run python scripts/build_index.py \
+  --dataset-name data/my_products \
+  --models openai/clip-vit-large-patch14 Marqo/marqo-fashionSigLIP \
+  --alpha-values 0.0 0.25 0.5 0.75 1.0 \
+  --environment prod
 ```
 
 ## Retrieval / Querying
 
-Use the `ChromaRetriever` to query indexed data:
+Use the `ChromaIndexer` to query indexed data:
 
 ```python
+from pathlib import Path
 from PIL import Image
-from qareen.models import Settings
+from qareen.config.settings import Settings
+from qareen.dataset.local_dataset import LocalDatasetLoader
+from qareen.indexing.chroma_indexer import ChromaIndexer
 from qareen.indexing.siglip_model import SIGLIPEmbeddingModel
-from qareen.retrieving.chroma_retriever import ChromaRetriever
 
+# Initialize components
 settings = Settings(environment="dev")
+dataset_loader = LocalDatasetLoader("data/my_products")
 embedding_model = SIGLIPEmbeddingModel("google/siglip-base-patch16-224")
-retriever = ChromaRetriever(embedding_model=embedding_model, settings=settings)
 
-# Note: dataset_name should match what was used during indexing (e.g., "data/my_products")
-vectorstore = retriever.get_vectorstore(
-    dataset_name="data/my_products",
+indexer = ChromaIndexer(
+    dataset_loader=dataset_loader,
+    embedding_model=embedding_model,
+    settings=settings,
+)
+
+# Load the vectorstore for a specific alpha
+vectorstore = indexer.create_vectorstore(
+    dataset_name="my_products",
     model_id="google/siglip-base-patch16-224",
     alpha=0.5,
     environment="dev",
 )
 
+# Query with both image and text
 query_image = Image.open("query_image.jpg")
-results = retriever.query_multimodal(
+query_text = "designer handbag"
+
+results = indexer.query_multimodal(
     vectorstore=vectorstore,
     image=query_image,
-    text="designer handbag",
-    alpha=0.5,
-    k=5,
+    text=query_text,
+    alpha=0.5,  # Must match the indexed alpha
+    k=5,  # Return top 5 results
 )
 
+# Process results
 for doc, score in results:
-    print(f"Score: {score:.3f} | Text: {doc.page_content} | Metadata: {doc.metadata}")
+    print(f"Score: {score:.3f}")
+    print(f"Text: {doc.page_content}")
+    print(f"Metadata: {doc.metadata}")
+    print("---")
 ```
 
 **Query variations:**
 
 ```python
-# Get vectorstores for different alpha values
-vectorstore_alpha_0 = retriever.get_vectorstore(
-    dataset_name="data/my_products", model_id="google/siglip-base-patch16-224", alpha=0.0, environment="dev"
-)
-vectorstore_alpha_05 = retriever.get_vectorstore(
-    dataset_name="data/my_products", model_id="google/siglip-base-patch16-224", alpha=0.5, environment="dev"
-)
-vectorstore_alpha_1 = retriever.get_vectorstore(
-    dataset_name="data/my_products", model_id="google/siglip-base-patch16-224", alpha=1.0, environment="dev"
-)
-
 # Text-only query (alpha=0.0)
-results = retriever.query_multimodal(vectorstore=vectorstore_alpha_0, image=None, text="leather handbag", alpha=0.0, k=5)
+results = indexer.query_multimodal(
+    vectorstore=vectorstore_alpha_0,
+    image=None,
+    text="leather handbag",
+    alpha=0.0,
+    k=5,
+)
 
 # Image-only query (alpha=1.0)
-results = retriever.query_multimodal(vectorstore=vectorstore_alpha_1, image=query_image, text=None, alpha=1.0, k=5)
+results = indexer.query_multimodal(
+    vectorstore=vectorstore_alpha_1,
+    image=query_image,
+    text=None,
+    alpha=1.0,
+    k=5,
+)
 
 # Balanced multimodal (alpha=0.5)
-results = retriever.query_multimodal(vectorstore=vectorstore_alpha_05, image=query_image, text="red handbag", alpha=0.5, k=10)
+results = indexer.query_multimodal(
+    vectorstore=vectorstore_alpha_05,
+    image=query_image,
+    text="red handbag",
+    alpha=0.5,
+    k=10,
+)
 ```
 
-## Quick Start
+## Quick Start Pipeline
 
-1. **Prepare**: Create dataset with `text`/`image` columns and save to disk.
-2. **Index**: Run `uv run python scripts/build_index.py --dataset-name <path> ...`
-3. **Query**: Use `ChromaRetriever.query_multimodal()` in your application.
+Complete workflow from data to retrieval:
+
+```bash
+# 1. Prepare dataset (Python script)
+python prepare_data.py  # Creates data/my_products/
+
+# 2. Index dataset
+uv run python scripts/build_index.py \
+  --dataset-name data/my_products \
+  --models google/siglip-base-patch16-224 \
+  --alpha-values 0.0 0.5 1.0 \
+  --environment dev
+
+# 3. Query (Python script)
+python query_data.py  # Uses ChromaIndexer.query_multimodal()
+```
 
 ## Configuration
 
 Environment variables and paths are managed via `Settings`:
 
 ```python
-from qareen.models import Settings
+from qareen.config.settings import Settings
 
+# Custom configuration
 settings = Settings(
     environment="prod",
     chroma_db_dir=Path("/custom/path/chroma_db"),
-    dev_sample_size=1000,
+    dev_sample_size=1000,  # Limit samples in dev
 )
 ```
 
@@ -163,7 +183,7 @@ See [CONFIGURATION.md](CONFIGURATION.md) for full configuration options.
 ## Notes
 
 - **Alpha values:** Must match between indexing and querying (use same alpha)
-- **Collection naming:** Format is roughly `{env}_{dataset}_{model}[_h{hash}]_a{alpha}`. Note that names are sanitized and may be hashed/truncated to fit ChromaDB limits. See `qareen.utils.naming.get_collection_name`.
+- **Collection naming:** Format: `{env}_{dataset}_{model}_a{alpha:.3f}`
 - **Storage:** ChromaDB persists to `chroma_db/` directory by default
 - **Models:** Any HuggingFace CLIP/SIGLIP model supported
 - **Distance metric:** Cosine distance (see [DISTANCE_METRIC.md](DISTANCE_METRIC.md))

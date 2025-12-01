@@ -5,7 +5,7 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from qareen.indexing.embedding_model import EmbeddingModel
+from qareen.indexing.models import EmbeddingModel
 
 
 def test_normalize_l2_valid_vector():
@@ -28,14 +28,14 @@ def test_normalize_l2_already_normalized():
 def test_normalize_l2_zero_vector():
     vector = np.array([0.0, 0.0, 0.0])
 
-    with pytest.raises(ValueError, match="cannot L2-normalize zero vector"):
+    with pytest.raises(ValueError, match=EmbeddingModel.ZERO_VECTOR_ERROR):
         EmbeddingModel.normalize_l2(vector)
 
 
 def test_normalize_l2_near_zero_vector():
     vector = np.array([1e-10, 1e-10, 1e-10])
 
-    with pytest.raises(ValueError, match="cannot L2-normalize zero vector"):
+    with pytest.raises(ValueError, match=EmbeddingModel.ZERO_VECTOR_ERROR):
         EmbeddingModel.normalize_l2(vector)
 
 

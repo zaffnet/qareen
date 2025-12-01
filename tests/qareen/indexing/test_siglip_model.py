@@ -7,6 +7,7 @@ from unittest.mock import Mock, patch
 import numpy as np
 import pytest
 
+from qareen.indexing.exceptions import InvalidAlphaError
 from qareen.indexing.siglip_model import SIGLIPEmbeddingModel
 from tests.qareen.indexing.test_fixtures import TEST_EMBEDDING_DIM
 
@@ -71,8 +72,8 @@ def test_embed_image_invalid_type():
     model.model = Mock()
     model.processor = Mock()
 
-    with pytest.raises(TypeError, match="Image must be PIL Image or path string"):
-        model.embed_image({"invalid": "type"})
+    with pytest.raises(TypeError, match=SIGLIPEmbeddingModel.IMAGE_TYPE_ERROR):
+        model.embed_image({"invalid": "type"})  # type: ignore[arg-type]
 
 
 def test_embed_image_invalid_path():
@@ -80,17 +81,17 @@ def test_embed_image_invalid_path():
     model.model = Mock()
     model.processor = Mock()
 
-    with pytest.raises(ValueError, match="Image must be PIL Image or path string"):
+    with pytest.raises(ValueError, match=SIGLIPEmbeddingModel.IMAGE_TYPE_ERROR):
         model.embed_image("/nonexistent/path.jpg")
 
 
 def test_embed_multimodal_invalid_alpha():
     model = SIGLIPEmbeddingModel()
 
-    with pytest.raises(ValueError, match="Alpha must be in range"):
+    with pytest.raises(InvalidAlphaError):
         model.embed_multimodal(image=None, text="test", alpha=1.5)
 
-    with pytest.raises(ValueError, match="Alpha must be in range"):
+    with pytest.raises(InvalidAlphaError):
         model.embed_multimodal(image=None, text="test", alpha=-0.1)
 
 

@@ -6,8 +6,6 @@ __pycache__/
 # C extensions
 *.so
 
-
-
 # Distribution / packaging
 .Python
 build/
@@ -200,11 +198,8 @@ cython_debug/
 #  Cursor is an AI-powered code editor. `.cursorignore` specifies files/directories to
 #  exclude from AI features like autocomplete and code analysis. Recommended for sensitive data
 #  refer to https://docs.cursor.com/context/ignore-files
-# .cursorignore
-# .cursorindexingignore
-
-# OS generated files
-.DS_Store
+.cursorignore
+.cursorindexingignore
 
 # Marimo
 marimo/_static/
@@ -214,8 +209,5 @@ __marimo__/
 # Qareen-specific runtime artifacts
 # Ignore data/ (datasets and extracted runtime artifacts) and chroma_db/ (vector DB indexes)
 # to prevent committing large/generated files that should be created during runtime or testing.
-# Ignore all backup directories and files except markdown files.
 data/
-!data/marqo_comparison.md
-!data/marqo_smoke_test.md
 chroma_db/

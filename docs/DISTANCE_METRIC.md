@@ -12,11 +12,16 @@ Score range: [0.0, 1.0] where 1.0 = identical, 0.5 = orthogonal, 0.0 = opposite.
 
 ## Why Cosine?
 
-Cosine distance measures directional similarity, providing consistent scores [0.0, 1.0] across all alpha values for L2-normalized vectors. This aligns with vision-language model training objectives.
+All embedding models produce L2-normalized vectors. Cosine distance:
+- Measures directional similarity (angle between vectors)
+- Provides meaningful scores across all alpha values (0.0 to 1.0)
+- Aligns with vision-language model training objectives
 
-## L2 Normalization
+Previous L2 distance with quadratic penalty caused zero scores for image-only queries.
 
-qareen models automatically L2-normalize embeddings before storage, so developers do not need to normalize manually.
+## L2 Normalization Still Required
 
-> [!NOTE]
-> Manual normalization (`embedding / ||embedding||`) is only necessary if embeddings are produced or stored outside of qareen's APIs.
+**Yes**, L2 normalization is still needed:
+- Embeddings must be normalized before storage: `embedding / ||embedding||`
+- Cosine distance assumes normalized vectors
+- All models apply normalization in their `embed_*` methods

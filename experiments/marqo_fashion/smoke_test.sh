@@ -2,32 +2,98 @@
 
 set -euo pipefail
 
-cd "$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-[ -f .venv/bin/activate ] || { echo "ERROR: Virtual environment not found" >&2; exit 1; }
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+
+cd "$PROJECT_ROOT"
+
+if [ ! -f .venv/bin/activate ]; then
+    echo "ERROR: Virtual environment not found at .venv"
+    echo "Please run: python -m venv .venv && source .venv/bin/activate && pip install -e ."
+    exit 1
+fi
+
 source .venv/bin/activate
 
-export QAREEN_DATASET_PATH="data/marqo_prepared" QAREEN_ALPHA_VALUES="[0.0, 0.25, 0.5, 0.75, 1.0]"
-MODELS=("openai/clip-vit-large-patch14" "Marqo/marqo-fashionSigLIP" "google/siglip2-so400m-patch14-224" "Marqo/marqo-ecommerce-embeddings-B")
-NUM_ALPHAS=$(python -c "import json; print(len(set(json.loads('$QAREEN_ALPHA_VALUES'))))")
-NUM_MODELS=${#MODELS[@]}
-MODELS_JSON=$(python -c "import json, sys; print(json.dumps(sys.argv[1:]))" "${MODELS[@]}")
-
-set_common_env() {
-    export QAREEN_ENVIRONMENT="dev" QAREEN_DATA_DIR="data" QAREEN_CHROMA_DB_DIR="chroma_db"
-    export QAREEN_EMBEDDING_MODELS="$MODELS_JSON" QAREEN_DEV_SAMPLE_SIZE="300" QAREEN_BATCH_SIZE="100"
-    export QAREEN_K_NEIGHBORS="10" QAREEN_RANDOM_SEED="43" QAREEN_VIZ_OUTPUT_FILE="data/marqo_smoke_test.md"
-    export QAREEN_PREPARED_DATASET_DIR="data/marqo_prepared" QAREEN_DATASET_PREP_SAMPLE_SIZE="300"
-    export QAREEN_REBUILD_COLLECTIONS="true"
-}
-
-set_common_env
-
 echo "==================================================================="
-echo "SMOKE TEST: ${NUM_MODELS} models × ${NUM_ALPHAS} alphas"
+echo "SMOKE TEST: 4 models × 1 alpha × 10 samples"
 echo "==================================================================="
+echo ""
 
-set_common_env && python scripts/prepare_marqo_dataset.py || { echo "ERROR: Dataset preparation failed" >&2; exit 1; }
-set_common_env && python scripts/build_index.py || { echo "ERROR: Index building failed" >&2; exit 1; }
-set_common_env && python scripts/visualize_marqo_comparison.py || { echo "ERROR: Visualization failed" >&2; exit 1; }
+echo "Preparing dataset..."
+if ! python scripts/prepare_marqo_dataset.py; then
+    echo "ERROR: Dataset preparation failed"
+    exit 1
+fi
 
-echo "✓ Smoke test passed! Visualization: data/marqo_smoke_test.md"
+echo "Creating 10-sample test subset..."
+if ! python -c "
+from datasets import load_from_disk
+dataset = load_from_disk('data/marqo_fashion_3000')
+small = dataset.select(range(10))
+small.save_to_disk('data/marqo_test')
+print(f'✓ Created data/marqo_test with {len(small)} samples')
+"; then
+    echo "ERROR: Test subset creation failed"
+    exit 1
+fi
+echo ""
+
+DATASET_PATH="data/marqo_test"
+ALPHA=0.5
+
+MODELS=(
+    "openai/clip-vit-large-patch14"
+    "Marqo/marqo-fashionSigLIP"
+    "google/siglip2-so400m-patch16-512"
+    "Marqo/marqo-ecommerce-embeddings-L"
+)
+
+for i in "${!MODELS[@]}"; do
+    MODEL="${MODELS[$i]}"
+    echo ""
+    echo "[$((i+1))/4] Testing model: $MODEL"
+    echo "-------------------------------------------------------------------"
+
+    if ! python scripts/build_index.py \
+        --dataset-name "$DATASET_PATH" \
+        --models "$MODEL" \
+        --alpha-values "$ALPHA" \
+        --environment dev \
+        --sample-size 10 \
+        --batch-size 10 \
+        --rebuild; then
+        echo "ERROR: Smoke test failed for model $MODEL"
+        exit 1
+    fi
+done
+
+echo ""
+echo "==================================================================="
+echo "Smoke Test Complete! Now testing visualization..."
+echo "==================================================================="
+echo ""
+
+MODEL_FLAGS=()
+for MODEL in "${MODELS[@]}"; do
+    MODEL_FLAGS+=("--models" "$MODEL")
+done
+
+if ! python scripts/visualize_marqo_comparison.py \
+    --dataset-path "$DATASET_PATH" \
+    "${MODEL_FLAGS[@]}" \
+    --alpha-values "$ALPHA" \
+    --environment dev \
+    --k 5 \
+    --output "data/marqo_smoke_test.md" \
+    --seed 42; then
+    echo "ERROR: Visualization generation failed"
+    exit 1
+fi
+
+echo ""
+echo "✓ Smoke test passed!"
+echo "✓ Visualization: data/marqo_smoke_test.md"
+echo ""
+
+exit 0
