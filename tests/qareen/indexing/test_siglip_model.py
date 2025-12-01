@@ -11,6 +11,12 @@ from tests.qareen.indexing.test_fixtures import TEST_EMBEDDING_DIM
 from qareen.indexing.exceptions import InvalidAlphaError
 from qareen.indexing.siglip_model import SIGLIPEmbeddingModel
 
+# Arbitrary embedding dimension for testing embedding_dim property.
+# The actual value doesn't matter - we're testing that the property
+# correctly reads from model config. Using a non-standard dimension
+# (not 512 or 768) to clearly show it's a test value.
+TEST_EMBEDDING_DIM = 63
+
 
 def test_init():
     model = SIGLIPEmbeddingModel(model_id="google/siglip-base-patch16-224")
@@ -72,7 +78,7 @@ def test_embed_image_invalid_type():
     model.model = Mock()
     model.processor = Mock()
 
-    with pytest.raises(TypeError, match=SIGLIPEmbeddingModel.IMAGE_TYPE_ERROR):
+    with pytest.raises(TypeError, match="Image must be PIL Image or path string"):
         model.embed_image({"invalid": "type"})
 
 
@@ -81,17 +87,17 @@ def test_embed_image_invalid_path():
     model.model = Mock()
     model.processor = Mock()
 
-    with pytest.raises(ValueError, match=SIGLIPEmbeddingModel.IMAGE_TYPE_ERROR):
+    with pytest.raises(ValueError, match="Image must be PIL Image or path string"):
         model.embed_image("/nonexistent/path.jpg")
 
 
 def test_embed_multimodal_invalid_alpha():
     model = SIGLIPEmbeddingModel()
 
-    with pytest.raises(InvalidAlphaError):
+    with pytest.raises(ValueError, match="Alpha must be in range"):
         model.embed_multimodal(image=None, text="test", alpha=1.5)
 
-    with pytest.raises(InvalidAlphaError):
+    with pytest.raises(ValueError, match="Alpha must be in range"):
         model.embed_multimodal(image=None, text="test", alpha=-0.1)
 
 
