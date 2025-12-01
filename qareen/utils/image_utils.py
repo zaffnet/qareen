@@ -22,8 +22,12 @@ def download_image_with_retry(
             response.raise_for_status()
 
             content_length = response.headers.get("content-length")
-            if content_length and int(content_length) > max_bytes:
-                return None
+            if content_length:
+                try:
+                    if int(content_length) > max_bytes:
+                        return None
+                except ValueError:
+                    pass  # Invalid content-length header, continue downloading
 
             content = BytesIO()
             size = 0
