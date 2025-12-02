@@ -169,7 +169,6 @@ def test_embedding_dim_caching(mock_open_clip):
         mock_embed.return_value = np.zeros(TEST_EMBEDDING_DIM)
         # First access - should call embed_text and populate cache
         dim1 = model.embedding_dim
-        dim2 = model.embedding_dim
         assert dim1 == TEST_EMBEDDING_DIM
         assert model._cached_embedding_dim == TEST_EMBEDDING_DIM
         mock_embed.assert_called_once_with("dummy")
