@@ -26,11 +26,19 @@ def main(
     config_file: Annotated[
         Path | None, typer.Option(help="Path to configuration file (.env format)")
     ] = None,
+    timeout: Annotated[
+        float | None,
+        typer.Option(help="Timeout in seconds for indexing operation (overrides config)"),
+    ] = None,
 ) -> int:
     try:
         settings = Settings(_env_file=str(config_file)) if config_file else Settings()
         if dataset_name:
             settings.dataset_path = dataset_name
+        if timeout is not None:
+            if timeout <= 0:
+                raise typer.BadParameter("timeout must be > 0")
+            settings.timeout = timeout
         if not settings.dataset_path:
             logger.error("dataset_path must be set in config or provided via --dataset-name")
             return 1
@@ -55,31 +63,56 @@ def main(
             if sample_size:
                 logger.info("Dev sample size: %s", sample_size)
 
+            if not settings.embedding_models:
+                logger.warning("⚠️ No embedding models configured. Nothing to do.")
+                return 0
+
+            failed_models: list[str] = []
             for model_id in settings.embedding_models:
-                logger.info("Processing model: %s", model_id)
-                embedding_model = settings.create_embedding_model(model_id)
-                indexer = ChromaIndexer(
-                    dataset_loader=dataset_loader,
-                    embedding_model=embedding_model,
-                    settings=settings,
-                )
-
-                vectorstores = indexer.index(
-                    alpha_values=settings.alpha_values,
-                    rebuild=settings.rebuild_collections,
-                    batch_size=settings.batch_size,
-                    sample_size=sample_size,
-                    environment=settings.environment,
-                )
-
-                for alpha in vectorstores:
-                    name = get_collection_name(
-                        dataset_loader.get_dataset_name(),
-                        embedding_model.get_model_id(),
-                        alpha,
-                        settings.environment,
+                try:
+                    logger.info("Processing model: %s", model_id)
+                    embedding_model = settings.create_embedding_model(model_id)
+                    indexer = ChromaIndexer(
+                        dataset_loader=dataset_loader,
+                        embedding_model=embedding_model,
+                        settings=settings,
                     )
-                    logger.info("✓ Completed: %s (alpha=%.3f)", name, alpha)
+
+                    vectorstores = indexer.index(
+                        alpha_values=settings.alpha_values,
+                        rebuild=settings.rebuild_collections,
+                        batch_size=settings.batch_size,
+                        sample_size=sample_size,
+                        environment=settings.environment,
+                        timeout=settings.timeout,
+                    )
+
+                    for alpha in vectorstores:
+                        name = get_collection_name(
+                            dataset_loader.get_dataset_name(),
+                            embedding_model.get_model_id(),
+                            alpha,
+                            settings.environment,
+                        )
+                        logger.info("✓ Completed: %s (alpha=%.3f)", name, alpha)
+                except (OSError, RuntimeError, TimeoutError, ValueError, TypeError) as e:
+                    logger.error("❌ Failed to process model %s: %s", model_id, str(e))
+                    failed_models.append(model_id)
+                except Exception as e:
+                    # Catch all other exceptions to allow batch processing of multiple models
+                    # to continue even if one model fails. This preserves the ability to process
+                    # remaining models in the batch rather than aborting entirely.
+                    logger.exception(
+                        "❌ Unexpected error processing model %s: %s", model_id, type(e).__name__
+                    )
+                    failed_models.append(model_id)
+
+            if failed_models:
+                logger.error(
+                    "❌ Failed to build indexes for the following models: %s",
+                    ", ".join(failed_models),
+                )
+                return 1
 
         logger.info("✅ All indexes built successfully")
         return 0

@@ -36,6 +36,8 @@ def test_vector_store_indexer_contract_and_naming() -> None:
             batch_size: int = 100,
             sample_size: int | None = None,
             environment: str | None = None,
+            timeout: float | None = None,
+            log_progress_percent: float = 10.0,
         ) -> dict[float, VectorStore]:
             raise NotImplementedError()
 

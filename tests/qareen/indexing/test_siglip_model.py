@@ -161,6 +161,9 @@ def test_get_model_id_special_chars():
 @patch("qareen.indexing.siglip_model.AutoModel")
 @patch("qareen.indexing.siglip_model.AutoProcessor")
 def test_embedding_dim_from_config(mock_processor_cls, mock_model_cls):
+    # Note: The actual google/siglip2-base-patch16-512 model has projection_dim=768.
+    # This test uses TEST_EMBEDDING_DIM (37) as an arbitrary mock value to verify
+    # the code correctly reads projection_dim from the config, regardless of the value.
     mock_model = Mock()
     mock_model.config.projection_dim = 512
     mock_model_cls.from_pretrained.return_value = mock_model
