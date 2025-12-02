@@ -8,7 +8,7 @@ import numpy as np
 import pytest
 
 from qareen.indexing.marqo_fashion_model import MarqoFashionSigLIPModel
-from tests.qareen.indexing.test_fixtures import TEST_EMBEDDING_DIM
+from tests.qareen.indexing.indexing_fixtures import TEST_EMBEDDING_DIM
 
 
 def test_init():
@@ -168,7 +168,6 @@ def test_embedding_dim_caching(mock_open_clip):
     with patch.object(model, "embed_text") as mock_embed:
         mock_embed.return_value = np.zeros(TEST_EMBEDDING_DIM)
         dim1 = model.embedding_dim
-        dim2 = model.embedding_dim
         dim2 = model.embedding_dim
         assert dim1 == TEST_EMBEDDING_DIM
         assert dim2 == TEST_EMBEDDING_DIM
