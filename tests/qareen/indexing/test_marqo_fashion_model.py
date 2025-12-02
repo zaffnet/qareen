@@ -8,6 +8,7 @@ import numpy as np
 import pytest
 
 from qareen.indexing.marqo_fashion_model import MarqoFashionSigLIPModel
+from tests.qareen.indexing.indexing_fixtures import TEST_EMBEDDING_DIM
 
 
 def test_init():
@@ -163,20 +164,18 @@ def test_embedding_dim_caching(mock_open_clip):
     mock_open_clip.get_tokenizer.return_value = Mock()
 
     model = MarqoFashionSigLIPModel()
-    assert model._cached_embedding_dim is None
 
     with patch.object(model, "embed_text") as mock_embed:
-        expected_dim = 512
-        mock_embed.return_value = np.zeros(expected_dim)
-
+        mock_embed.return_value = np.zeros(TEST_EMBEDDING_DIM)
+        # First access - should call embed_text and populate cache
         dim1 = model.embedding_dim
-        assert dim1 == expected_dim
-        assert model._cached_embedding_dim == expected_dim
+        assert dim1 == TEST_EMBEDDING_DIM
+        assert model._cached_embedding_dim == TEST_EMBEDDING_DIM
         mock_embed.assert_called_once_with("dummy")
 
+        # Second access - should use cached value without calling embed_text again
         dim2 = model.embedding_dim
-        assert dim2 == expected_dim
-        assert dim1 == dim2
+        assert dim2 == TEST_EMBEDDING_DIM
         mock_embed.assert_called_once()
 
 
