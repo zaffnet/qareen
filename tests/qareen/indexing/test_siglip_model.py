@@ -8,6 +8,7 @@ import numpy as np
 import pytest
 
 from qareen.indexing.siglip_model import SIGLIPEmbeddingModel
+from tests.qareen.indexing.indexing_fixtures import TEST_EMBEDDING_DIM
 
 
 def test_init():
