@@ -8,7 +8,7 @@ import numpy as np
 import pytest
 
 from qareen.indexing.marqo_fashion_model import MarqoFashionSigLIPModel
-from tests.qareen.indexing.test_fixtures import TEST_EMBEDDING_DIM
+from tests.qareen.indexing.indexing_fixtures import TEST_EMBEDDING_DIM
 
 
 def test_init():
