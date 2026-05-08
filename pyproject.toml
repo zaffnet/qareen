@@ -45,6 +45,9 @@ dependencies = [
 # The base package will work with CPU-only PyTorch (installed automatically via
 # transformers/sentence-transformers dependencies).
 gpu = []
+ui = [
+    "gradio~=4.14.0",
+]
 dev = [
     "pytest~=8.0.0",
     "ruff>=0.14.5",
@@ -113,5 +116,8 @@ module = [
     "chromadb.*",
     "requests.*",
     "rich.*",
+    "gradio.*",
+    "open_clip.*",
+    "PIL.*",
 ]
 ignore_missing_imports = true

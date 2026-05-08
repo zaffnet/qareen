@@ -4,6 +4,7 @@ import contextlib
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
+import numpy as np
 from chromadb.errors import NotFoundError
 
 if TYPE_CHECKING:
@@ -72,6 +73,8 @@ class ChromaRetriever:
         text: str | None,
         alpha: float,
         k: int = 5,
+        fetch_k: int = 20,
+        mmr_lambda: float = 0.5,
         score_threshold: float | None = None,
     ) -> list[tuple[Document, float]]:
         if not (0.0 <= alpha <= 1.0):
@@ -97,10 +100,12 @@ class ChromaRetriever:
 
         loaded_img = load_image(image)
         query_emb = self.embedding_model.embed_multimodal(image=loaded_img, text=text, alpha=alpha)
+
+        # We need to fetch more candidates for MMR, and we need their embeddings
         results = vectorstore.query(
             query_embeddings=[query_emb.tolist()],
-            n_results=k + 1,
-            include=["metadatas", "documents", "distances"],
+            n_results=max(k, fetch_k) + 1,
+            include=["metadatas", "documents", "distances", "embeddings"],
         )
 
         ids = (results.get("ids") or [[]])[0]
@@ -110,21 +115,85 @@ class ChromaRetriever:
         metadatas = (results.get("metadatas") or [[]])[0] or [{}] * len(ids)
         docs = (results.get("documents") or [[]])[0] or [""] * len(ids)
         distances = (results.get("distances") or [[]])[0] or [0.0] * len(ids)
+        embeddings = (results.get("embeddings") or [[]])[0]
 
-        documents = []
+        if embeddings is None or len(embeddings) == 0:
+            # Fallback if embeddings are not returned
+            embeddings = [query_emb.tolist()] * len(ids)
+
+        documents_with_scores = []
         skipped_identical = False
-        for _id, metadata, doc_text, distance in zip(ids, metadatas, docs, distances, strict=True):
+        valid_indices = []
+
+        for idx, (distance, _id) in enumerate(zip(distances, ids, strict=True)):
             similarity = max(0.0, min(1.0, 1.0 - (abs(distance) / 2.0)))
             if similarity > IDENTICAL_THRESHOLD and not skipped_identical:
                 skipped_identical = True
                 continue
             if score_threshold is not None and similarity < score_threshold:
                 continue
-            documents.append((Document(page_content=doc_text, metadata=metadata), similarity))
-            if len(documents) >= k:
+            documents_with_scores.append((idx, similarity))
+            valid_indices.append(idx)
+
+        if not documents_with_scores:
+            return []
+
+        # MMR logic
+        selected_indices = []
+        unselected_indices = valid_indices.copy()
+
+        # Select first item (most similar to query)
+        best_initial_idx = max(documents_with_scores, key=lambda x: x[1])[0]
+        selected_indices.append(best_initial_idx)
+        unselected_indices.remove(best_initial_idx)
+
+        # Convert to numpy arrays for fast similarity computation
+        query_emb_np = np.array(query_emb)
+        query_norm = np.linalg.norm(query_emb_np)
+        if query_norm > 0:
+            query_emb_np = query_emb_np / query_norm
+
+        emb_np = np.array(embeddings)
+        norms = np.linalg.norm(emb_np, axis=1, keepdims=True)
+        norms[norms == 0] = 1
+        emb_np = emb_np / norms
+
+        while len(selected_indices) < min(k, len(valid_indices)):
+            best_score = -float("inf")
+            best_idx = -1
+
+            for idx in unselected_indices:
+                # Similarity to query (we could use the precomputed distance, but let's be exact)
+                sim_to_query = max(0.0, min(1.0, 1.0 - (abs(distances[idx]) / 2.0)))
+
+                # Max similarity to already selected
+                selected_embs = emb_np[selected_indices]
+                candidate_emb = emb_np[idx]
+
+                # Cosine similarity is dot product of normalized vectors
+                sims_to_selected = np.dot(selected_embs, candidate_emb)
+                max_sim_to_selected = np.max(sims_to_selected)
+
+                # MMR score
+                mmr_score = mmr_lambda * sim_to_query - (1 - mmr_lambda) * max_sim_to_selected
+
+                if mmr_score > best_score:
+                    best_score = mmr_score
+                    best_idx = idx
+
+            if best_idx != -1:
+                selected_indices.append(best_idx)
+                unselected_indices.remove(best_idx)
+            else:
                 break
 
-        return documents
+        final_documents = []
+        for idx in selected_indices:
+            similarity = max(0.0, min(1.0, 1.0 - (abs(distances[idx]) / 2.0)))
+            doc = Document(page_content=docs[idx], metadata=metadatas[idx])
+            final_documents.append((doc, similarity))
+
+        return final_documents
 
     def list_available_alphas(
         self, dataset_name: str, model_id: str, environment: str = "dev"
